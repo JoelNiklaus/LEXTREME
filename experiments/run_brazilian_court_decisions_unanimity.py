@@ -215,14 +215,14 @@ def main():
 
     label_dict = get_label_dict('../experiments/unanimity/','unanimity_label')
     if training_args.do_train:
-        train_dataset = create_dataset('../experiments/unanimity/train.jsonl',label_dict,'unanimity_label')
+        train_dataset = create_dataset('../experiments/unanimity/train.jsonl',label_dict,'judgment_text','unanimity_label')
         print(train_dataset)
 
     if training_args.do_eval:
-        eval_dataset = create_dataset('../experiments/unanimity/validation.jsonl',label_dict,'unanimity_label')
+        eval_dataset = create_dataset('../experiments/unanimity/validation.jsonl',label_dict,'judgment_text','unanimity_label')
 
     if training_args.do_predict:
-        predict_dataset = create_dataset('../experiments/unanimity/test.jsonl',label_dict,'unanimity_label')
+        predict_dataset = create_dataset('../experiments/unanimity/test.jsonl',label_dict,'judgment_text','unanimity_label')
 
     # Labels
     label_list = list(label_dict.values())

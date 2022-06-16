@@ -23,7 +23,7 @@ def get_label_dict(main_path:str,label_column:str='label')->dict:
 
 
 
-def create_dataset(path:str,label_dict:dict,label_column:str='label'):
+def create_dataset(path:str,label_dict:dict,text_column:str='text', label_column:str='label'):
     
     '''
     This function reads the train, validation and test dataset
@@ -35,7 +35,7 @@ def create_dataset(path:str,label_dict:dict,label_column:str='label'):
 
     all_data = pd.read_json(path, lines=True)
 
-    all_data['text']=all_data['judgment_text']
+    all_data['text']=all_data[text_column]
     all_data['label']=all_data[label_column]
 
     all_data = all_data[['text','label']]
