@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--top_k', default=3)
     config = parser.parse_args()
 
-    BASE_DIR = f'logs/{config.dataset}'
+    BASE_DIR = f'../scripts/logs/{config.dataset}'
 
     if os.path.exists(BASE_DIR):
         print(f'{BASE_DIR} exists!')
