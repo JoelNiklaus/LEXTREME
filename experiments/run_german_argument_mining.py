@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-""" Finetuning models on LEDGAR (e.g. Bert, RoBERTa, LEGAL-BERT)."""
+
 
 import logging
 import os
@@ -10,12 +10,12 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
+import pandas as pd
 from datasets import load_dataset, Dataset
 from sklearn.metrics import f1_score
 import numpy as np
 import glob
 import shutil
-from bcd_helper import get_label_dict, create_dataset
 
 import transformers
 from transformers import (
@@ -204,29 +204,34 @@ def main():
     # download the dataset.
     # Downloading and loading eurlex dataset from the hub.
     
-    '''if training_args.do_train:
-        train_dataset = load_dataset("lex_glue", "ledgar", split="train", cache_dir=model_args.cache_dir)
 
-    if training_args.do_eval:
-        eval_dataset = load_dataset("lex_glue", "ledgar", split="validation", cache_dir=model_args.cache_dir)
 
-    if training_args.do_predict:
-        predict_dataset = load_dataset("lex_glue", "ledgar", split="test", cache_dir=model_args.cache_dir)'''
-
-    label_dict = get_label_dict('../experiments/german_argument_mining/','label')
     if training_args.do_train:
-        train_dataset = create_dataset('../experiments/german_argument_mining/train.jsonl',label_dict,'input_sentence','label')
-        print(train_dataset)
+        train_dataset = load_dataset("joelito/german_argument_mining",split='train', cache_dir=model_args.cache_dir)
+        
 
     if training_args.do_eval:
-        eval_dataset = create_dataset('../experiments/german_argument_mining/validation.jsonl',label_dict,'input_sentence','label')
+        eval_dataset = load_dataset("joelito/german_argument_mining",split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = create_dataset('../experiments/german_argument_mining/test.jsonl',label_dict,'input_sentence','label')
+        predict_dataset = load_dataset("joelito/german_argument_mining",split='test', cache_dir=model_args.cache_dir)
 
+    
     # Labels
-    label_list = list(label_dict.values())
+    label_list = sorted(list(set(train_dataset['label'])))
     num_labels = len(label_list)
+
+    train_dataset =pd.DataFrame(train_dataset)
+    train_dataset['label']=train_dataset.label.apply(lambda x: label_list.index(x))
+    train_dataset = Dataset.from_pandas(train_dataset)
+
+    eval_dataset =pd.DataFrame(eval_dataset)
+    eval_dataset['label']=eval_dataset.label.apply(lambda x: label_list.index(x))
+    eval_dataset = Dataset.from_pandas(eval_dataset)
+
+    predict_dataset =pd.DataFrame(predict_dataset)
+    predict_dataset['label']=predict_dataset.label.apply(lambda x: label_list.index(x))
+    predict_dataset = Dataset.from_pandas(predict_dataset)
 
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
@@ -271,12 +276,12 @@ def main():
     def preprocess_function(examples):
         # Tokenize the texts
         batch = tokenizer(
-            examples["text"],
+            examples["input_sentence"],
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True,
         )
-        batch["label"] = [label_list.index(label) for label in examples["label"]]
+        #batch["label"] = [label_list[label] for label in examples["label"]]
 
         return batch
 
@@ -290,6 +295,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
+            
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -315,7 +321,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on prediction dataset",
             )
-
+    
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
