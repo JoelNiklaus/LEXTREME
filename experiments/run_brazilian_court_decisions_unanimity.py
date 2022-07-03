@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
-""" Finetuning models on LEDGAR (e.g. Bert, RoBERTa, LEGAL-BERT)."""
+
 
 import logging
 import os
@@ -8,6 +8,7 @@ import random
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
+import pandas as pd
 
 import datasets
 from datasets import load_dataset, Dataset
@@ -204,28 +205,32 @@ def main():
     # download the dataset.
     # Downloading and loading eurlex dataset from the hub.
     
-    '''if training_args.do_train:
-        train_dataset = load_dataset("lex_glue", "ledgar", split="train", cache_dir=model_args.cache_dir)
+    def prepare_dataset(dataset):
+        dataset =pd.DataFrame(dataset)
+        dataset['label']=dataset['unanimity_label']
+        #dataset['label']=dataset.label.apply(lambda x: label_list.index(x))
+        dataset['text']=dataset['ementa_text']+' '+dataset['decision_description']+' '+dataset['judgment_text']
+        dataset = Dataset.from_pandas(dataset)
+        return dataset
 
-    if training_args.do_eval:
-        eval_dataset = load_dataset("lex_glue", "ledgar", split="validation", cache_dir=model_args.cache_dir)
 
-    if training_args.do_predict:
-        predict_dataset = load_dataset("lex_glue", "ledgar", split="test", cache_dir=model_args.cache_dir)'''
-
-    label_dict = get_label_dict('../experiments/unanimity/','unanimity_label')
     if training_args.do_train:
-        train_dataset = create_dataset('../experiments/unanimity/train.jsonl',label_dict,'judgment_text','unanimity_label')
-        print(train_dataset)
-
+        train_dataset = load_dataset("joelito/brazilian_court_decisions",split='train', cache_dir=model_args.cache_dir)
+        
     if training_args.do_eval:
-        eval_dataset = create_dataset('../experiments/unanimity/validation.jsonl',label_dict,'judgment_text','unanimity_label')
+        eval_dataset = load_dataset("joelito/brazilian_court_decisions",split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = create_dataset('../experiments/unanimity/test.jsonl',label_dict,'judgment_text','unanimity_label')
+        predict_dataset = load_dataset("joelito/brazilian_court_decisions",split='test', cache_dir=model_args.cache_dir)
+
+    
+
+    train_dataset =prepare_dataset(train_dataset)
+    eval_dataset =prepare_dataset(eval_dataset)
+    predict_dataset =prepare_dataset(predict_dataset)
 
     # Labels
-    label_list = list(label_dict.values())
+    label_list = sorted(list(set(train_dataset['label'])))
     num_labels = len(label_list)
 
     # Load pretrained model and tokenizer
