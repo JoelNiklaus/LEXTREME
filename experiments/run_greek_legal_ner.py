@@ -9,10 +9,12 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
+import re
 
 import datasets
 from datasets import load_dataset, load_metric, Dataset
 from sklearn.metrics import f1_score
+from helper import reduce_size
 import numpy as np
 import glob
 import shutil
@@ -207,12 +209,12 @@ def main():
     # Downloading and loading eurlex dataset from the hub.
 
 
-    dataset = load_dataset("joelito/greek_legal_ner")
+    ner_dataset = load_dataset("joelito/greek_legal_ner")
 
     label2id = dict()
     id2label =dict()
     label_list = set()
-    for labels in dataset['train']['ner']:
+    for labels in ner_dataset['train']['ner']:
         for l in labels:
             label_list.add(l)
     
@@ -226,14 +228,18 @@ def main():
     def add_label_tags(examples):
         
         examples["ner_tags"] = [[label2id[l] for l in label] for label in examples["ner"]]
+
+        del examples["ner"]
         
         return examples
 
-    dataset = dataset.map(add_label_tags, batched=True)
+    ner_dataset = ner_dataset.map(add_label_tags, batched=True)
 
-    train_dataset = dataset['train']
-    eval_dataset = dataset['validation']
-    predict_dataset = dataset['test']
+    
+
+    train_dataset = reduce_size(ner_dataset['train'],100)
+    eval_dataset = reduce_size(ner_dataset['validation'],100)
+    predict_dataset = reduce_size(ner_dataset['test'],100)
 
 
 
@@ -277,17 +283,6 @@ def main():
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
 
-    '''def preprocess_function(examples):
-        # Tokenize the texts
-        batch = tokenizer(
-            examples["text"],
-            padding=padding,
-            max_length=data_args.max_seq_length,
-            truncation=True,
-        )
-        batch["label"] = [label_list.index(label) for label in examples["label"]]
-
-        return batch'''
 
     #Get the values for input_ids, token_type_ids, attention_mask
     def preprocess_function(all_samples_per_split):
@@ -322,10 +317,6 @@ def main():
             total_adjusted_labels.append(adjusted_label_ids)
         tokenized_samples["labels"] = total_adjusted_labels
         
-        tokenized_samples_df = pd.DataFrame(tokenized_samples)
-        tokenized_samples_df = tokenized_samples_df[tokenized_samples_df.input_ids.map(len) == 512]
-        del tokenized_samples_df['words']
-        tokenized_samples = Dataset.from_pandas(tokenized_samples_df)
         return tokenized_samples
 
     if training_args.do_train:
@@ -337,13 +328,7 @@ def main():
                 batched=True,
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
-            )
-        train_df = pd.DataFrame(train_dataset)
-        for x in train_df.input_ids.tolist():
-            if len(x)>512:
-                print('ERRRRRRRRRRRRRROOOOOOOOOOOOOOOOOR: ',x)
-            
-            
+            )            
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -374,7 +359,7 @@ def main():
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     metric = load_metric("seqeval")
-    def compute_metrics(p):
+    def compute_metrics(p: EvalPrediction):
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
 
@@ -399,7 +384,11 @@ def main():
             if(k not in flattened_results.keys()):
                 flattened_results[k+"_f1"]=results[k]["f1"]
 
+        print('\n###########################################################\n')
+        print(flattened_results)
+        print('\n###########################################################\n')
         return flattened_results
+        #return {'macro-f1': results['overall_f1'], 'micro-f1':results['overall_f1']}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -412,6 +401,7 @@ def main():
     
 
     # Initialize our Trainer
+    training_args.evaluation_strategy = "epoch"
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -431,7 +421,12 @@ def main():
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
-        metrics = train_result.metrics
+        #metrics = train_result.metrics #This does not return any valuable results therefore I use the training dataset as input
+        metrics_unprocessed = trainer.evaluate(eval_dataset=train_dataset)
+        metrics = dict()
+        for k,v in metrics_unprocessed.items():
+            k_new = re.sub('eval','train', k)
+            metrics[k_new]=v
         max_train_samples = (
             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
         )
@@ -441,6 +436,7 @@ def main():
 
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
+        #save_metrics("train",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
         trainer.save_state()
 
     # Evaluation
@@ -453,6 +449,7 @@ def main():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+        #save_metrics("eval",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
 
     # Prediction
     if training_args.do_predict:
@@ -466,13 +463,14 @@ def main():
 
         trainer.log_metrics("predict", metrics)
         trainer.save_metrics("predict", metrics)
+        #save_metrics("predict",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
 
-        output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
+        '''output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
         if trainer.is_world_process_zero():
             with open(output_predict_file, "w") as writer:
                 for index, pred_list in enumerate(predictions):
                     pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                    writer.write(f"{index}\t{pred_line}\n")
+                    writer.write(f"{index}\t{pred_line}\n")'''
 
 
     # Clean up checkpoints

@@ -1,3 +1,4 @@
+bert-base-multilingual-cased
 bert-base-uncased
 roberta-base
 microsoft/deberta-base
