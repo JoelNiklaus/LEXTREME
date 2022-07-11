@@ -3,6 +3,8 @@ import pandas as pd
 from typing import List
 import os
 from pathlib import Path
+import json as js
+from datasets import Dataset
 
 def get_label_dict(main_path:str,label_column:str='label')->dict:
 
@@ -47,6 +49,24 @@ def create_dataset(path:str,label_dict:dict,text_column:str='text', label_column
     dataset = Dataset.from_pandas(all_data)
 
     return dataset
+
+
+
+def save_metrics(split,metric_results:dict,output_path:str):
+
+    if split in ['train','eval','predict']:
+        with open(output_path+'/'+split+'_results.json','w') as f:
+            js.dump(metric_results,f,ensure_ascii=False,indent=2)
+
+
+
+def reduce_size(dataset,n):
+    dataset_df = pd.DataFrame(dataset)
+    dataset_df = dataset_df[:n]
+    dataset_new = Dataset.from_pandas(dataset_df)
+    return dataset_new
+
+
 
 
 

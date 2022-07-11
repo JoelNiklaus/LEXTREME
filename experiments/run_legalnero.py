@@ -209,7 +209,7 @@ def main():
     # Downloading and loading eurlex dataset from the hub.
 
 
-    ner_dataset = load_dataset("joelito/greek_legal_ner")
+    ner_dataset = load_dataset("joelito/legalnero")
 
     label2id = dict()
     id2label =dict()
@@ -249,7 +249,7 @@ def main():
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task="greek_legal_ner",
+        finetuning_task="legalnero",
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
