@@ -228,7 +228,6 @@ def main():
     eval_dataset = reduce_size(eval_dataset,200)
     predict_dataset = reduce_size(predict_dataset,100)
 
-    pd.DataFrame(predict_dataset).to_excel('test_dataset.xlsx')
 
     # Labels
     label_list = set()
@@ -417,7 +416,7 @@ def main():
         output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
         output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
         output_predict_file_new = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output.to_json(output_predict_file_new, orient='records', force_ascii=False,lines=True)
+        output.to_json(output_predict_file_new, orient='records', force_ascii=False)
 
 
 
