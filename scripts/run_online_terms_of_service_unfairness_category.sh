@@ -2,11 +2,11 @@ GPU_NUMBER=0
 LOWER_CASE='True'
 BATCH_SIZE=30
 ACCUMULATION_STEPS=1
-NUM_TRAIN_EPOCHS=10.0
+NUM_TRAIN_EPOCHS=1.0
 
 
 
-model_input="models_to_be_used_small.txt"
+model_input="models_to_be_used.txt"
 while IFS= read -r line
   MODEL_NAME="$line"
   
