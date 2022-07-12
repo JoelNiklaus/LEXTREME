@@ -13,11 +13,13 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
+from helper import compute_metrics_multi_label, reduce_size
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
 import glob
 import shutil
+
 
 import transformers
 from transformers import (
@@ -95,6 +97,14 @@ class DataTrainingArguments:
     )
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+
+    language:Optional[str] = field(
+        default='en',
+        metadata={
+            "help": "For choosin the language "
+            "value if set."
+        },
+    )
 
 
 @dataclass
@@ -206,13 +216,19 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("multi_eurlex", 'all_languages', split="train", cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("multi_eurlex", data_args.language, split="train", cache_dir=model_args.cache_dir)
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("multi_eurlex", 'all_languages', split="validation", cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("multi_eurlex", data_args.language, split="validation", cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("multi_eurlex", 'all_languages', split="test", cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("multi_eurlex", data_args.language, split="test", cache_dir=model_args.cache_dir)
+
+    train_dataset = reduce_size(train_dataset, 1000)
+    eval_dataset = reduce_size(eval_dataset,200)
+    predict_dataset = reduce_size(predict_dataset,100)
+
+    pd.DataFrame(predict_dataset).to_excel('test_dataset.xlsx')
 
     # Labels
     label_list = set()
@@ -239,7 +255,7 @@ def main():
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task="multi_eurlex",
+        finetuning_task=data_args.language+"_multi_eurlex",
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -322,31 +338,6 @@ def main():
                 desc="Running tokenizer on prediction dataset",
             )
 
-    # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
-    # predictions and label_ids field) and has to return a dictionary string to float.
-    '''def compute_metrics(p: EvalPrediction):
-        logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = (expit(logits) > 0.5).astype('int32')
-        macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-        micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-        return {'macro-f1': macro_f1, 'micro-f1': micro_f1}'''
-
-
-    def compute_metrics(p: EvalPrediction):
-        # Fix gold labels
-        y_true = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
-        y_true[:, :-1] = p.label_ids
-        y_true[:, -1] = (np.sum(p.label_ids, axis=1) == 0).astype('int32')
-        # Fix predictions
-        logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = (expit(logits) > 0.5).astype('int32')
-        y_pred = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
-        y_pred[:, :-1] = preds
-        y_pred[:, -1] = (np.sum(preds, axis=1) == 0).astype('int32')
-        # Compute scores
-        macro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='macro', zero_division=0)
-        micro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='micro', zero_division=0)
-        return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -362,7 +353,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics,
+        compute_metrics=compute_metrics_multi_label,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
@@ -418,6 +409,16 @@ def main():
                 for index, pred_list in enumerate(predictions):
                     pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
                     writer.write(f"{index}\t{pred_line}\n")
+
+        predict_dataset_df = pd.DataFrame(predict_dataset)
+
+        preds = (expit(predictions) > 0.5).astype('int32')
+
+        output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
+        output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
+        output_predict_file_new = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+        output.to_json(output_predict_file_new, orient='records', force_ascii=False,lines=True)
+
 
 
     # Clean up checkpoints

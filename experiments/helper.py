@@ -5,6 +5,11 @@ import os
 from pathlib import Path
 import json as js
 from datasets import Dataset
+from transformers import EvalPrediction
+from scipy.special import expit
+from sklearn.metrics import f1_score
+import numpy as np
+
 
 def get_label_dict(main_path:str,label_column:str='label')->dict:
 
@@ -65,6 +70,58 @@ def reduce_size(dataset,n):
     dataset_df = dataset_df[:n]
     dataset_new = Dataset.from_pandas(dataset_df)
     return dataset_new
+
+# You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
+# predictions and label_ids field) and has to return a dictionary string to float.
+def compute_metrics_multi_label(p: EvalPrediction):
+    logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+    preds = (expit(logits) > 0.5).astype('int32')
+    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+
+    outputs = list(zip(logits,preds,p.label_ids))
+    df = pd.DataFrame(outputs,columns=['logits','predictions','reference'])
+    if df.shape[0]==100:
+
+        df.to_excel('outputs.xlsx')
+    return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+
+
+
+
+
+def compute_metrics_multi_label_1(p: EvalPrediction):
+        # Fix gold labels
+        y_true = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
+        y_true[:, :-1] = p.label_ids
+        y_true[:, -1] = (np.sum(p.label_ids, axis=1) == 0).astype('int32')
+        # Fix predictions
+        logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+        preds = (expit(logits) > 0.5).astype('int32')
+        y_pred = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
+        y_pred[:, :-1] = preds
+        y_pred[:, -1] = (np.sum(preds, axis=1) == 0).astype('int32')
+        # Compute scores
+        macro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='macro', zero_division=0)
+        micro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='micro', zero_division=0)
+        return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+
+def compute_metrics_multi_label_double(p: EvalPrediction):
+    results_1 = compute_metrics_multi_label(p)
+    results_1['macro-f1-0']=results_1['macro-f1']
+    results_1['micro-f1-0']=results_1['macro-f1']
+    #del results_1['macro-f1']
+    #del results_1['macro-f1']
+    results_2 = compute_metrics_multi_label_1(p)
+    results_2['macro-f1-1']=results_2['macro-f1']
+    results_2['micro-f1-1']=results_2['macro-f1']
+    #del results_2['macro-f1']
+    #del results_2['macro-f1']
+
+    results_2.update(results_1)
+
+    return results_2
+
 
 
 
