@@ -1,1 +1,2 @@
-bert-base-multilingual-cased
+distilbert-base-multilingual-cased
+microsoft/Multilingual-MiniLM-L12-H384
