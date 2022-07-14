@@ -9,9 +9,6 @@ NUM_TRAIN_EPOCHS=20
 LEARNING_RATE=1e-5
 
 
-
-lang_input=""
-
 cat models_to_be_used.txt | while read MODEL_NAME 
 do
     TASK='de_german_argument_mining'
