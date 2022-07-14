@@ -70,6 +70,7 @@ if __name__=='__main__':
     list_of_tasks = os.listdir('./')
     list_of_tasks = [x.strip()[:-3] for x in list_of_tasks if x.endswith('sh')]
     list_of_tasks = [re.sub(r'run_','',x) for x in list_of_tasks]
+    list_of_tasks = sorted(list_of_tasks)
 
     parser = argparse.ArgumentParser()
     
