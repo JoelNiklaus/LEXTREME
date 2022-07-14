@@ -103,6 +103,15 @@ def compute_metrics_multi_label_1(p: EvalPrediction):
         return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
 
 
+# You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
+# predictions and label_ids field) and has to return a dictionary string to float.
+def compute_metrics_multi_class(p: EvalPrediction):
+    logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+    preds = np.argmax(logits, axis=1)
+    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+
 
 
 

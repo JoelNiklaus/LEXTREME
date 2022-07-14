@@ -15,6 +15,15 @@ models_to_be_used_large = open('models_to_be_used_large.txt','r').readlines()
 models_to_be_used_large = [x.strip() for x in models_to_be_used_large]
 
 
+'''
+multi_linguagel_tasks = ["covid19_emergency_event","online_terms_of_service_unfairness_level","swiss_judgment_prediction","online_terms_of_service_unfairness_category","multi_eurlex"]
+
+
+def adjust_language_list(task:str,language:str):
+
+    pass
+'''
+
 def run_experiment(language_model_type='all',running_mode='default', task='all'):
     
     if language_model_type=='all':

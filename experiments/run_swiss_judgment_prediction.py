@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
+from helper import reduce_size, compute_metrics_multi_class
 import pandas as pd
 from datasets import load_dataset, Dataset
 from sklearn.metrics import f1_score
@@ -92,6 +93,22 @@ class DataTrainingArguments:
             "value if set."
         },
     )
+
+    language:Optional[str] = field(
+        default='all_languages',
+        metadata={
+            "help": "For choosin the language "
+            "value if set."
+        },
+    )
+    running_mode:Optional[str] = field(
+        default='default',
+        metadata={
+            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
+            "value if set."
+        },
+    )
+
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
@@ -207,19 +224,27 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("swiss_judgment_prediction","all_languages",split='train', cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("swiss_judgment_prediction",data_args.language,split='train', cache_dir=model_args.cache_dir)
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("swiss_judgment_prediction","all_languages",split='validation', cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("swiss_judgment_prediction",data_args.language,split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("swiss_judgment_prediction","all_languages",split='test', cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("swiss_judgment_prediction",data_args.language,split='test', cache_dir=model_args.cache_dir)
 
     
     # Labels
     label_list = sorted(list(set(train_dataset['label'])))
     num_labels = len(label_list)
+
+    label2id = {'dismissal':0,'approval':1}
+    id2label = {0:'dismissal',1:'approval'}
+
+    if data_args.running_mode=='experimental':
+        train_dataset = reduce_size(train_dataset, 1000)
+        eval_dataset = reduce_size(eval_dataset,200)
+        predict_dataset = reduce_size(predict_dataset,100)
 
     
     # Load pretrained model and tokenizer
@@ -228,7 +253,7 @@ def main():
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task="swiss_judgment_prediction",
+        finetuning_task=data_args.language+"_swiss_judgment_prediction",
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -311,14 +336,7 @@ def main():
                 desc="Running tokenizer on prediction dataset",
             )
     
-    # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
-    # predictions and label_ids field) and has to return a dictionary string to float.
-    def compute_metrics(p: EvalPrediction):
-        logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = np.argmax(logits, axis=1)
-        macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-        micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-        return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+    
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -334,7 +352,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics,
+        compute_metrics=compute_metrics_multi_class,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
@@ -390,6 +408,22 @@ def main():
                 for index, pred_list in enumerate(predictions):
                     pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
                     writer.write(f"{index}\t{pred_line}\n")
+
+
+        predict_dataset_df = pd.DataFrame(predict_dataset)
+
+        preds = np.argmax(predictions, axis=-1)
+
+        output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
+        output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
+        
+        output['predictions_as_label']=output.predictions.apply(lambda x: id2label[x])
+        output['reference_as_label']=output.reference.apply(lambda x: id2label[x])
+        
+        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+        output.to_csv(output_predict_file_new_csv)
 
 
     # Clean up checkpoints
