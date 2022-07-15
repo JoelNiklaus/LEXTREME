@@ -13,7 +13,7 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
-from helper import compute_metrics_multi_label, reduce_size
+from helper import compute_metrics_multi_label, reduce_size,convert_id2label
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
@@ -94,16 +94,24 @@ class DataTrainingArguments:
             "value if set."
         },
     )
-    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-
     language:Optional[str] = field(
-        default='en',
+        default='all_languages',
         metadata={
             "help": "For choosin the language "
             "value if set."
         },
     )
+    running_mode:Optional[str] = field(
+        default='default',
+        metadata={
+            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
+            "value if set."
+        },
+    )
+
+    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+
 
 
 @dataclass
@@ -232,7 +240,10 @@ def main():
 
     def prepare_dataset(dataset):
         dataset =pd.DataFrame(dataset)
-        dataset = dataset[dataset.language==data_args.language]
+        
+        if data_args.language!='all_languages':
+            dataset = dataset[dataset.language==data_args.language]
+        
         dataset['labels']=dataset.apply(lambda x: [], axis=1)
         
         for i, _ in dataset.iterrows():
@@ -240,7 +251,7 @@ def main():
                 if dataset.at[i,l]==True:
                     dataset.at[i,'labels'].append(label2id[l])
         
-        dataset = dataset[['sentence','labels']]
+        #dataset = dataset[['sentence','labels']]
         dataset = Dataset.from_pandas(dataset)
         return dataset
 
@@ -248,13 +259,18 @@ def main():
     eval_dataset =prepare_dataset(eval_dataset)
     predict_dataset =prepare_dataset(predict_dataset)
 
+    if data_args.running_mode=='experimental':
+        train_dataset = reduce_size(train_dataset, 1000)
+        eval_dataset = reduce_size(eval_dataset,200)
+        predict_dataset = reduce_size(predict_dataset,100)
+
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=data_args.language+"_online_terms_of_service",
+        finetuning_task=data_args.language+"_online_terms_of_service_unfairness_category",
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -296,6 +312,7 @@ def main():
             max_length=data_args.max_seq_length,
             truncation=True,
         )
+        
         batch["labels"] = [[1 if label in labels else 0 for label in list(label2id.values())] for labels in examples["labels"]]
 
         return batch
@@ -410,31 +427,18 @@ def main():
         predict_dataset_df = pd.DataFrame(predict_dataset)
 
         preds = (expit(predictions) > 0.5).astype('int32')
-        preds_as_labels = list()
+        
 
-        for p in preds:
-            p_as_labels = list()
-            for n, x in enumerate(p):
-                if x==1:
-                    label = id2label[n]
-                    p_as_labels.append(label)
-            preds_as_labels.append(p_as_labels)
+        output = list(zip(predict_dataset_df.sentence.tolist(),labels,preds,predictions))
+        output = pd.DataFrame(output, columns = ['sentence','reference','predictions','logits'])
+        
+        output['predictions_as_label']=output.predictions.apply(lambda x: convert_id2label(x,id2label))
+        output['reference_as_label']=output.reference.apply(lambda x: convert_id2label(x,id2label))
 
-
-        referece_as_labels = list()
-        for p in predict_dataset['labels']:
-            p_as_labels = list()
-            for n, x in enumerate(p):
-                if x==1:
-                    label = id2label[n]
-                    p_as_labels.append(label)
-            referece_as_labels.append(p_as_labels)
-
-
-        output = list(zip(predict_dataset_df.sentence.tolist(),labels,preds,predictions,referece_as_labels,preds_as_labels))
-        output = pd.DataFrame(output, columns = ['text','reference','predictions','logits','referece_as_labels','predictions_as_labels'])
-        output_predict_file_new = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output.to_json(output_predict_file_new, orient='records', force_ascii=False,lines=True)
+        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+        output.to_csv(output_predict_file_new_csv)
 
 
     # Clean up checkpoints
