@@ -4,7 +4,7 @@ from typing import List
 import os
 from pathlib import Path
 import json as js
-from datasets import Dataset
+from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
 from sklearn.metrics import f1_score
@@ -114,6 +114,43 @@ def compute_metrics_multi_class(p: EvalPrediction):
 
 
 
+
+
+
+# You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
+# predictions and label_ids field) and has to return a dictionary string to float.
+metric = load_metric("seqeval")
+def compute_metrics_for_token_classification(p: EvalPrediction):
+    predictions, labels = p
+    predictions = np.argmax(predictions, axis=2)
+
+    # Remove ignored index (special tokens)
+    true_predictions = [
+        [p for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels)
+    ]
+    true_labels = [
+        [l for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels)
+    ]
+
+    results = metric.compute(predictions=true_predictions, references=true_labels)
+    flattened_results = {
+        "overall_precision": results["overall_precision"],
+        "overall_recall": results["overall_recall"],
+        "overall_f1": results["overall_f1"],
+        "overall_accuracy": results["overall_accuracy"],
+    }
+    for k in results.keys():
+        if(k not in flattened_results.keys()):
+            flattened_results[k+"_f1"]=results[k]["f1"]
+
+    print('\n###########################################################\n')
+    print(flattened_results)
+    print('\n###########################################################\n')
+    return flattened_results
+
+
 def convert_id2label(label_output:list,id2label:dict)->list:
 
     label_output = list(label_output)
@@ -127,6 +164,8 @@ def convert_id2label(label_output:list,id2label:dict)->list:
     label_output_as_labels = [id2label[l] for l in label_output_indices_of_positive_values]
 
     return label_output_as_labels
+
+
 
 
 

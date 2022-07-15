@@ -12,7 +12,8 @@ import pandas as pd
 import re
 
 import datasets
-from datasets import load_dataset, load_metric, Dataset
+from datasets import load_dataset, load_metric
+from helper import reduce_size, compute_metrics_for_token_classification
 from sklearn.metrics import f1_score
 from helper import reduce_size
 import numpy as np
@@ -96,6 +97,14 @@ class DataTrainingArguments:
             "value if set."
         },
     )
+    running_mode:Optional[str] = field(
+        default='default',
+        metadata={
+            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
+            "value if set."
+        },
+    )
+
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
@@ -236,10 +245,10 @@ def main():
     ner_dataset = ner_dataset.map(add_label_tags, batched=True)
 
     
-
-    train_dataset = reduce_size(ner_dataset['train'],100)
-    eval_dataset = reduce_size(ner_dataset['validation'],100)
-    predict_dataset = reduce_size(ner_dataset['test'],100)
+    if data_args.running_mode=="experimental":
+        train_dataset = reduce_size(ner_dataset['train'],1000)
+        eval_dataset = reduce_size(ner_dataset['validation'],200)
+        predict_dataset = reduce_size(ner_dataset['test'],100)
 
 
 
@@ -388,7 +397,6 @@ def main():
         print(flattened_results)
         print('\n###########################################################\n')
         return flattened_results
-        #return {'macro-f1': results['overall_f1'], 'micro-f1':results['overall_f1']}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -407,7 +415,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics,
+        compute_metrics=compute_metrics_for_token_classification,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
@@ -465,13 +473,50 @@ def main():
         trainer.save_metrics("predict", metrics)
         #save_metrics("predict",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
 
-        '''output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
-        if trainer.is_world_process_zero():
+        output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
+        '''if trainer.is_world_process_zero():
             with open(output_predict_file, "w") as writer:
                 for index, pred_list in enumerate(predictions):
                     pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
                     writer.write(f"{index}\t{pred_line}\n")'''
+        
+        preds = predictions[:,0].shape
+        preds = np.argmax(predictions.squeeze(), axis=2)
+        #preds = preds.tolist()
+        textual_data = tokenizer.batch_decode(predict_dataset['input_ids'])
 
+        words = list()
+        preds_final = list()
+        reference = list()
+
+        for n, x in enumerate(textual_data):
+            w = textual_data[n].split()
+            l = labels[n]
+            p = preds[n]
+            
+            zipped = list(zip(w,l,p))
+            #zipped = [x for x in zipped if x[0] not in ['[PAD]','[SEP]'] and x[1]!=-100]
+            zipped = [x for x in zipped if x[1] in id2label.keys()]
+            words_item = [x[0] for x in zipped]
+            words.append(words_item)
+            reference_item = [x[1] for x in zipped]
+            reference.append(reference_item)
+            preds_item = [x[2] for x in zipped]
+            preds_final.append(preds_item)
+            
+        
+
+
+        output = list(zip(words,reference,preds_final,predictions))
+        output = pd.DataFrame(output, columns = ['words','reference','predictions','logits'])
+        
+        output['predictions_as_label']=output.predictions.apply(lambda l: [id2label[x] for x in l])
+        output['reference_as_label']=output.reference.apply(lambda l: [id2label[x] for x in l])
+
+        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+        output.to_csv(output_predict_file_new_csv)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
