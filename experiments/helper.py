@@ -114,7 +114,19 @@ def compute_metrics_multi_class(p: EvalPrediction):
 
 
 
+def convert_id2label(label_output:list,id2label:dict)->list:
 
+    label_output = list(label_output)
+    
+    label_output_indices_of_positive_values = list()
+    
+    for n, lp in enumerate(label_output):
+        if lp==1:
+            label_output_indices_of_positive_values.append(n)
+
+    label_output_as_labels = [id2label[l] for l in label_output_indices_of_positive_values]
+
+    return label_output_as_labels
 
 
 
