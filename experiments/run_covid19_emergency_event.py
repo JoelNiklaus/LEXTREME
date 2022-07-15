@@ -113,14 +113,6 @@ class DataTrainingArguments:
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
-    language:Optional[str] = field(
-        default='en',
-        metadata={
-            "help": "For choosin the language "
-            "value if set."
-        },
-    )
-
 
 @dataclass
 class ModelArguments:
