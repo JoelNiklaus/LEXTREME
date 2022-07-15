@@ -13,7 +13,7 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
-from helper import compute_metrics_multi_label, reduce_size
+from helper import compute_metrics_multi_label, reduce_size, convert_id2label
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
@@ -95,16 +95,23 @@ class DataTrainingArguments:
             "value if set."
         },
     )
-    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-
     language:Optional[str] = field(
-        default='en',
+        default='all_languages',
         metadata={
             "help": "For choosin the language "
             "value if set."
         },
     )
+    running_mode:Optional[str] = field(
+        default='default',
+        metadata={
+            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
+            "value if set."
+        },
+    )
+
+    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
 
 @dataclass
@@ -224,9 +231,6 @@ def main():
     if training_args.do_predict:
         predict_dataset = load_dataset("multi_eurlex", data_args.language, split="test", cache_dir=model_args.cache_dir)
 
-    train_dataset = reduce_size(train_dataset, 1000)
-    eval_dataset = reduce_size(eval_dataset,200)
-    predict_dataset = reduce_size(predict_dataset,100)
 
 
     # Labels
@@ -236,6 +240,17 @@ def main():
             label_list.add(l)
     label_list = list(label_list)
     num_labels = len(label_list)
+
+    label2id = dict()
+    id2label = dict()
+    for l in label_list:
+        label2id[l]=label_list.index(l)
+        id2label[label_list.index(l)]=l
+
+    if data_args.running_mode=='experimental':
+        train_dataset = reduce_size(train_dataset, 1000)
+        eval_dataset = reduce_size(eval_dataset,200)
+        predict_dataset = reduce_size(predict_dataset,100)
 
     def convert_funct(dataset):
         dataset_df = pd.DataFrame(dataset)
@@ -414,9 +429,12 @@ def main():
         preds = (expit(predictions) > 0.5).astype('int32')
 
         output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
+
         output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
-        output_predict_file_new = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output.to_json(output_predict_file_new, orient='records', force_ascii=False)
+        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+        output.to_csv(output_predict_file_new_csv)
 
 
 
