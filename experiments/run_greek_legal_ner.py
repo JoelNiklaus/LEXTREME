@@ -251,6 +251,10 @@ def main():
         train_dataset = reduce_size(ner_dataset['train'],1000)
         eval_dataset = reduce_size(ner_dataset['validation'],200)
         predict_dataset = reduce_size(ner_dataset['test'],100)
+    else:
+        train_dataset = ner_dataset['train']
+        eval_dataset = ner_dataset['validation']
+        predict_dataset = ner_dataset['test']
 
 
     # Load pretrained model and tokenizer
