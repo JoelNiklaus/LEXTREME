@@ -427,28 +427,6 @@ def main():
 
         preds = (expit(predictions) > 0.5).astype('int32')
         
-        
-        '''preds_as_labels = list()
-
-        for p in preds:
-            p_as_labels = list()
-            for n, x in enumerate(p):
-                if x==1:
-                    label = id2label[n]
-                    p_as_labels.append(label)
-            preds_as_labels.append(p_as_labels)
-
-
-        referece_as_labels = list()
-        for p in predict_dataset['labels']:
-            p_as_labels = list()
-            for n, x in enumerate(p):
-                if x==1:
-                    label = id2label[n]
-                    p_as_labels.append(label)
-            referece_as_labels.append(p_as_labels)
-'''
-        
 
         output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
         output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
