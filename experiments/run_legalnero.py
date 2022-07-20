@@ -299,7 +299,11 @@ def main():
 
     #Get the values for input_ids, token_type_ids, attention_mask
     def preprocess_function(examples):
-        tokenized_inputs = tokenizer(examples["words"], truncation=True, is_split_into_words=True)
+        tokenized_inputs = tokenizer.batch_encode_plus(examples["words"],
+            is_split_into_words=True,
+            padding=padding,
+            max_length=data_args.max_seq_length,
+            truncation=True)
 
         labels = []
         for i, label in enumerate(examples[f"ner_tags"]):
