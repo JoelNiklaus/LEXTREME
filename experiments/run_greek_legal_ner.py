@@ -13,7 +13,7 @@ import re
 
 import datasets
 from datasets import load_dataset, load_metric
-from helper import reduce_size, compute_metrics_for_token_classification
+from helper import reduce_size, Seqeval
 from sklearn.metrics import f1_score
 from helper import reduce_size
 import numpy as np
@@ -299,39 +299,30 @@ def main():
 
 
     #Get the values for input_ids, token_type_ids, attention_mask
-    def preprocess_function(all_samples_per_split):
-        tokenized_samples = tokenizer.batch_encode_plus(all_samples_per_split["words"],
+    def preprocess_function(examples):
+        tokenized_inputs = tokenizer.batch_encode_plus(examples["words"],
             is_split_into_words=True,
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True)
-        #tokenized_samples is not a datasets object so this alone won't work with Trainer API, hence map is used 
-        #so the new keys [input_ids, labels (after adjustment)]
-        #can be added to the datasets dict for each train test validation split
-        total_adjusted_labels = []
-        print(len(tokenized_samples["input_ids"]))
-        for k in range(0, len(tokenized_samples["input_ids"])):
-            prev_wid = -1
-            word_ids_list = tokenized_samples.word_ids(batch_index=k)
-            existing_label_ids = all_samples_per_split["ner_tags"][k]
-            i = -1
-            adjusted_label_ids = []
-    
-            for wid in word_ids_list:
-                if(wid is None):
-                    adjusted_label_ids.append(-100)
-                elif(wid!=prev_wid):
-                    i = i + 1
-                    adjusted_label_ids.append(existing_label_ids[i])
-                    prev_wid = wid
+
+        labels = []
+        for i, label in enumerate(examples[f"ner_tags"]):
+            word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
+            previous_word_idx = None
+            label_ids = []
+            for word_idx in word_ids:  # Set the special tokens to -100.
+                if word_idx is None:
+                    label_ids.append(-100)
+                elif word_idx != previous_word_idx:  # Only label the first token of a given word.
+                    label_ids.append(label[word_idx])
                 else:
-                    label_name = label_list[existing_label_ids[i]]
-                    adjusted_label_ids.append(existing_label_ids[i])
-            
-            total_adjusted_labels.append(adjusted_label_ids)
-        tokenized_samples["labels"] = total_adjusted_labels
-        
-        return tokenized_samples
+                    label_ids.append(-100)
+                previous_word_idx = word_idx
+            labels.append(label_ids)
+
+        tokenized_inputs["labels"] = labels
+        return tokenized_inputs
 
     if training_args.do_train:
         if data_args.max_train_samples is not None:
@@ -370,39 +361,6 @@ def main():
                 desc="Running tokenizer on prediction dataset",
             )
 
-    # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
-    # predictions and label_ids field) and has to return a dictionary string to float.
-    metric = load_metric("seqeval")
-    def compute_metrics(p: EvalPrediction):
-        predictions, labels = p
-        predictions = np.argmax(predictions, axis=2)
-
-        # Remove ignored index (special tokens)
-        true_predictions = [
-            [id2label[p] for (p, l) in zip(prediction, label) if l != -100]
-            for prediction, label in zip(predictions, labels)
-        ]
-        true_labels = [
-            [id2label[l] for (p, l) in zip(prediction, label) if l != -100]
-            for prediction, label in zip(predictions, labels)
-        ]
-
-        results = metric.compute(predictions=true_predictions, references=true_labels)
-        flattened_results = {
-            "overall_precision": results["overall_precision"],
-            "overall_recall": results["overall_recall"],
-            "overall_f1": results["overall_f1"],
-            "overall_accuracy": results["overall_accuracy"],
-        }
-        for k in results.keys():
-            if(k not in flattened_results.keys()):
-                flattened_results[k+"_f1"]=results[k]["f1"]
-
-        print('\n###########################################################\n')
-        print(flattened_results)
-        print('\n###########################################################\n')
-        return flattened_results
-        #return {'macro-f1': results['overall_f1'], 'micro-f1':results['overall_f1']}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -413,7 +371,8 @@ def main():
         data_collator = None
 
     
-
+    seqeval = Seqeval(label_list=label_list)
+    
     # Initialize our Trainer
     training_args.evaluation_strategy = "epoch"
     trainer = Trainer(
@@ -421,7 +380,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics_for_token_classification,
+        compute_metrics=seqeval.compute_metrics_for_token_classification,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
@@ -479,51 +438,38 @@ def main():
         trainer.save_metrics("predict", metrics)
         #save_metrics("predict",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
 
-        output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
-        '''if trainer.is_world_process_zero():
-            with open(output_predict_file, "w") as writer:
-                for index, pred_list in enumerate(predictions):
-                    pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                    writer.write(f"{index}\t{pred_line}\n")'''
         
-        preds = predictions[:,0].shape
-        preds = np.argmax(predictions.squeeze(), axis=2)
-        #preds = preds.tolist()
-        textual_data = tokenizer.batch_decode(predict_dataset['input_ids'])
+        preds = np.argmax(predictions, axis=2)
+        textual_data = tokenizer.batch_decode(predict_dataset['input_ids'],skip_special_tokens=True)
 
         words = list()
         preds_final = list()
-        reference = list()
+        references = list()
 
-        for n, x in enumerate(textual_data):
+        for n, _ in enumerate(textual_data):
             w = textual_data[n].split()
             l = labels[n]
             p = preds[n]
             
-            zipped = list(zip(w,l,p))
-            #zipped = [x for x in zipped if x[0] not in ['[PAD]','[SEP]'] and x[1]!=-100]
-            zipped = [x for x in zipped if x[1] in id2label.keys()]
-            words_item = [x[0] for x in zipped]
-            words.append(words_item)
-            reference_item = [x[1] for x in zipped]
-            reference.append(reference_item)
-            preds_item = [x[2] for x in zipped]
-            preds_final.append(preds_item)
+            #Remove all labels with value -100
+            valid_indices = [n for n,x in enumerate(list(l))if x!=-100]
+            l = l[valid_indices]
+            p = p[valid_indices]
+
+            words.append(w)
+            references.append(l)
+            preds_final.append(p)
             
-        
-
-
-        output = list(zip(words,reference,preds_final,predictions))
-        output = pd.DataFrame(output, columns = ['words','reference','predictions','logits'])
+        output = list(zip(words,references,preds_final,predictions))
+        output = pd.DataFrame(output, columns = ['words','references','predictions','logits'])
         
         output['predictions_as_label']=output.predictions.apply(lambda l: [id2label[x] for x in l])
-        output['reference_as_label']=output.reference.apply(lambda l: [id2label[x] for x in l])
+        output['references_as_label']=output.references.apply(lambda l: [id2label[x] for x in l])
 
         output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
         output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
         output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
         output.to_csv(output_predict_file_new_csv)
-
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
