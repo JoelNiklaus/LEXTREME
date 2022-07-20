@@ -9,6 +9,7 @@ from transformers import EvalPrediction
 from scipy.special import expit
 from sklearn.metrics import f1_score
 import numpy as np
+from typing import Tuple
 
 
 def get_label_dict(main_path:str,label_column:str='label')->dict:
@@ -84,25 +85,6 @@ def compute_metrics_multi_label(p: EvalPrediction):
 
 
 
-
-
-def compute_metrics_multi_label_1(p: EvalPrediction):
-        # Fix gold labels
-        y_true = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
-        y_true[:, :-1] = p.label_ids
-        y_true[:, -1] = (np.sum(p.label_ids, axis=1) == 0).astype('int32')
-        # Fix predictions
-        logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        preds = (expit(logits) > 0.5).astype('int32')
-        y_pred = np.zeros((p.label_ids.shape[0], p.label_ids.shape[1] + 1), dtype=np.int32)
-        y_pred[:, :-1] = preds
-        y_pred[:, -1] = (np.sum(preds, axis=1) == 0).astype('int32')
-        # Compute scores
-        macro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='macro', zero_division=0)
-        micro_f1 = f1_score(y_true=y_true, y_pred=y_pred, average='micro', zero_division=0)
-        return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
-
-
 # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
 def compute_metrics_multi_class(p: EvalPrediction):
@@ -119,36 +101,44 @@ def compute_metrics_multi_class(p: EvalPrediction):
 
 # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
-metric = load_metric("seqeval")
-def compute_metrics_for_token_classification(p: EvalPrediction):
-    predictions, labels = p
-    predictions = np.argmax(predictions, axis=2)
 
-    # Remove ignored index (special tokens)
-    true_predictions = [
-        [p for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
-    true_labels = [
-        [l for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
-    ]
+class Seqeval():
 
-    results = metric.compute(predictions=true_predictions, references=true_labels)
-    flattened_results = {
-        "overall_precision": results["overall_precision"],
-        "overall_recall": results["overall_recall"],
-        "overall_f1": results["overall_f1"],
-        "overall_accuracy": results["overall_accuracy"],
-    }
-    for k in results.keys():
-        if(k not in flattened_results.keys()):
-            flattened_results[k+"_f1"]=results[k]["f1"]
+    def __init__(self, label_list):
+        self.metric = load_metric('seqeval')
+        self.label_list = label_list
 
-    print('\n###########################################################\n')
-    print(flattened_results)
-    print('\n###########################################################\n')
-    return flattened_results
+    
+
+    def compute_metrics_for_token_classification(self,p: EvalPrediction):
+        predictions, labels = p
+        predictions = np.argmax(predictions, axis=2)
+
+        # Remove ignored index (special tokens)
+        # Adding the prefix I- because the seqeval cuts the first letter because it, presumably, assumes that one of these tagging schemes has been used: ["IOB1", "IOB2", "IOE1", "IOE2", "IOBES", "BILOU"]
+        # By adding the prefix I- we make sure that the labels returned are the original labels
+        true_predictions = [
+            ['I-'+self.label_list[p] for (p, l) in zip(prediction, label) if l != -100] 
+            for prediction, label in zip(predictions, labels)
+        ]
+        true_labels = [
+            ['I-'+self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(predictions, labels)
+        ]
+
+        results = self.metric.compute(predictions=true_predictions, references=true_labels)
+        flattened_results = {
+            "overall_precision": results["overall_precision"],
+            "overall_recall": results["overall_recall"],
+            "overall_f1": results["overall_f1"],
+            "overall_accuracy": results["overall_accuracy"],
+        }
+        for k in results.keys():
+            if(k not in flattened_results.keys()):
+                flattened_results[k+"_f1"]=results[k]["f1"]
+
+
+        return flattened_results
 
 
 def convert_id2label(label_output:list,id2label:dict)->list:
