@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
-from helper import reduce_size, compute_metrics_multi_class
+from helper import reduce_size, compute_metrics_multi_class, make_predictions_multi_class
 import pandas as pd
 from datasets import load_dataset, Dataset
 from sklearn.metrics import f1_score
@@ -90,6 +90,13 @@ class DataTrainingArguments:
         default=None,
         metadata={
             "help": "For debugging purposes or quicker training, truncate the number of prediction examples to this "
+            "value if set."
+        },
+    )
+    language:Optional[str] = field(
+        default='de',
+        metadata={
+            "help": "For choosin the language "
             "value if set."
         },
     )
@@ -397,38 +404,8 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input_sentence")
 
-        max_predict_samples = (
-            data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
-        )
-        metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
-
-        trainer.log_metrics("predict", metrics)
-        trainer.save_metrics("predict", metrics)
-
-        output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
-        if trainer.is_world_process_zero():
-            with open(output_predict_file, "w") as writer:
-                for index, pred_list in enumerate(predictions):
-                    pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                    writer.write(f"{index}\t{pred_line}\n")
-
-
-        predict_dataset_df = pd.DataFrame(predict_dataset)
-
-        preds = np.argmax(predictions, axis=-1)
-
-        output = list(zip(predict_dataset_df.input_sentence.tolist(),labels,preds,predictions))
-        output = pd.DataFrame(output, columns = ['input_sentence','reference','predictions','logits'])
-        
-        output['predictions_as_label']=output.predictions.apply(lambda x: id2label[x])
-        output['reference_as_label']=output.reference.apply(lambda x: id2label[x])
-        
-        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
-        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
-        output.to_csv(output_predict_file_new_csv)
 
 
     # Clean up checkpoints

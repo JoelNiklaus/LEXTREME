@@ -29,6 +29,15 @@ def get_label_dict(main_path:str,label_column:str='label')->dict:
 
     return label_dict
 
+def merge_dicts(dict_args):
+    """
+    Given any number of dictionaries, shallow copy and merge into a new dict,
+    precedence goes to key-value pairs in latter dictionaries.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
 
 
 def create_dataset(path:str,label_dict:dict,text_column:str='text', label_column:str='label'):
@@ -161,8 +170,61 @@ def convert_id2label(label_output:list,id2label:dict)->list:
 
 
 
+def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='text'):
+    
+    language_specific_metrics = list()
+    if data_args.language=='all_languages':
+        
+        for l in list_of_languages:
+            
+            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
+
+            predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+
+            language_specific_metrics.append(metrics)
 
 
+        
+
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+
+    
+
+    max_predict_samples = (
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+    )
+    metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
+
+    language_specific_metrics.append(metrics)
+
+    language_specific_metrics = merge_dicts(language_specific_metrics)
+
+    trainer.log_metrics("predict", language_specific_metrics)
+    trainer.save_metrics("predict", language_specific_metrics)
+
+
+    output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
+    if trainer.is_world_process_zero():
+        with open(output_predict_file, "w") as writer:
+            for index, pred_list in enumerate(predictions):
+                pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
+                writer.write(f"{index}\t{pred_line}\n")
+
+
+    predict_dataset_df = pd.DataFrame(predict_dataset)
+
+    preds = np.argmax(predictions, axis=-1)
+
+    output = list(zip(predict_dataset_df[name_of_input_field].tolist(),labels,preds,predictions))
+    output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
+    
+    output['predictions_as_label']=output.predictions.apply(lambda x: id2label[x])
+    output['reference_as_label']=output.reference.apply(lambda x: id2label[x])
+    
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output.to_csv(output_predict_file_new_csv)
 
 
 
