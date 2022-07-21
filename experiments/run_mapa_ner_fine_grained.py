@@ -12,7 +12,7 @@ import pandas as pd
 import re
 
 import datasets
-from datasets import load_dataset, load_metric
+from datasets import load_dataset, Dataset
 from helper import reduce_size, Seqeval, make_predictions_ner
 from sklearn.metrics import f1_score
 from helper import reduce_size
@@ -98,7 +98,7 @@ class DataTrainingArguments:
         },
     )
     language:Optional[str] = field(
-        default='el',
+        default='all_languages',
         metadata={
             "help": "For choosin the language "
             "value if set."
@@ -111,7 +111,6 @@ class DataTrainingArguments:
             "value if set."
         },
     )
-
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -226,12 +225,15 @@ def main():
     # Downloading and loading eurlex dataset from the hub.
 
 
-    ner_dataset = load_dataset("joelito/greek_legal_ner")
+    ner_dataset = load_dataset("joelito/mapa")
+
+    
+
 
     label2id = dict()
     id2label =dict()
     label_list = set()
-    for labels in ner_dataset['train']['ner']:
+    for labels in ner_dataset['train']['fine_grained']:
         for l in labels:
             label_list.add(l)
     
@@ -244,16 +246,15 @@ def main():
 
     def add_label_tags(examples):
         
-        examples["ner_tags"] = [[label2id[l] for l in label] for label in examples["ner"]]
+        examples["ner_tags"] = [[label2id[l] for l in label] for label in examples["fine_grained"]]
 
-        del examples["ner"]
+        del examples["fine_grained"]
         
         return examples
 
     ner_dataset = ner_dataset.map(add_label_tags, batched=True)
 
     
-
     if data_args.running_mode=="experimental":
         train_dataset = reduce_size(ner_dataset['train'],1000)
         eval_dataset = reduce_size(ner_dataset['validation'],200)
@@ -264,13 +265,26 @@ def main():
         predict_dataset = ner_dataset['test']
 
 
+    if data_args.language!="all_languages":
+        dataset_df = pd.DataFrame(train_dataset)
+        dataset_df = dataset_df[dataset_df.language==data_args.language]
+        train_dataset = Dataset.from_pandas(dataset_df)
+        
+        dataset_df = pd.DataFrame(eval_dataset)
+        dataset_df = dataset_df[dataset_df.language==data_args.language]
+        eval_dataset = Dataset.from_pandas(dataset_df)
+
+        dataset_df = pd.DataFrame(predict_dataset)
+        dataset_df = dataset_df[dataset_df.language==data_args.language]
+        predict_dataset = Dataset.from_pandas(dataset_df)
+
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task="el_greek_legal_ner",
+        finetuning_task=data_args.language+"_mapa_ner_fine_grained",
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -307,7 +321,7 @@ def main():
 
     #Get the values for input_ids, token_type_ids, attention_mask
     def preprocess_function(examples):
-        tokenized_inputs = tokenizer.batch_encode_plus(examples["words"],
+        tokenized_inputs = tokenizer.batch_encode_plus(examples["tokens"],
             is_split_into_words=True,
             padding=padding,
             max_length=data_args.max_seq_length,
@@ -376,10 +390,10 @@ def main():
         data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
-
+    
     
     seqeval = Seqeval(label_list=label_list)
-    
+
     # Initialize our Trainer
     training_args.evaluation_strategy = "epoch"
     trainer = Trainer(
@@ -434,6 +448,7 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
+        
         make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args)
 
     # Clean up checkpoints

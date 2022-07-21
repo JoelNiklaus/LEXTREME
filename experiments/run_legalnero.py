@@ -13,7 +13,7 @@ import re
 
 import datasets
 from datasets import load_dataset, load_metric
-from helper import reduce_size, Seqeval
+from helper import reduce_size, Seqeval, make_predictions_ner
 from sklearn.metrics import f1_score
 from helper import reduce_size
 import numpy as np
@@ -94,6 +94,13 @@ class DataTrainingArguments:
         default=None,
         metadata={
             "help": "For debugging purposes or quicker training, truncate the number of prediction examples to this "
+            "value if set."
+        },
+    )
+    language:Optional[str] = field(
+        default='ro',
+        metadata={
+            "help": "For choosin the language "
             "value if set."
         },
     )
@@ -426,49 +433,7 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
-
-        max_predict_samples = (
-            data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
-        )
-        metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
-
-        trainer.log_metrics("predict", metrics)
-        trainer.save_metrics("predict", metrics)
-        #save_metrics("predict",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
-
-        
-        preds = np.argmax(predictions, axis=2)
-        textual_data = tokenizer.batch_decode(predict_dataset['input_ids'],skip_special_tokens=True)
-
-        words = list()
-        preds_final = list()
-        references = list()
-
-        for n, _ in enumerate(textual_data):
-            w = textual_data[n].split()
-            l = labels[n]
-            p = preds[n]
-            
-            #Remove all labels with value -100
-            valid_indices = [n for n,x in enumerate(list(l))if x!=-100]
-            l = l[valid_indices]
-            p = p[valid_indices]
-
-            words.append(w)
-            references.append(l)
-            preds_final.append(p)
-            
-        output = list(zip(words,references,preds_final,predictions))
-        output = pd.DataFrame(output, columns = ['words','references','predictions','logits'])
-        
-        output['predictions_as_label']=output.predictions.apply(lambda l: [id2label[x] for x in l])
-        output['references_as_label']=output.references.apply(lambda l: [id2label[x] for x in l])
-
-        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
-        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
-        output.to_csv(output_predict_file_new_csv)
+        make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]

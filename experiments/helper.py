@@ -288,3 +288,67 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
 
 
 
+def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,training_args,list_of_languages=[]):
+    
+    language_specific_metrics = list()
+    if data_args.language=='all_languages':
+        
+        for l in list_of_languages:
+            
+            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
+
+            if len(predict_dataset_filtered['language'])>0:
+
+                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+
+                language_specific_metrics.append(metrics)
+
+
+        
+
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+
+    max_predict_samples = (
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+    )
+    metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
+
+    language_specific_metrics.append(metrics)
+
+    language_specific_metrics = merge_dicts(language_specific_metrics)
+
+    trainer.log_metrics("predict", language_specific_metrics)
+    trainer.save_metrics("predict", language_specific_metrics)
+
+    
+    preds = np.argmax(predictions, axis=2)
+    textual_data = tokenizer.batch_decode(predict_dataset['input_ids'],skip_special_tokens=True)
+
+    words = list()
+    preds_final = list()
+    references = list()
+
+    for n, _ in enumerate(textual_data):
+        w = textual_data[n].split()
+        l = labels[n]
+        p = preds[n]
+        
+        #Remove all labels with value -100
+        valid_indices = [n for n,x in enumerate(list(l))if x!=-100]
+        l = l[valid_indices]
+        p = p[valid_indices]
+
+        words.append(w)
+        references.append(l)
+        preds_final.append(p)
+        
+    output = list(zip(words,references,preds_final,predictions))
+    output = pd.DataFrame(output, columns = ['words','references','predictions','logits'])
+    
+    output['predictions_as_label']=output.predictions.apply(lambda l: [id2label[x] for x in l])
+    output['references_as_label']=output.references.apply(lambda l: [id2label[x] for x in l])
+
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output.to_csv(output_predict_file_new_csv)
