@@ -13,7 +13,7 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
-from helper import compute_metrics_multi_label, reduce_size, convert_id2label
+from helper import compute_metrics_multi_label, reduce_size, convert_id2label, make_predictions_multi_label
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
@@ -406,38 +406,10 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
 
-        max_predict_samples = (
-            data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
-        )
-        metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
+        langs = ["en","da","es","fr","hu","it", "nl", "nn", "no", "pl", "sv", "te"]
 
-        trainer.log_metrics("predict", metrics)
-        trainer.save_metrics("predict", metrics)
-
-        output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
-        if trainer.is_world_process_zero():
-            with open(output_predict_file, "w") as writer:
-                for index, pred_list in enumerate(predictions):
-                    pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                    writer.write(f"{index}\t{pred_line}\n")
-
-        predict_dataset_df = pd.DataFrame(predict_dataset)
-
-        preds = (expit(predictions) > 0.5).astype('int32')
-        
-
-        output = list(zip(predict_dataset_df.text.tolist(),labels,preds,predictions))
-        output = pd.DataFrame(output, columns = ['text','reference','predictions','logits'])
-        
-        output['predictions_as_label']=output.predictions.apply(lambda x: convert_id2label(x,id2label))
-        output['reference_as_label']=output.reference.apply(lambda x: convert_id2label(x,id2label))
-
-        output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-        output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
-        output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
-        output.to_csv(output_predict_file_new_csv)
+        make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=langs,name_of_input_field='text')
 
 
     # Clean up checkpoints
