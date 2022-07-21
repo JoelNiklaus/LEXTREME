@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
-from helper import reduce_size, compute_metrics_multi_class
+from helper import reduce_size, compute_metrics_multi_class, merge_dicts, make_predictions_multi_class
 import pandas as pd
 from datasets import load_dataset, Dataset
 from sklearn.metrics import f1_score
@@ -392,15 +392,36 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
+        language_specific_metrics = list()
+        if data_args.language=='all_languages':
+            
+            for l in ["de", "fr", "it"]:
+                predict_dataset_df = pd.DataFrame(predict_dataset)
+                predict_dataset_df_filtered = predict_dataset_df[predict_dataset_df.language==l]
+                predict_dataset_filtered = Dataset.from_pandas(predict_dataset_df_filtered)
+                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix="for_language_"+l+"_predict")
+
+                language_specific_metrics.append(metrics)
+
+
+            
+
         predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+
+        
 
         max_predict_samples = (
             data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
         )
         metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
 
-        trainer.log_metrics("predict", metrics)
-        trainer.save_metrics("predict", metrics)
+        language_specific_metrics.append(metrics)
+
+        language_specific_metrics = merge_dicts(language_specific_metrics)
+
+        trainer.log_metrics("predict", language_specific_metrics)
+        trainer.save_metrics("predict", language_specific_metrics)
+
 
         output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
         if trainer.is_world_process_zero():
@@ -424,6 +445,8 @@ def main():
         output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
         output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
         output.to_csv(output_predict_file_new_csv)
+
+        
 
 
     # Clean up checkpoints
