@@ -16,7 +16,7 @@ def merge_dicts(*dict_args):
 
 
 
-log_path = Path('../logs/')
+log_path = Path('../scripts/logs/')
 
 #directories = [x[0] for x in os.walk(log_path)]
 directories = [f for f in log_path.glob('**/*') if f.is_dir()]
@@ -38,5 +38,7 @@ for d in directories:
 
 
 overview_df = pd.DataFrame(overview)
+columns_without_finetuning_task = [c for c in overview_df.columns.tolist() if c !='finetuning_task']
+overview_df = overview_df[['finetuning_task']+columns_without_finetuning_task]
 print(overview_df)
 overview_df.to_csv('../overview_of_results.csv',index=False)

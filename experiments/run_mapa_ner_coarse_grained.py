@@ -263,17 +263,17 @@ def main():
         predict_dataset = ner_dataset['test']
 
     if data_args.language!="all_languages":
-        dataset_df = pd.DataFrame(train_dataset)
-        dataset_df = dataset_df[dataset_df.language==data_args.language]
-        train_dataset = Dataset.from_pandas(dataset_df)
+        train_dataset_df = pd.DataFrame(train_dataset)
+        train_dataset_df = train_dataset_df[train_dataset_df.language==data_args.language]
+        train_dataset = Dataset.from_pandas(train_dataset_df)
         
-        dataset_df = pd.DataFrame(eval_dataset)
-        dataset_df = dataset_df[dataset_df.language==data_args.language]
-        eval_dataset = Dataset.from_pandas(dataset_df)
+        eval_dataset_df = pd.DataFrame(eval_dataset)
+        eval_dataset_df = eval_dataset_df[eval_dataset_df.language==data_args.language]
+        eval_dataset = Dataset.from_pandas(eval_dataset_df)
 
-        dataset_df = pd.DataFrame(predict_dataset)
-        dataset_df = dataset_df[dataset_df.language==data_args.language]
-        predict_dataset = Dataset.from_pandas(dataset_df)
+        predict_dataset_df = pd.DataFrame(predict_dataset)
+        predict_dataset_df = predict_dataset_df[predict_dataset_df.language==data_args.language]
+        predict_dataset = Dataset.from_pandas(predict_dataset_df)
 
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently

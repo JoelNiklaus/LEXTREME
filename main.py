@@ -24,6 +24,20 @@ def adjust_language_list(task:str,language:str):
     pass
 '''
 
+def adjust_value(value=None):
+
+    '''line_list = list()
+    
+    if value is not None:
+        with open(script,'r') as f:
+            for line in f:
+                if 'BATCH_SIZE=' in line:
+                    re.sub('BATCH_SIZE=)'''
+    pass
+
+    
+
+
 def run_experiment(language_model_type='all',running_mode='default', task='all'):
     
     if language_model_type=='all':
