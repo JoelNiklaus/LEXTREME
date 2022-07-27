@@ -7,7 +7,7 @@ import json as js
 from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, matthews_corrcoef
 import numpy as np
 from typing import Tuple
 
@@ -101,7 +101,29 @@ def compute_metrics_multi_class(p: EvalPrediction):
     preds = np.argmax(logits, axis=1)
     macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    accuracy_not_noramlized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
+    precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    precision_weighted = precision_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    recall_score_macro = recall_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    recall_score_micro = recall_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    recall_score_weighted = recall_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    mcc = matthews_corrcoef(y_true=p.label_ids, y_pred=preds)
+    return {'macro-f1': macro_f1, 
+            'micro-f1': micro_f1,
+            'weighted-f1':weighted_f1,
+            'mcc':mcc, 
+            'accuracy_normalized':accuracy_normalized,
+            'accuracy_not_noramlized':accuracy_not_noramlized,
+            'macro-precision': precision_macro,
+            'micro-precision':precision_micro,
+            'weighted-precision': precision_weighted,
+            'macro-recall_score':recall_score_macro,
+            'micro-recall_score': recall_score_micro,
+            'weighted-recall_score': recall_score_weighted
+            }
 
 
 
