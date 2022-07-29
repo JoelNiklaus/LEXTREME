@@ -1,4 +1,2 @@
 microsoft/mdeberta-v3-base
 xlm-roberta-base
-bert-base-multilingual-cased
-bert-base-multilingual-uncased
