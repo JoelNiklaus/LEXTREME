@@ -33,7 +33,7 @@ task_code_mapping = {'run_greek_legal_ner': 'run_greek_legal_ner.py',
     'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
     'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
     'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    'run_multi_eurlex': 'run_multi_eurlex.py',
+    #'run_multi_eurlex': 'run_multi_eurlex.py',
     'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
     'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
@@ -50,7 +50,7 @@ def generate_command(**data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs/{LANGUAGE}'+'_'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model micro-f1 --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --language {LANGUAGE} --running_mode {RUNNING_MODE}'
+    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs/{LANGUAGE}'+'_'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model micro-f1 --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
 
     
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"])
@@ -100,6 +100,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
         models_to_be_used = models_to_be_used_large
 
     models_to_be_used = list(set(models_to_be_used))
+    print(models_to_be_used)
 
     commands_already_satisfied = list()
     all_commands_to_run = list()

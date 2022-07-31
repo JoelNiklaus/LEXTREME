@@ -13,7 +13,7 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
-from helper import compute_metrics_multi_label, reduce_size, make_predictions_multi_label
+from helper import compute_metrics_multi_label, reduce_size, make_predictions_multi_label, split_into_languages
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
@@ -224,12 +224,16 @@ def main():
 
     if training_args.do_train:
         train_dataset = load_dataset("multi_eurlex", data_args.language, split="train", cache_dir=model_args.cache_dir)
+        train_dataset = split_into_languages(train_dataset)
+        
 
     if training_args.do_eval:
         eval_dataset = load_dataset("multi_eurlex", data_args.language, split="validation", cache_dir=model_args.cache_dir)
+        eval_dataset = split_into_languages(eval_dataset)
 
     if training_args.do_predict:
         predict_dataset = load_dataset("multi_eurlex", data_args.language, split="test", cache_dir=model_args.cache_dir)
+        predict_dataset = split_into_languages(predict_dataset)
 
 
 

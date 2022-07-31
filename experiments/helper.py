@@ -12,6 +12,31 @@ import numpy as np
 from typing import Tuple
 
 
+def split_into_languages(dataset):
+    dataset_new = list()
+    
+    dataset_df = pd.DataFrame(dataset)
+    
+    for item in dataset_df.to_dict(orient='records'):
+        celex_id = item['celex_id']
+        labels = item['labels']
+        for k,v in item.items():
+            if k=='text':
+                for language, document in v.items():
+                    item_new = dict()
+                    item_new['language']=language
+                    item_new['text']=document
+                    item_new['celex_id']=celex_id
+                    item_new['labels']=labels
+                    dataset_new.append(item_new)
+    
+    dataset_new = pd.DataFrame(dataset_new)
+    
+    dataset_new = Dataset.from_pandas(dataset_new)
+    
+    return  dataset_new
+
+
 def get_label_dict(main_path:str,label_column:str='label')->dict:
 
     all_labels = set()
@@ -89,8 +114,30 @@ def compute_metrics_multi_label(p: EvalPrediction):
     
     macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-
-    return {'macro-f1': macro_f1, 'micro-f1': micro_f1}
+    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    accuracy_not_noramlized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
+    precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    precision_weighted = precision_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    recall_score_macro = recall_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    recall_score_micro = recall_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    recall_score_weighted = recall_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    #mcc = matthews_corrcoef(y_true=p.label_ids, y_pred=preds)
+    
+    return {'macro-f1': macro_f1, 
+            'micro-f1': micro_f1,
+            'weighted-f1':weighted_f1,
+            #'mcc':mcc, 
+            'accuracy_normalized':accuracy_normalized,
+            'accuracy_not_noramlized':accuracy_not_noramlized,
+            'macro-precision': precision_macro,
+            #'micro-precision':precision_micro,
+            'weighted-precision': precision_weighted,
+            'macro-recall_score':recall_score_macro,
+            #'micro-recall_score': recall_score_micro,
+            'weighted-recall_score': recall_score_weighted
+            }
 
 
 
@@ -118,10 +165,10 @@ def compute_metrics_multi_class(p: EvalPrediction):
             'accuracy_normalized':accuracy_normalized,
             'accuracy_not_noramlized':accuracy_not_noramlized,
             'macro-precision': precision_macro,
-            'micro-precision':precision_micro,
+            #'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
             'macro-recall_score':recall_score_macro,
-            'micro-recall_score': recall_score_micro,
+            #'micro-recall_score': recall_score_micro,
             'weighted-recall_score': recall_score_weighted
             }
 
@@ -204,10 +251,7 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
             predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
 
             language_specific_metrics.append(metrics)
-
-
         
-
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
 
     
@@ -255,6 +299,7 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     language_specific_metrics = list()
     if data_args.language=='all_languages':
         
+        
         for l in list_of_languages:
             
             predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
@@ -264,8 +309,6 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
                 predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
 
                 language_specific_metrics.append(metrics)
-
-
         
 
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
