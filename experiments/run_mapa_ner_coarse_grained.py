@@ -156,13 +156,17 @@ class ModelArguments:
     )
 
 
-def main():
+def main(batch_size=None):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    if batch_size is not None:
+        training_args.per_device_train_batch_size=batch_size
+        training_args.per_device_eval_batch_size=batch_size
 
 
     # Setup distant debugging if needed
@@ -231,7 +235,7 @@ def main():
     label2id = dict()
     id2label =dict()
     label_list = set()
-    for labels in ner_dataset['train']['coarse_grained']:
+    for labels in ner_dataset['train']['coarse_grained'] + ner_dataset['validation']['coarse_grained'] + ner_dataset['test']['coarse_grained']:
         for l in labels:
             label_list.add(l)
     
@@ -392,7 +396,7 @@ def main():
     seqeval = Seqeval(label_list=label_list)
 
     # Initialize our Trainer
-    training_args.evaluation_strategy = "epoch"
+    training_args.metric_for_best_model = 'overall_f1'
     trainer = Trainer(
         model=model,
         args=training_args,
