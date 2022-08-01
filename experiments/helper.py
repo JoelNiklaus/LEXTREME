@@ -204,7 +204,7 @@ class Seqeval():
             for prediction, label in zip(predictions, labels)
         ]
 
-        results = self.metric.compute(predictions=true_predictions, references=true_labels)
+        results = self.metric.compute(predictions=true_predictions, references=true_labels, zero_division=0)
         flattened_results = {
             "overall_precision": results["overall_precision"],
             "overall_recall": results["overall_recall"],
