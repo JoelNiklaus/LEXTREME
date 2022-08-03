@@ -33,6 +33,7 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
+    IntervalStrategy
 )
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
@@ -366,6 +367,9 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+    training_args.evaluation_strategy = IntervalStrategy.STEPS
+    training_args.eval_steps = 1000
+
     trainer = MultilabelTrainer(
         model=model,
         args=training_args,

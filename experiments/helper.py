@@ -132,10 +132,10 @@ def compute_metrics_multi_label(p: EvalPrediction):
             'accuracy_normalized':accuracy_normalized,
             'accuracy_not_noramlized':accuracy_not_noramlized,
             'macro-precision': precision_macro,
-            #'micro-precision':precision_micro,
+            'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
             'macro-recall_score':recall_score_macro,
-            #'micro-recall_score': recall_score_micro,
+            'micro-recall_score': recall_score_micro,
             'weighted-recall_score': recall_score_weighted
             }
 
@@ -165,10 +165,10 @@ def compute_metrics_multi_class(p: EvalPrediction):
             'accuracy_normalized':accuracy_normalized,
             'accuracy_not_noramlized':accuracy_not_noramlized,
             'macro-precision': precision_macro,
-            #'micro-precision':precision_micro,
+            'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
             'macro-recall_score':recall_score_macro,
-            #'micro-recall_score': recall_score_micro,
+            'micro-recall_score': recall_score_micro,
             'weighted-recall_score': recall_score_weighted
             }
 
