@@ -119,8 +119,10 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
             if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br"]:
                 metric_for_best_model="overall_f1"
+            elif task in ["run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
+                metric_for_best_model="macro-f1"
             else:
-                metric_for_best_model="micro-f1"
+                metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
             script_new = generate_command(gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
@@ -145,8 +147,10 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
             if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br"]:
                 metric_for_best_model="overall_f1"
+            elif task in ["run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
+                metric_for_best_model="macro-f1"
             else:
-                metric_for_best_model="micro-f1"
+                metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
             script_new = generate_command(gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
