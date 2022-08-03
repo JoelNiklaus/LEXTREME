@@ -396,7 +396,7 @@ def main(batch_size=None):
     seqeval = Seqeval(label_list=label_list)
 
     # Initialize our Trainer
-    training_args.metric_for_best_model = 'overall_f1'
+    #training_args.metric_for_best_model = 'overall_f1'
     trainer = Trainer(
         model=model,
         args=training_args,

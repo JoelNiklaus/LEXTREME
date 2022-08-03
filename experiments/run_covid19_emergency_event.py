@@ -13,7 +13,7 @@ import numpy as np
 
 import datasets
 from datasets import load_dataset, Dataset
-from helper import compute_metrics_multi_label, reduce_size, convert_id2label, make_predictions_multi_label
+from helper import compute_metrics_multi_label, reduce_size, make_predictions_multi_label
 from sklearn.metrics import f1_score
 from trainer import MultilabelTrainer
 from scipy.special import expit
