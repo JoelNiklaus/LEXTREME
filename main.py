@@ -110,7 +110,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     number_of_parallel_commands = len(gpu_number)-1
     commands_to_run = list()
     if task=='all': 
-        all_variables = [[t for t in list(task_code_mapping.keys()) if t!='run_multi_eurlex'],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
+        all_variables = [[t for t in list(task_code_mapping.keys()) if t!='run_multi_eurlex']+['run_multi_eurlex'],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
         all_variables_perturbations = list(itertools.product(*all_variables))
         all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]        
         all_variables_perturbations = list(zip(cycle(gpu_number), all_variables_perturbations)) 
@@ -213,6 +213,6 @@ if __name__=='__main__':
     
     
 
-    run_experiment(args.language_model_type,args.running_mode,args.task,batch_size=args.batch_size,num_train_epochs=args.num_train_epochs,list_of_seeds=args.list_of_seeds)
+    run_experiment(language_model_type=args.language_model_type,running_mode=args.running_mode,task=args.task,batch_size=args.batch_size,num_train_epochs=args.num_train_epochs,list_of_seeds=args.list_of_seeds)
 
     

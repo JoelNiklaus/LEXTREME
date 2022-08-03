@@ -237,6 +237,10 @@ def main():
         predict_dataset = split_into_languages(predict_dataset)
 
 
+    if data_args.running_mode=='experimental':
+        train_dataset = reduce_size(train_dataset, 1000)
+        eval_dataset = reduce_size(eval_dataset,200)
+        predict_dataset = reduce_size(predict_dataset,100)
 
     # Labels
     label_list = set()
@@ -251,11 +255,6 @@ def main():
     for l in label_list:
         label2id[l]=label_list.index(l)
         id2label[label_list.index(l)]=l
-
-    if data_args.running_mode=='experimental':
-        train_dataset = reduce_size(train_dataset, 1000)
-        eval_dataset = reduce_size(eval_dataset,200)
-        predict_dataset = reduce_size(predict_dataset,100)
 
     def convert_funct(dataset):
         dataset_df = pd.DataFrame(dataset)
