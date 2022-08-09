@@ -3,7 +3,6 @@
 
 
 import logging
-import datetime
 import os
 import random
 import sys
@@ -12,10 +11,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length
 import pandas as pd
 from datasets import load_dataset, Dataset
-from sklearn.metrics import f1_score
 import numpy as np
 import glob
 import shutil
@@ -26,7 +24,6 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     DataCollatorWithPadding,
-    DebertaTokenizer, 
     DebertaForSequenceClassification,
     HfArgumentParser,
     TrainingArguments,
@@ -259,15 +256,6 @@ def main():
         data_args.max_eval_samples=200
         data_args.max_predict_samples=100
 
-    train_dataset =pd.DataFrame(train_dataset)
-    train_dataset = Dataset.from_pandas(train_dataset)
-
-    eval_dataset =pd.DataFrame(eval_dataset)
-    eval_dataset = Dataset.from_pandas(eval_dataset)
-
-    predict_dataset =pd.DataFrame(predict_dataset)
-    predict_dataset = Dataset.from_pandas(predict_dataset)
-
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
@@ -283,15 +271,17 @@ def main():
     if config.model_type == 'big_bird':
         config.attention_type = 'original_full'
 
+    
+    #DebertaTokenizer is buggy, therefore we use the AutTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+        do_lower_case=model_args.do_lower_case,
+        cache_dir=model_args.cache_dir,
+        use_fast=model_args.use_fast_tokenizer,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
     if bool(re.search('deberta',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('deberta',str(model_args.model_name_or_path),re.IGNORECASE)):
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
         model = DebertaForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -302,14 +292,6 @@ def main():
             use_auth_token=True if model_args.use_auth_token else None,
         )
     else:
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
         model = AutoModelForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -326,6 +308,10 @@ def main():
     else:
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
+
+    
+    # Chossing the optimal maximal sequence length depending on the dataset
+    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):
         # Tokenize the texts
