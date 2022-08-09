@@ -9,7 +9,8 @@ from transformers import EvalPrediction
 from scipy.special import expit
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, matthews_corrcoef
 import numpy as np
-from typing import Tuple
+import datetime
+import wandb
 
 
 def split_into_languages(dataset):
@@ -417,3 +418,14 @@ def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,tr
     output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
+
+
+
+def config_wandb(training_args, model_args, data_args):
+
+    time_now = datetime.datetime.now().isoformat()
+    time_now = datetime.datetime.now().isoformat()
+    project_name = "LEXTREME-"+data_args.finetuning_task
+    wandb.init(project=project_name)
+    wandb.run.name='german_argument_mining_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
+
