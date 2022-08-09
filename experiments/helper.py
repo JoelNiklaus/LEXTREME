@@ -100,13 +100,6 @@ def save_metrics(split,metric_results:dict,output_path:str):
             js.dump(metric_results,f,ensure_ascii=False,indent=2)
 
 
-
-def reduce_size(dataset,n):
-    dataset_df = pd.DataFrame(dataset)
-    dataset_df = dataset_df[:n]
-    dataset_new = Dataset.from_pandas(dataset_df)
-    return dataset_new
-
 # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
 def compute_metrics_multi_label(p: EvalPrediction):
