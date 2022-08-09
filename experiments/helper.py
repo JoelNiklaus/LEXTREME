@@ -420,5 +420,13 @@ def config_wandb(training_args, model_args, data_args):
     time_now = datetime.datetime.now().isoformat()
     project_name = "LEXTREME-"+data_args.finetuning_task
     wandb.init(project=project_name)
-    wandb.run.name='german_argument_mining_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
+    wandb.run.name=data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
 
+def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset):
+    all_inputs = train_dataset['input'] + eval_dataset['input'] + predict_dataset['input']
+    all_inputs = [len(tokenizer(i)['input_ids']) for i in all_inputs]
+    max_length = max(all_inputs)
+    if max_length <=512:
+        return max_length
+    else:
+        return 512
