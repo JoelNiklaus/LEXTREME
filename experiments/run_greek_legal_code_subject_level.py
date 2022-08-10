@@ -6,14 +6,15 @@ import logging
 import os
 import random
 import sys
+import re
 from dataclasses import dataclass, field
 from typing import Optional
+import json as js
 
 import datasets
-from helper import reduce_size, compute_metrics_multi_class, make_predictions_multi_class
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification
 import pandas as pd
-from datasets import load_dataset, Dataset
-from sklearn.metrics import f1_score
+from datasets import load_dataset
 import numpy as np
 import glob
 import shutil
@@ -24,7 +25,7 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     DataCollatorWithPadding,
-    EvalPrediction,
+    DebertaForSequenceClassification,
     HfArgumentParser,
     TrainingArguments,
     default_data_collator,
@@ -104,8 +105,13 @@ class DataTrainingArguments:
     running_mode:Optional[str] = field(
         default='default',
         metadata={
-            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
-            "value if set."
+            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
+        },
+    )
+    finetuning_task:Optional[str] = field(
+        default='greek_legal_code_subject',
+        metadata={
+            "help": "Name of the finetuning task"
         },
     )
 
@@ -160,6 +166,8 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
 
     # Setup distant debugging if needed
@@ -224,21 +232,20 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("greek_legal_code","subject",split='train', cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("greek_legal_code","subject",split='validation', cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("greek_legal_code","subject",split='test', cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
 
     
     # Labels
-    label_list = set()
-    for l in train_dataset['label']+eval_dataset['label']+predict_dataset['label']:
-        label_list.add(l)
-    label_list =sorted(list(label_list))
+    with open('labels_greek_legal_code_chapter.txt','r') as f:
+        label_list = js.load(f)["greek_legal_code_subject"]["label_classes"]
+    
     num_labels = len(label_list)
 
     label2id = dict()
@@ -249,18 +256,17 @@ def main():
         id2label[n]=l
 
     if data_args.running_mode=='experimental':
-        train_dataset = reduce_size(train_dataset, 1000)
-        eval_dataset = reduce_size(eval_dataset,200)
-        predict_dataset = reduce_size(predict_dataset,100)
-
-    
+        data_args.max_train_samples=1000
+        data_args.max_eval_samples=200
+        data_args.max_predict_samples=100
+  
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=data_args.language+"_greek_legal_code_subject_level",
+        finetuning_task= data_args.language+'_'+data_args.finetuning_task,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -269,22 +275,7 @@ def main():
     if config.model_type == 'big_bird':
         config.attention_type = 'original_full'
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, config=config)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -297,12 +288,11 @@ def main():
     def preprocess_function(examples):
         # Tokenize the texts
         batch = tokenizer(
-            examples["text"],
+            examples["input"],
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True,
         )
-        #batch["label"] = [label_list[label] for label in examples["label"]]
 
         return batch
 
@@ -342,7 +332,6 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on prediction dataset",
             )
-    
     
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
@@ -399,7 +388,8 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field='text')
+        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input")
+
 
 
     # Clean up checkpoints

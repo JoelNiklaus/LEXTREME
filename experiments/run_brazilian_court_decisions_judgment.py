@@ -12,7 +12,7 @@ from typing import Optional
 import pandas as pd
 
 import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
 from datasets import load_dataset, Dataset
 import numpy as np
 import glob
@@ -168,7 +168,6 @@ def main():
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
-
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
         # Distant debugging - see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
@@ -273,34 +272,7 @@ def main():
         config.attention_type = 'original_full'
     
     
-    #DebertaTokenizer is buggy, therefore we use the AutTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    if bool(re.search('deberta',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('deberta',str(model_args.model_name_or_path),re.IGNORECASE)):
-        model = DebertaForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-    else:
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, config=config)
 
     # Preprocessing the datasets
     # Padding strategy

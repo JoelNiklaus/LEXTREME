@@ -11,9 +11,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
 import pandas as pd
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 import numpy as np
 import glob
 import shutil
@@ -112,7 +112,7 @@ class DataTrainingArguments:
             "help": "Name of the finetuning task"
         },
     )
-    #finetuning_task
+
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
@@ -272,34 +272,7 @@ def main():
         config.attention_type = 'original_full'
 
     
-    #DebertaTokenizer is buggy, therefore we use the AutTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    if bool(re.search('deberta',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('deberta',str(model_args.model_name_or_path),re.IGNORECASE)):
-        model = DebertaForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-    else:
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, config=config)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -310,7 +283,7 @@ def main():
         padding = False
 
     
-    # Chossing the optimal maximal sequence length depending on the dataset
+    # Choosing the optimal maximal sequence length depending on the dataset
     data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):

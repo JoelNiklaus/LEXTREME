@@ -2,19 +2,18 @@
 # coding=utf-8
 
 
-from cProfile import label
 import logging
 import os
 import random
 import sys
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
 
 import datasets
-from helper import reduce_size, compute_metrics_multi_class, make_predictions_multi_class
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
 from datasets import load_dataset, Dataset
-from sklearn.metrics import f1_score
 import numpy as np
 import glob
 import shutil
@@ -26,7 +25,7 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
     DataCollatorWithPadding,
-    EvalPrediction,
+    DebertaForSequenceClassification,
     HfArgumentParser,
     TrainingArguments,
     default_data_collator,
@@ -105,8 +104,13 @@ class DataTrainingArguments:
     running_mode:Optional[str] = field(
         default='default',
         metadata={
-            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
-            "value if set."
+            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
+        },
+    )
+    finetuning_task:Optional[str] = field(
+        default='brazilian_court_decisions_unanimity',
+        metadata={
+            "help": "Name of the finetuning task"
         },
     )
 
@@ -162,7 +166,8 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
+    
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
         # Distant debugging - see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
@@ -222,33 +227,21 @@ def main():
     # download the dataset.
     # Downloading and loading eurlex dataset from the hub.
     
-    def prepare_dataset(dataset):
-        dataset =pd.DataFrame(dataset)
-        dataset['label']=dataset['unanimity_label']
-        dataset = dataset[dataset.label!="not_determined"]
-        #dataset['label']=dataset.label.apply(lambda x: label_list.index(x))
-        dataset['text']=dataset['ementa_text']+' '+dataset['decision_description']+' '+dataset['judgment_text']
-        dataset = Dataset.from_pandas(dataset)
-        return dataset
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/brazilian_court_decisions",split='train', cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         
+
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/brazilian_court_decisions",split='validation', cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/brazilian_court_decisions",split='test', cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
 
-    
-
-    train_dataset =prepare_dataset(train_dataset)
-    eval_dataset =prepare_dataset(eval_dataset)
-    predict_dataset =prepare_dataset(predict_dataset)
 
     # Labels
-    label_list = sorted(list(set(train_dataset['label'])))
+    label_list = ["unanimity", "not-unanimity"]
     num_labels = len(label_list)
 
     label2id = dict()
@@ -259,9 +252,9 @@ def main():
         id2label[n]=l
 
     if data_args.running_mode=='experimental':
-        train_dataset = reduce_size(train_dataset, 1000)
-        eval_dataset = reduce_size(eval_dataset,200)
-        predict_dataset = reduce_size(predict_dataset,100)
+        data_args.max_train_samples=1000
+        data_args.max_eval_samples=200
+        data_args.max_predict_samples=100
 
     # Load pretrained model and tokenizer
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
@@ -269,7 +262,7 @@ def main():
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task="pt_brazilian-court-decisions_unanimity",
+        finetuning_task= data_args.language+'_'+data_args.finetuning_task,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -278,22 +271,8 @@ def main():
     if config.model_type == 'big_bird':
         config.attention_type = 'original_full'
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    
+    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, config=config)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -303,15 +282,18 @@ def main():
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
 
+    
+    # Chossing the optimal maximal sequence length depending on the dataset
+    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
+
     def preprocess_function(examples):
         # Tokenize the texts
         batch = tokenizer(
-            examples["text"],
+            examples["input"],
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True,
         )
-        batch["label"] = [label_list.index(label) for label in examples["label"]]
 
         return batch
 
@@ -325,6 +307,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
+        
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -406,9 +389,10 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="text")
+        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input")
 
 
+    
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
     for checkpoint in checkpoints:
