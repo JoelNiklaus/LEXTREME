@@ -243,8 +243,7 @@ def main():
 
     
     # Labels
-    with open('labels_greek_legal_code_chapter.txt','r') as f:
-        label_list = js.load(f)["greek_legal_code_subject"]["label_classes"]
+    label_list = train_dataset.features['label'].names
     
     num_labels = len(label_list)
 
