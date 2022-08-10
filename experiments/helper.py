@@ -11,6 +11,13 @@ from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_sc
 import numpy as np
 import datetime
 import wandb
+import re
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    XLMRobertaTokenizer,
+    DebertaForSequenceClassification
+)
 
 
 def split_into_languages(dataset):
@@ -430,3 +437,49 @@ def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_datas
         return max_length
     else:
         return 512
+
+
+
+def generate_Model_Tokenizer_for_SequenceClassification(model_args, config):
+
+    # DebertaTokenizer is buggy, therefore we use the AutTokenizer
+    # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
+    if bool(re.search('microsoft/Multilingual-MiniLM-L12-H384',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('microsoft/Multilingual-MiniLM-L12-H384',str(model_args.model_name_or_path),re.IGNORECASE)):
+        tokenizer = XLMRobertaTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    if bool(re.search('deberta',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('deberta',str(model_args.model_name_or_path),re.IGNORECASE)):
+        model = DebertaForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+    return model, tokenizer
