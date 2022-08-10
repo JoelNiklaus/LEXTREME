@@ -25,30 +25,31 @@ models_to_be_used_large = open('models_to_be_used_large.txt','r').readlines()
 models_to_be_used_large = [x.strip() for x in models_to_be_used_large]
 
 
-task_code_mapping = {'run_greek_legal_ner': 'run_greek_legal_ner.py',
-    'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
+task_code_mapping = {
+    #'run_greek_legal_ner': 'run_greek_legal_ner.py',
+    #'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
     'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
     'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    #'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    #'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
     'run_multi_eurlex': 'run_multi_eurlex.py',
     'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    #'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
-    'run_legalnero': 'run_legalnero.py',
+    #'run_legalnero': 'run_legalnero.py',
     'run_german_argument_mining': 'run_german_argument_mining.py',
-    'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    #'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
     'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
-    'run_lener_br': 'run_lener_br.py',
+    #'run_lener_br': 'run_lener_br.py',
     'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
     }
 
 
-def generate_command(**data):
+def generate_command(time_stamp, **data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
 
     
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"]) # I must be careful, it another stragey might require greater_is_better = False
@@ -70,6 +71,7 @@ def run_in_parallel(commands_to_run):
 
 def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=20,batch_size=10,accumulation_steps=1,language='all_languages',learning_rate=1e-5,gpu_number=None):
 
+    time_stamp = datetime.datetime.now().isoformat()
 
     if gpu_number is None:
         gpu_number = [n for n in range(0,torch.cuda.device_count())]
@@ -130,7 +132,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
-            script_new = generate_command(gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 print(command)
@@ -159,7 +161,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
-            script_new = generate_command(gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 print(command)
