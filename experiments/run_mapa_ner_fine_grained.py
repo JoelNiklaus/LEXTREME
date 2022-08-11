@@ -6,16 +6,14 @@ import logging
 import os
 import random
 import sys
+
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
-import re
 
 import datasets
-from datasets import load_dataset, Dataset
-from helper import reduce_size, Seqeval, make_predictions_ner
-from sklearn.metrics import f1_score
-from helper import reduce_size
+from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_optimal_max_length
+from datasets import load_dataset
 import numpy as np
 import glob
 import shutil
@@ -23,15 +21,9 @@ import shutil
 
 import transformers
 from transformers import (
-    AutoConfig,
-    AutoModelForTokenClassification,
-    AutoTokenizer,
-    DataCollatorWithPadding,
-    EvalPrediction,
     DataCollatorForTokenClassification,
     HfArgumentParser,
     TrainingArguments,
-    default_data_collator,
     set_seed,
     EarlyStoppingCallback,
     Trainer
@@ -107,8 +99,13 @@ class DataTrainingArguments:
     running_mode:Optional[str] = field(
         default='default',
         metadata={
-            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
-            "value if set."
+            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
+        },
+    )
+    finetuning_task:Optional[str] = field(
+        default='mapa_fine',
+        metadata={
+            "help": "Name of the finetuning task"
         },
     )
 
@@ -163,6 +160,8 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
 
     # Setup distant debugging if needed
@@ -220,93 +219,37 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    # Downloading and loading eurlex dataset from the hub.
+    
+    if training_args.do_train:
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = train_dataset.rename_column("label", "labels")
 
+    if training_args.do_eval:
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = eval_dataset.rename_column("label", "labels")
 
-    ner_dataset = load_dataset("joelito/mapa")
+    if training_args.do_predict:
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = predict_dataset.rename_column("label", "labels")
 
     
-    label2id = dict()
-    id2label =dict()
-    label_list = set()
-    for labels in ner_dataset['train']['fine_grained']:
-        for l in labels:
-            label_list.add(l)
-    
-    label_list = sorted(list(label_list))
+    # Labels
+    label_list =  ['building','city','country','place','postcode','street','territory','unit','value','year','standard abbreviation','month','day of the week','day','calender event','age','email','ethnic category','family name','financial','given name – female','given name – male','health insurance number','id document number','initial name','marital status','medical record number','nationality','profession','role','social security number','title','url','build year','colour','license plate number','model','type','o']
     num_labels = len(label_list)
 
-    for l in label_list:
-        label2id[l]=label_list.index(l)
-        id2label[label_list.index(l)]=l
+    label2id = dict()
+    id2label = dict()
 
-    def add_label_tags(examples):
-        
-        examples["ner_tags"] = [[label2id[l] for l in label] for label in examples["fine_grained"]]
+    for n,l in enumerate(label_list):
+        label2id[l]=n
+        id2label[n]=l
 
-        del examples["fine_grained"]
-        
-        return examples
+    if data_args.running_mode=='experimental':
+        data_args.max_train_samples=1000
+        data_args.max_eval_samples=200
+        data_args.max_predict_samples=100
 
-    ner_dataset = ner_dataset.map(add_label_tags, batched=True)
-
-    
-    if data_args.running_mode=="experimental":
-        train_dataset = reduce_size(ner_dataset['train'],1000)
-        eval_dataset = reduce_size(ner_dataset['validation'],200)
-        predict_dataset = reduce_size(ner_dataset['test'],100)
-    else:
-        train_dataset = ner_dataset['train']
-        eval_dataset = ner_dataset['validation']
-        predict_dataset = ner_dataset['test']
-
-
-    if data_args.language!="all_languages":
-        train_dataset_df = pd.DataFrame(train_dataset)
-        train_dataset_df = train_dataset_df[train_dataset_df.language==data_args.language]
-        train_dataset = Dataset.from_pandas(train_dataset_df)
-        
-        eval_dataset_df = pd.DataFrame(eval_dataset)
-        eval_dataset_df = eval_dataset_df[eval_dataset_df.language==data_args.language]
-        eval_dataset = Dataset.from_pandas(eval_dataset_df)
-
-        predict_dataset_df = pd.DataFrame(predict_dataset)
-        predict_dataset_df = predict_dataset_df[predict_dataset_df.language==data_args.language]
-        predict_dataset = Dataset.from_pandas(predict_dataset_df)
-
-    # Load pretrained model and tokenizer
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-    config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        num_labels=num_labels,
-        finetuning_task=data_args.language+"_mapa_ner_fine_grained",
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-
-    if config.model_type == 'big_bird':
-        config.attention_type = 'original_full'
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    model = AutoModelForTokenClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -317,16 +260,18 @@ def main():
         padding = False
 
 
-    #Get the values for input_ids, token_type_ids, attention_mask
+    # Choosing the optimal maximal sequence length depending on the dataset
+    #data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
+
     def preprocess_function(examples):
-        tokenized_inputs = tokenizer.batch_encode_plus(examples["tokens"],
+        tokenized_inputs = tokenizer.batch_encode_plus(examples["input"],
             is_split_into_words=True,
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True)
 
         labels = []
-        for i, label in enumerate(examples[f"ner_tags"]):
+        for i, label in enumerate(examples["labels"]):
             word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
             previous_word_idx = None
             label_ids = []
@@ -341,6 +286,7 @@ def main():
             labels.append(label_ids)
 
         tokenized_inputs["labels"] = labels
+        
         return tokenized_inputs
 
     if training_args.do_train:
@@ -353,6 +299,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )            
+        
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -393,7 +340,8 @@ def main():
     seqeval = Seqeval(label_list=label_list)
 
     # Initialize our Trainer
-    #training_args.metric_for_best_model = 'overall_f1'
+    
+    training_args.metric_for_best_model = 'overall_macro-f1'
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -446,7 +394,6 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        
         make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args)
 
     # Clean up checkpoints

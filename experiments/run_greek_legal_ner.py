@@ -6,7 +6,7 @@ import logging
 import os
 import random
 import sys
-import re
+
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
@@ -218,11 +218,6 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
-
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    # Downloading and loading eurlex dataset from the hub.
-
 
 
     if training_args.do_train:
