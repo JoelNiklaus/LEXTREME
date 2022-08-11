@@ -13,10 +13,19 @@ import datetime
 import wandb
 import re
 from transformers import (
-    AutoModelForSequenceClassification,
+    AutoConfig,
+    BertConfig,
+    RobertaConfig,
+    DebertaConfig,
     AutoTokenizer,
+    BertTokenizer,
+    RobertaTokenizer,
     XLMRobertaTokenizer,
-    DebertaForSequenceClassification
+    DebertaForSequenceClassification,
+    BertForSequenceClassification,
+    RobertaForSequenceClassification,
+    AutoModelForSequenceClassification,
+
 )
 
 
@@ -240,7 +249,7 @@ def convert_id2label(label_output:list,id2label:dict)->list:
 
 
 
-def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='text'):
+def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='input'):
     
     language_specific_metrics = list()
     if data_args.language=='all_languages':
@@ -295,21 +304,22 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
 
 
 
-def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='text'):
+def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='input'):
     
     language_specific_metrics = list()
-    if data_args.language=='all_languages':
-        
-        
-        for l in list_of_languages:
+    
+    if "language" in list(predict_dataset.features.keys()):
+        if data_args.language=='all_languages':
             
-            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
+            for l in list_of_languages:
+                
+                predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
 
-            if len(predict_dataset_filtered['language'])>0:
+                if len(predict_dataset_filtered['language'])>0:
 
-                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
 
-                language_specific_metrics.append(metrics)
+                    language_specific_metrics.append(metrics)
         
 
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
@@ -440,20 +450,33 @@ def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_datas
 
 
 
-def generate_Model_Tokenizer_for_SequenceClassification(model_args, config):
+def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
 
-    # DebertaTokenizer is buggy, therefore we use the AutTokenizer
-    # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-    if bool(re.search('microsoft/Multilingual-MiniLM-L12-H384',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('microsoft/Multilingual-MiniLM-L12-H384',str(model_args.model_name_or_path),re.IGNORECASE)):
-        tokenizer = XLMRobertaTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
+    model_types = {
+                    "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
+                    "bert": ["distilbert-base-multilingual-cased"],
+                    "deberta" : ["microsoft/mdeberta-v3-base"],
+                    "roberta" : ["xlm-roberta-base","xlm-roberta-large"]
+    }
+
+    
+    if model_args.model_name_or_path in model_types['bert']:
+        
+        # Load pretrained model and tokenizer
+        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+        # download model & vocab.
+        config = BertConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-    else:
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
@@ -462,7 +485,74 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, config):
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-    if bool(re.search('deberta',str(model_args.tokenizer_name),re.IGNORECASE)) or bool(re.search('deberta',str(model_args.model_name_or_path),re.IGNORECASE)):
+        model = BertForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+    elif model_args.model_name_or_path in model_types['roberta']:
+        
+        # Load pretrained model and tokenizer
+        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+        # download model & vocab.
+        config = RobertaConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        tokenizer = RobertaTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        model = RobertaForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+    elif model_args.model_name_or_path in model_types['deberta']:
+
+        config = DebertaConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        # DebertaTokenizer is buggy, therefore we use the AutTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
         model = DebertaForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -472,14 +562,41 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, config):
             ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-    else:
-        model = AutoModelForSequenceClassification.from_pretrained(
+    
+    elif model_args.model_name_or_path in model_types['MiniLM']:
+        
+        
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
+        tokenizer = XLMRobertaTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
+        model = BertForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
+    
 
     return model, tokenizer
