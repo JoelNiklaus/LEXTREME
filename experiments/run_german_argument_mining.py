@@ -6,7 +6,6 @@ import logging
 import os
 import random
 import sys
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -226,14 +225,14 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', download_mode="force_redownload")
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', download_mode="force_redownload")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', download_mode="force_redownload")
 
     
     # Labels
@@ -371,7 +370,7 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input")
+        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label)
 
 
 

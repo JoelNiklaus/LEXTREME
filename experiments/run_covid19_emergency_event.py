@@ -226,14 +226,14 @@ def main():
     
     
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', download_mode="force_redownload")
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', download_mode="force_redownload")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', download_mode="force_redownload")
 
     # Labels
     label_list = ["event1", "event2", "event3", "event4", "event5", "event6", "event7", "event8"]
@@ -326,6 +326,8 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+
+    training_args.metric_for_best_model = "macro-f1"
     trainer = MultilabelTrainer(
         model=model,
         args=training_args,
