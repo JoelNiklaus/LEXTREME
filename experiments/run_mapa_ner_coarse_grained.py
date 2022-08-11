@@ -405,7 +405,7 @@ def main(batch_size=None):
         compute_metrics=seqeval.compute_metrics_for_token_classification,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
     )
 
     # Training
