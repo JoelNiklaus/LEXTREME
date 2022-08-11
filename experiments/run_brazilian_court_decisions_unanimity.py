@@ -21,11 +21,7 @@ import shutil
 
 import transformers
 from transformers import (
-    AutoConfig,
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
     DataCollatorWithPadding,
-    DebertaForSequenceClassification,
     HfArgumentParser,
     TrainingArguments,
     default_data_collator,
@@ -256,23 +252,7 @@ def main():
         data_args.max_eval_samples=200
         data_args.max_predict_samples=100
 
-    # Load pretrained model and tokenizer
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-    config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        num_labels=num_labels,
-        finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-
-    if config.model_type == 'big_bird':
-        config.attention_type = 'original_full'
-
-    
-    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, config=config)
+    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -344,6 +324,8 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+
+    training_args.metric_for_best_model = "mcc"
     trainer = Trainer(
         model=model,
         args=training_args,

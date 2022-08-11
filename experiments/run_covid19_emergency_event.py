@@ -21,7 +21,6 @@ import shutil
 
 import transformers
 from transformers import (
-    AutoConfig,
     DataCollatorWithPadding,
     HfArgumentParser,
     TrainingArguments,

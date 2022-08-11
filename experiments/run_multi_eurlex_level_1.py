@@ -2,6 +2,7 @@
 # coding=utf-8
 
 
+from cProfile import label
 import logging
 import os
 import random
@@ -9,14 +10,16 @@ import sys
 import re
 from dataclasses import dataclass, field
 from typing import Optional
+import pandas as pd
+import numpy as np
 
 import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
-import pandas as pd
-from datasets import load_dataset
-import numpy as np
+from datasets import load_dataset, Dataset
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages
+from trainer import MultilabelTrainer
 import glob
 import shutil
+
 
 import transformers
 from transformers import (
@@ -26,7 +29,7 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
-    Trainer
+    IntervalStrategy
 )
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
@@ -90,7 +93,7 @@ class DataTrainingArguments:
         },
     )
     language:Optional[str] = field(
-        default='de',
+        default='all_languages',
         metadata={
             "help": "For choosin the language "
             "value if set."
@@ -103,7 +106,7 @@ class DataTrainingArguments:
         },
     )
     finetuning_task:Optional[str] = field(
-        default='german_argument_mining',
+        default='multi_eurlex_level_1',
         metadata={
             "help": "Name of the finetuning task"
         },
@@ -163,7 +166,7 @@ def main():
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
-
+    
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
         # Distant debugging - see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
@@ -222,35 +225,47 @@ def main():
     # In distributed training, the load_dataset function guarantees that only one local process can concurrently
     # download the dataset.
     # Downloading and loading eurlex dataset from the hub.
-    
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
-        
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
+        if data_args.running_mode=="experimental":
+            train_dataset = train_dataset.select([n for n in range(0,100)])
+        train_dataset = split_into_languages(train_dataset)
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
+        if data_args.running_mode=="experimental":
+            eval_dataset = eval_dataset.select([n for n in range(0,10)])
+        eval_dataset = split_into_languages(eval_dataset)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
+        if data_args.running_mode=="experimental":
+            predict_dataset = predict_dataset.select([n for n in range(0,10)])
+        
+        predict_dataset = split_into_languages(predict_dataset)
 
-    
+
     # Labels
-    label_list = ["conclusion", "definition", "subsumption", "other"]
+    label_list = set()
+
+    for l_list in train_dataset['label']:
+        for l in l_list:
+            label_list.add(l)
+
+    label_list = sorted(list(label_list))
     num_labels = len(label_list)
 
     label2id = dict()
     id2label = dict()
-
+    
     for n,l in enumerate(label_list):
         label2id[l]=n
         id2label[n]=l
 
-    if data_args.running_mode=='experimental':
-        data_args.max_train_samples=1000
-        data_args.max_eval_samples=200
-        data_args.max_predict_samples=100
+
+
 
     model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
@@ -262,18 +277,19 @@ def main():
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
 
-    
-    # Choosing the optimal maximal sequence length depending on the dataset
-    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
-
     def preprocess_function(examples):
         # Tokenize the texts
+       
         batch = tokenizer(
             examples["input"],
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True,
         )
+        
+        batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in examples["label"]]
+
+        del examples["label"]
 
         return batch
 
@@ -287,7 +303,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
-            
+        
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -313,7 +329,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on prediction dataset",
             )
-    
+
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -324,14 +340,16 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+    training_args.metric_for_best_model = "macro-f1"
+    training_args.evaluation_strategy = IntervalStrategy.STEPS
+    training_args.eval_steps = 1000
 
-    training_args.metric_for_best_model = "mcc"
-    trainer = Trainer(
+    trainer = MultilabelTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics_multi_class,
+        compute_metrics=compute_metrics_multi_label,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
@@ -371,7 +389,10 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input")
+
+        langs = ["en", "da", "de", "nl", "sv", "bg", "cs", "hr", "pl", "sk", "sl", "es", "fr", "it", "pt", "ro", "et", "fi", "hu", "lt", "lv", "el", "mt"]
+
+        make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=langs)
 
 
 

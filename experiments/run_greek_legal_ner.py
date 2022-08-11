@@ -6,16 +6,14 @@ import logging
 import os
 import random
 import sys
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
-import re
 
 import datasets
-from datasets import load_dataset, load_metric
-from helper import reduce_size, Seqeval, make_predictions_ner
-from sklearn.metrics import f1_score
-from helper import reduce_size
+from datasets import load_dataset
+from helper import reduce_size, Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification
 import numpy as np
 import glob
 import shutil
@@ -23,15 +21,9 @@ import shutil
 
 import transformers
 from transformers import (
-    AutoConfig,
-    AutoModelForTokenClassification,
-    AutoTokenizer,
-    DataCollatorWithPadding,
-    EvalPrediction,
     DataCollatorForTokenClassification,
     HfArgumentParser,
     TrainingArguments,
-    default_data_collator,
     set_seed,
     EarlyStoppingCallback,
     Trainer
@@ -107,11 +99,15 @@ class DataTrainingArguments:
     running_mode:Optional[str] = field(
         default='default',
         metadata={
-            "help": "If set true only a small portion of the original dataset will be used for fast experiments"
-            "value if set."
+            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
         },
     )
-
+    finetuning_task:Optional[str] = field(
+        default='greek_legal_ner',
+        metadata={
+            "help": "Name of the finetuning task"
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -165,6 +161,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
@@ -264,37 +261,7 @@ def main():
         predict_dataset = ner_dataset['test']
 
 
-    # Load pretrained model and tokenizer
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-    config = AutoConfig.from_pretrained(
-        model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        num_labels=num_labels,
-        finetuning_task="el_greek_legal_ner",
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-
-    if config.model_type == 'big_bird':
-        config.attention_type = 'original_full'
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-        do_lower_case=model_args.do_lower_case,
-        cache_dir=model_args.cache_dir,
-        use_fast=model_args.use_fast_tokenizer,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
-    model = AutoModelForTokenClassification.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
