@@ -12,8 +12,8 @@ from typing import Optional
 import pandas as pd
 
 import datasets
+from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_optimal_max_length
 from datasets import load_dataset
-from helper import reduce_size, Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification
 import numpy as np
 import glob
 import shutil
@@ -163,6 +163,7 @@ def main():
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
+    
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
         # Distant debugging - see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
@@ -223,43 +224,35 @@ def main():
     # Downloading and loading eurlex dataset from the hub.
 
 
-    ner_dataset = load_dataset("joelito/greek_legal_ner")
 
-    label2id = dict()
-    id2label =dict()
-    label_list = set()
-    for labels in ner_dataset['train']['ner']:
-        for l in labels:
-            label_list.add(l)
+    if training_args.do_train:
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = train_dataset.rename_column("label", "labels")
+
+    if training_args.do_eval:
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = eval_dataset.rename_column("label", "labels")
+
+    if training_args.do_predict:
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = predict_dataset.rename_column("label", "labels")
+
     
-    label_list = sorted(list(label_list))
+    # Labels
+    label_list = ["FACILITY", "GPE", "LEG-REFS", "LOCATION-NAT", "LOCATION-UNK", "ORG", "PERSON", "PUBLIC-DOCS", "O"]
     num_labels = len(label_list)
 
-    for l in label_list:
-        label2id[l]=label_list.index(l)
-        id2label[label_list.index(l)]=l
+    label2id = dict()
+    id2label = dict()
 
-    def add_label_tags(examples):
-        
-        examples["ner_tags"] = [[label2id[l] for l in label] for label in examples["ner"]]
+    for n,l in enumerate(label_list):
+        label2id[l]=n
+        id2label[n]=l
 
-        del examples["ner"]
-        
-        return examples
-
-    ner_dataset = ner_dataset.map(add_label_tags, batched=True)
-
-    
-
-    if data_args.running_mode=="experimental":
-        train_dataset = reduce_size(ner_dataset['train'],1000)
-        eval_dataset = reduce_size(ner_dataset['validation'],200)
-        predict_dataset = reduce_size(ner_dataset['test'],100)
-    else:
-        train_dataset = ner_dataset['train']
-        eval_dataset = ner_dataset['validation']
-        predict_dataset = ner_dataset['test']
-
+    if data_args.running_mode=='experimental':
+        data_args.max_train_samples=1000
+        data_args.max_eval_samples=200
+        data_args.max_predict_samples=100
 
     model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
@@ -272,16 +265,18 @@ def main():
         padding = False
 
 
-    #Get the values for input_ids, token_type_ids, attention_mask
+    # Choosing the optimal maximal sequence length depending on the dataset
+    #data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
+
     def preprocess_function(examples):
-        tokenized_inputs = tokenizer.batch_encode_plus(examples["words"],
+        tokenized_inputs = tokenizer.batch_encode_plus(examples["input"],
             is_split_into_words=True,
             padding=padding,
             max_length=data_args.max_seq_length,
             truncation=True)
 
         labels = []
-        for i, label in enumerate(examples[f"ner_tags"]):
+        for i, label in enumerate(examples["labels"]):
             word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
             previous_word_idx = None
             label_ids = []
@@ -296,6 +291,7 @@ def main():
             labels.append(label_ids)
 
         tokenized_inputs["labels"] = labels
+        
         return tokenized_inputs
 
     if training_args.do_train:
@@ -308,6 +304,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )            
+        
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -322,7 +319,6 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on validation dataset",
             )
-
 
     if training_args.do_predict:
         if data_args.max_predict_samples is not None:
@@ -348,7 +344,8 @@ def main():
     seqeval = Seqeval(label_list=label_list)
     
     # Initialize our Trainer
-    #training_args.metric_for_best_model = 'overall_f1'
+    
+    training_args.metric_for_best_model = 'overall_macro-f1'
     trainer = Trainer(
         model=model,
         args=training_args,

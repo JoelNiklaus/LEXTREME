@@ -8,6 +8,7 @@ from ast import literal_eval
 from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
+from seqeval.metrics import f1_score as seqeval_f1_score
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, matthews_corrcoef
 import numpy as np
 import datetime
@@ -21,8 +22,11 @@ from transformers import (
     DebertaConfig,
     AutoTokenizer,
     DistilBertTokenizer,
+    DistilBertTokenizerFast,
     RobertaTokenizer,
+    RobertaTokenizerFast,
     XLMRobertaTokenizer,
+    XLMRobertaTokenizerFast,
     DebertaForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
@@ -218,7 +222,11 @@ class Seqeval():
         ]
 
         results = self.metric.compute(predictions=true_predictions, references=true_labels, zero_division=0)
+        macro_f1 = seqeval_f1_score(true_predictions, true_labels, average="macro", zero_division=0)
+        micro_f1 = seqeval_f1_score(true_predictions, true_labels, average="micro", zero_division=0)
         flattened_results = {
+            "overall_macro-f1":macro_f1,
+            "overall_micro-f1":micro_f1,
             "overall_precision": results["overall_precision"],
             "overall_recall": results["overall_recall"],
             "overall_f1": results["overall_f1"],
@@ -444,7 +452,7 @@ def config_wandb(training_args, model_args, data_args):
 
 def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset):
     all_inputs = train_dataset['input'] + eval_dataset['input'] + predict_dataset['input']
-    all_inputs = [len(tokenizer(i)['input_ids']) for i in all_inputs]
+    all_inputs = [len(tokenizer(i)['input_ids']) if type(i)==str else len(i) for i in all_inputs]
     max_length = max(all_inputs)
     if max_length <=512:
         return max_length
@@ -634,11 +642,11 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         if config.model_type == 'big_bird':
             config.attention_type = 'original_full'
 
-        tokenizer = DistilBertTokenizer.from_pretrained(
+        tokenizer = DistilBertTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
+            #use_fast=True,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -669,11 +677,11 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         if config.model_type == 'big_bird':
             config.attention_type = 'original_full'
 
-        tokenizer = RobertaTokenizer.from_pretrained(
+        tokenizer = RobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
+            #use_fast=True,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -706,7 +714,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
+            #use_fast=True,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -736,11 +744,11 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             config.attention_type = 'original_full'
 
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-        tokenizer = XLMRobertaTokenizer.from_pretrained(
+        tokenizer = XLMRobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
+            #use_fast=True,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
