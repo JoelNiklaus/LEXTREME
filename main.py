@@ -27,12 +27,14 @@ models_to_be_used_large = [x.strip() for x in models_to_be_used_large]
 
 task_code_mapping = {
     #'run_greek_legal_ner': 'run_greek_legal_ner.py',
-    #'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
+    'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
     'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
     'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
     #'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
     #'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    'run_multi_eurlex': 'run_multi_eurlex.py',
+    'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
     'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
     #'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
@@ -116,7 +118,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     number_of_parallel_commands = len(gpu_number)-1
     commands_to_run = list()
     if task=='all': 
-        all_variables = [[t for t in list(task_code_mapping.keys()) if t!='run_multi_eurlex']+['run_multi_eurlex'],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
+        all_variables = [[t for t in list(task_code_mapping.keys()) if t not in ['run_multi_eurlex_level_1','run_multi_eurlex_level_2', 'run_multi_eurlex_level_3']]+['run_multi_eurlex_level_1'],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
         all_variables_perturbations = list(itertools.product(*all_variables))
         all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]        
         all_variables_perturbations = list(zip(cycle(gpu_number), all_variables_perturbations)) 
