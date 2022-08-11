@@ -4,6 +4,7 @@ from typing import List
 import os
 from pathlib import Path
 import json as js
+from ast import literal_eval
 from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
@@ -14,17 +15,23 @@ import wandb
 import re
 from transformers import (
     AutoConfig,
+    DistilBertConfig,
     BertConfig,
     RobertaConfig,
     DebertaConfig,
     AutoTokenizer,
-    BertTokenizer,
+    DistilBertTokenizer,
     RobertaTokenizer,
     XLMRobertaTokenizer,
     DebertaForSequenceClassification,
     BertForSequenceClassification,
+    DistilBertForTokenClassification,
     RobertaForSequenceClassification,
-    AutoModelForSequenceClassification,
+    DistilBertForSequenceClassification,
+    BertForTokenClassification,
+    DistilBertForTokenClassification,
+    RobertaForTokenClassification,
+    DebertaForTokenClassification
 
 )
 
@@ -35,17 +42,13 @@ def split_into_languages(dataset):
     dataset_df = pd.DataFrame(dataset)
     
     for item in dataset_df.to_dict(orient='records'):
-        celex_id = item['celex_id']
-        labels = item['labels']
-        for k,v in item.items():
-            if k=='text':
-                for language, document in v.items():
-                    item_new = dict()
-                    item_new['language']=language
-                    item_new['text']=document
-                    item_new['celex_id']=celex_id
-                    item_new['labels']=labels
-                    dataset_new.append(item_new)
+        labels = item['label']
+        for language, document in literal_eval(item['input']).items():
+            item_new = dict()
+            item_new['language']=language
+            item_new['input']=str(document)
+            item_new['label']=labels
+            dataset_new.append(item_new)
     
     dataset_new = pd.DataFrame(dataset_new)
     
@@ -125,7 +128,7 @@ def compute_metrics_multi_label(p: EvalPrediction):
     macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
     weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    accuracy_not_noramlized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_not_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
     accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
     precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
@@ -140,7 +143,7 @@ def compute_metrics_multi_label(p: EvalPrediction):
             'weighted-f1':weighted_f1,
             #'mcc':mcc, 
             'accuracy_normalized':accuracy_normalized,
-            'accuracy_not_noramlized':accuracy_not_noramlized,
+            'accuracy_not_normalized':accuracy_not_normalized,
             'macro-precision': precision_macro,
             'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
@@ -159,7 +162,7 @@ def compute_metrics_multi_class(p: EvalPrediction):
     macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
     weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    accuracy_not_noramlized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_not_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
     accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
     precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
@@ -173,7 +176,7 @@ def compute_metrics_multi_class(p: EvalPrediction):
             'weighted-f1':weighted_f1,
             'mcc':mcc, 
             'accuracy_normalized':accuracy_normalized,
-            'accuracy_not_noramlized':accuracy_not_noramlized,
+            'accuracy_not_normalized':accuracy_not_normalized,
             'macro-precision': precision_macro,
             'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
@@ -452,20 +455,22 @@ def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_datas
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
 
+
+
     model_types = {
                     "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
-                    "bert": ["distilbert-base-multilingual-cased"],
+                    "distilbert": ["distilbert-base-multilingual-cased"],
                     "deberta" : ["microsoft/mdeberta-v3-base"],
                     "roberta" : ["xlm-roberta-base","xlm-roberta-large"]
     }
 
     
-    if model_args.model_name_or_path in model_types['bert']:
+    if model_args.model_name_or_path in model_types['distilbert']:
         
         # Load pretrained model and tokenizer
         # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
         # download model & vocab.
-        config = BertConfig.from_pretrained(
+        config = DistilBertConfig.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
@@ -477,7 +482,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         if config.model_type == 'big_bird':
             config.attention_type = 'original_full'
 
-        tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer = DistilBertTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
@@ -485,7 +490,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = BertForSequenceClassification.from_pretrained(
+        model = DistilBertForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -589,6 +594,158 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         )
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
         model = BertForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    
+
+    return model, tokenizer
+
+
+def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
+
+    model_types = {
+                    "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
+                    "distilbert": ["distilbert-base-multilingual-cased"],
+                    "deberta" : ["microsoft/mdeberta-v3-base"],
+                    "roberta" : ["xlm-roberta-base","xlm-roberta-large"]
+    }
+
+    
+    if model_args.model_name_or_path in model_types['distilbert']:
+        
+        # Load pretrained model and tokenizer
+        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+        # download model & vocab.
+        config = DistilBertConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        tokenizer = DistilBertTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        model = DistilBertForTokenClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+    elif model_args.model_name_or_path in model_types['roberta']:
+        
+        # Load pretrained model and tokenizer
+        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+        # download model & vocab.
+        config = RobertaConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        tokenizer = RobertaTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        model = RobertaForTokenClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+    elif model_args.model_name_or_path in model_types['deberta']:
+
+        config = DebertaConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        # DebertaTokenizer is buggy, therefore we use the AutTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        model = DebertaForTokenClassification.from_pretrained(
+            model_args.model_name_or_path,
+            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            config=config,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            ignore_mismatched_sizes=True,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+    
+    elif model_args.model_name_or_path in model_types['MiniLM']:
+        
+        
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        if config.model_type == 'big_bird':
+            config.attention_type = 'original_full'
+
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
+        tokenizer = XLMRobertaTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            do_lower_case=model_args.do_lower_case,
+            cache_dir=model_args.cache_dir,
+            use_fast=model_args.use_fast_tokenizer,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
+        model = BertForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
