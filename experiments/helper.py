@@ -516,7 +516,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         # Load pretrained model and tokenizer
         # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
         # download model & vocab.
-        config = RobertaConfig.from_pretrained(
+        config = AutoConfig.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
@@ -528,11 +528,12 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         if config.model_type == 'big_bird':
             config.attention_type = 'original_full'
 
-        tokenizer = RobertaTokenizer.from_pretrained(
+        # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
+        tokenizer = RobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
+            #use_fast=model_args.use_fast_tokenizer,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -680,6 +681,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         if config.model_type == 'big_bird':
             config.attention_type = 'original_full'
 
+        # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
         tokenizer = RobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,

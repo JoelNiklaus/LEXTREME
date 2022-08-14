@@ -23,11 +23,11 @@ models_to_be_used_small = [
     ]
 models_to_be_used_base = [
     "microsoft/mdeberta-v3-base",
-    "xlm-roberta-base"
+    #"xlm-roberta-base"
     ]
 
 models_to_be_used_large = [
-    #"xlm-roberta-large"
+    "xlm-roberta-large"
     ]
 
 
@@ -64,6 +64,7 @@ def generate_command(time_stamp, **data):
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"]) # I must be careful, it another stragey might require greater_is_better = False
     
     file_name = './temporary/'+data["task"]+"_"+str(data["gpu_number"])+"_"+str(data["seed"])+"_"+str(data["model_name"]).replace('/','_')+"_"+time_now+".sh"
+    
     with open(file_name,"w") as f:
         print(final_command,file=f)
      
@@ -78,7 +79,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=20,batch_size=10,accumulation_steps=1,language='all_languages',learning_rate=1e-5,gpu_number=None):
+def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=20,batch_size=8,accumulation_steps=2,language='all_languages',learning_rate=1e-5,gpu_number=None):
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -141,6 +142,12 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
+            if model_name=="large" or model_name in models_to_be_used_large:
+                batch_size=8
+                accumulation_steps=2
+            else:
+                batch_size=16
+                accumulation_steps=1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
@@ -170,6 +177,12 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
+            if model_name=="large" or model_name in models_to_be_used_large:
+                batch_size=8
+                accumulation_steps=2
+            else:
+                batch_size=16
+                accumulation_steps=1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
