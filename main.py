@@ -35,22 +35,22 @@ models_to_be_used_large = [
 task_code_mapping = {
     'run_greek_legal_ner': 'run_greek_legal_ner.py',
     'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
-    #'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    #'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    #'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
+    'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
+    'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
     'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
     'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
     'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
     'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    #'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    #'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
-    #'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
+    'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
     'run_legalnero': 'run_legalnero.py',
     'run_german_argument_mining': 'run_german_argument_mining.py',
     'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    #'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
+    'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
     'run_lener_br': 'run_lener_br.py',
-    #'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
+    'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
     }
 
 
@@ -79,7 +79,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=20,batch_size=8,accumulation_steps=2,language='all_languages',learning_rate=1e-5,gpu_number=None):
+def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=50,batch_size=8,accumulation_steps=2,language='all_languages',learning_rate=1e-5,gpu_number=None):
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -237,7 +237,7 @@ if __name__=='__main__':
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
     parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=10)
-    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=20)
+    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=50)
     parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', type=str)
     
 
