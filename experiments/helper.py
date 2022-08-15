@@ -486,7 +486,8 @@ def config_wandb(training_args, model_args, data_args):
 
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
-    project_name = "LEXTREME-"+data_args.finetuning_task
+    project_name = model_args.model_name_or_path
+    project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     wandb.run.name=data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
 
