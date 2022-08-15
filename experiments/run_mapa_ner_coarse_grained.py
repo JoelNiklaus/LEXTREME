@@ -341,7 +341,7 @@ def main():
 
     # Initialize our Trainer
     
-    training_args.metric_for_best_model = 'overall_macro-f1'
+    training_args.metric_for_best_model = 'macro-f1'
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -394,7 +394,11 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args)
+
+        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+        langs = sorted(list(set(langs)))
+
+        make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args, list_of_languages=langs)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]

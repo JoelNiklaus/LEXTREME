@@ -340,7 +340,7 @@ def main():
 
     # Initialize our Trainer
     
-    training_args.metric_for_best_model = 'overall_macro-f1'
+    training_args.metric_for_best_model = 'macro-f1'
     trainer = Trainer(
         model=model,
         args=training_args,

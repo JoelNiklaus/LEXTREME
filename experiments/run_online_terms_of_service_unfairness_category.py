@@ -226,14 +226,14 @@ def main():
     
     
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', download_mode="force_redownload")
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', download_mode="force_redownload")
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', download_mode="force_redownload")
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
 
     # Labels
     label_list = ["a", "ch", "cr", "j", "law", "ltd", "ter", "use", "pinc"]
@@ -374,7 +374,10 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
 
-        make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=["de","en","it","pl"])
+        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+        langs = sorted(list(set(langs)))
+
+        make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=langs)
 
 
 

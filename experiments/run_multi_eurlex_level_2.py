@@ -390,7 +390,8 @@ def main():
     if training_args.do_predict:
         logger.info("*** Predict ***")
 
-        langs = ["en", "da", "de", "nl", "sv", "bg", "cs", "hr", "pl", "sk", "sl", "es", "fr", "it", "pt", "ro", "et", "fi", "hu", "lt", "lv", "el", "mt"]
+        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+        langs = sorted(list(set(langs)))
 
         make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=langs)
 

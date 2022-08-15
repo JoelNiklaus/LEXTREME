@@ -9,6 +9,9 @@ from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
 from seqeval.metrics import f1_score as seqeval_f1_score
+from seqeval.metrics import precision_score as seqeval_precision_score
+from seqeval.metrics import recall_score as seqeval_recall_score
+from seqeval.metrics import accuracy_score as seqeval_accuracy_score
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, matthews_corrcoef
 import numpy as np
 import datetime
@@ -222,19 +225,39 @@ class Seqeval():
         ]
 
         results = self.metric.compute(predictions=true_predictions, references=true_labels, zero_division=0)
+
         macro_f1 = seqeval_f1_score(true_predictions, true_labels, average="macro", zero_division=0)
         micro_f1 = seqeval_f1_score(true_predictions, true_labels, average="micro", zero_division=0)
+        weighted_f1 = seqeval_f1_score(true_predictions, true_labels, average="weighted", zero_division=0)
+
+        macro_precision = seqeval_precision_score(true_predictions, true_labels, average="macro", zero_division=0)
+        micro_precision = seqeval_precision_score(true_predictions, true_labels, average="micro", zero_division=0)
+        weighted_precision = seqeval_precision_score(true_predictions, true_labels, average="weighted", zero_division=0)
+
+
+        macro_recall = seqeval_recall_score(true_predictions, true_labels, average="macro", zero_division=0)
+        micro_recall = seqeval_recall_score(true_predictions, true_labels, average="micro", zero_division=0)
+        weighted_recall = seqeval_recall_score(true_predictions, true_labels, average="weighted", zero_division=0)
+
+        accuracy_normalized = seqeval_accuracy_score(true_predictions, true_labels)
+        
         flattened_results = {
-            "overall_macro-f1":macro_f1,
-            "overall_micro-f1":micro_f1,
-            "overall_precision": results["overall_precision"],
-            "overall_recall": results["overall_recall"],
-            "overall_f1": results["overall_f1"],
-            "overall_accuracy": results["overall_accuracy"],
+            "macro-f1":macro_f1,
+            "micro-f1":micro_f1,
+            'weighted-f1':weighted_f1,
+            "macro-precision":macro_precision,
+            "micro-precision":micro_precision,
+            "weighted-precision":weighted_precision,
+            "macro-recall":macro_recall,
+            "micro-recall":micro_recall,
+            "weighted-recall":weighted_recall,
+            'accuracy_normalized':accuracy_normalized
         }
         for k in results.keys():
-            if(k not in flattened_results.keys()):
+            if k.startswith("overall")==False:
                 flattened_results[k+"_f1"]=results[k]["f1"]
+                flattened_results[k+"_precision"]=results[k]["precision"]
+                flattened_results[k+"_recall"]=results[k]["recall"]
 
 
         return flattened_results
@@ -264,16 +287,22 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
     
     language_specific_metrics = list()
     if data_args.language=='all_languages':
+
+        if list_of_languages==[]:
+            list_of_languages = sorted(list(set(predict_dataset['language'])))
         
         for l in list_of_languages:
             
             predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
 
-            predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+            if len(predict_dataset_filtered['language'])>0:
+                metric_prefix = l+"_predict/"
+                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=metric_prefix)
+                wandb.log(metrics)
 
-            language_specific_metrics.append(metrics)
+                language_specific_metrics.append(metrics)
         
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
 
     
 
@@ -314,6 +343,8 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
+    return language_specific_metrics
+
 
 
 def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='input'):
@@ -322,19 +353,22 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     
     if "language" in list(predict_dataset.features.keys()):
         if data_args.language=='all_languages':
+            if list_of_languages==[]:
+                list_of_languages = sorted(list(set(predict_dataset['language'])))
             
             for l in list_of_languages:
                 
                 predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
 
                 if len(predict_dataset_filtered['language'])>0:
-
-                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+                    metric_prefix = l+"_predict/"
+                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=metric_prefix)
+                    wandb.log(metrics)
 
                     language_specific_metrics.append(metrics)
         
 
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
 
     
 
@@ -349,7 +383,7 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
 
     trainer.log_metrics("predict", language_specific_metrics)
     trainer.save_metrics("predict", language_specific_metrics)
-    wandb.log(language_specific_metrics)
+    #wandb.log(language_specific_metrics)
 
 
     output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
@@ -381,21 +415,24 @@ def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,tr
     
     language_specific_metrics = list()
     if data_args.language=='all_languages':
+        if list_of_languages==[]:
+            list_of_languages = sorted(list(set(predict_dataset['language'])))
         
         for l in list_of_languages:
             
             predict_dataset_filtered = predict_dataset.filter(lambda example: example['language']==l)
 
             if len(predict_dataset_filtered['language'])>0:
-
-                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=l+"_predict")
+                metric_prefix = l+"_predict/"
+                predictions, labels, metrics = trainer.predict(predict_dataset_filtered, metric_key_prefix=metric_prefix)
+                wandb.log(metrics)
 
                 language_specific_metrics.append(metrics)
 
 
         
 
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict")
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
 
     max_predict_samples = (
         data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
@@ -687,6 +724,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
             #use_fast=True,
+            add_prefix_space=True,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )

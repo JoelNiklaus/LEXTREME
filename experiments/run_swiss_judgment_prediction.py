@@ -369,7 +369,11 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input")
+
+        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+        langs = sorted(list(set(langs)))
+
+        make_predictions_multi_class(trainer=trainer,training_args=training_args,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,name_of_input_field="input",list_of_languages=langs)
 
 
     
