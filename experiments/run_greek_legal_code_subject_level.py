@@ -228,14 +228,14 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
 
     
     # Labels

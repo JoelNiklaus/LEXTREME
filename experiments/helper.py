@@ -383,7 +383,7 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
 
     trainer.log_metrics("predict", language_specific_metrics)
     trainer.save_metrics("predict", language_specific_metrics)
-    #wandb.log(language_specific_metrics)
+    wandb.log(language_specific_metrics)
 
 
     output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
