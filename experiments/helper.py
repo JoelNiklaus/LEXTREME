@@ -51,11 +51,12 @@ def split_into_languages(dataset):
     for item in dataset_df.to_dict(orient='records'):
         labels = item['label']
         for language, document in literal_eval(item['input']).items():
-            item_new = dict()
-            item_new['language']=language
-            item_new['input']=str(document)
-            item_new['label']=labels
-            dataset_new.append(item_new)
+            if document is not None:
+                item_new = dict()
+                item_new['language']=language
+                item_new['input']=str(document)
+                item_new['label']=labels
+                dataset_new.append(item_new)
     
     dataset_new = pd.DataFrame(dataset_new)
     
@@ -486,7 +487,8 @@ def config_wandb(training_args, model_args, data_args):
 
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
-    project_name = model_args.model_name_or_path
+    #project_name = model_args.model_name_or_path
+    project_name = 'bfh_test'
     project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     wandb.run.name=data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
@@ -654,7 +656,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         )
     
 
-    return model, tokenizer
+    return model, tokenizer, config
 
 
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
