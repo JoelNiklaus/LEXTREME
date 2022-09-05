@@ -8,7 +8,7 @@ import json as js
 import shutil
 import itertools
 import setproctitle
-
+from collections import defaultdict
 
 os.chdir('./scripts')
 
@@ -23,7 +23,7 @@ models_to_be_used_small = [
     ]
 models_to_be_used_base = [
     "microsoft/mdeberta-v3-base",
-    #"xlm-roberta-base"
+    "xlm-roberta-base"
     ]
 
 models_to_be_used_large = [
@@ -33,24 +33,24 @@ models_to_be_used_large = [
 
 
 task_code_mapping = {
-    'run_greek_legal_ner': 'run_greek_legal_ner.py',
-    'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
-    'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    #'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
-    #'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
-    #'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
-    'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
-    'run_legalnero': 'run_legalnero.py',
-    'run_german_argument_mining': 'run_german_argument_mining.py',
-    'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    #'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
-    'run_lener_br': 'run_lener_br.py',
-    'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
+    #'run_greek_legal_ner': 'run_greek_legal_ner.py',
+    #'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
+    #'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
+    #'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
+    #'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    #'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
+    #'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    #'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    #'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
+    #'run_legalnero': 'run_legalnero.py',
+    #'run_german_argument_mining': 'run_german_argument_mining.py',
+    #'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
+    #'run_lener_br': 'run_lener_br.py',
+    #'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
     }
 
 
@@ -79,7 +79,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=50,batch_size=8,accumulation_steps=2,language='all_languages',learning_rate=1e-5,gpu_number=None):
+def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=50,batch_size=None,accumulation_steps=None,language='all_languages',learning_rate=1e-5,gpu_number=None):
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -121,6 +121,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     models_to_be_used = sorted(list(set(models_to_be_used)))
     print(models_to_be_used)
 
+    gpu_command_dict = defaultdict(list)
     commands_already_satisfied = list()
     all_commands_to_run = list()
     number_of_parallel_commands = len(gpu_number)-1
@@ -136,22 +137,26 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
              
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
             if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br"]:
-                metric_for_best_model="overall_f1"
+                metric_for_best_model="macro-f1"
             elif task in ["run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
-            if model_name=="large" or model_name in models_to_be_used_large:
-                batch_size=8
-                accumulation_steps=2
-            else:
-                batch_size=16
+            if batch_size is None:
+                if model_name=="large" or model_name in models_to_be_used_large:
+                    batch_size=8
+                    accumulation_steps=2
+                else:
+                    batch_size=16
+                    accumulation_steps=1
+            if batch_size is not None and accumulation_steps is None:
                 accumulation_steps=1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
+                gpu_command_dict[gpu_id].append(command)
                 print(command)
                 if command not in commands_to_run:
                     if len(commands_to_run) <= number_of_parallel_commands:
@@ -170,23 +175,25 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
         all_variables_perturbations = [[x[0]]+x[1].split('$') for x in all_variables_perturbations]
              
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
-            if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br"]:
-                metric_for_best_model="overall_f1"
-            elif task in ["run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
+            if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br", "run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
             gpu_id = int(gpu_id)
             seed = int(seed)
-            if model_name=="large" or model_name in models_to_be_used_large:
-                batch_size=8
-                accumulation_steps=2
-            else:
-                batch_size=16
+            if batch_size is None:
+                if model_name=="large" or model_name in models_to_be_used_large:
+                    batch_size=8
+                    accumulation_steps=2
+                else:
+                    batch_size=16
+                    accumulation_steps=1
+            if batch_size is not None and accumulation_steps is None:
                 accumulation_steps=1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
             if script_new is not None:
                 command = 'bash '+str(script_new)
+                gpu_command_dict[gpu_id].append(command)
                 print(command)
                 if command not in commands_to_run:
                     if len(commands_to_run) <= number_of_parallel_commands:
@@ -209,9 +216,14 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
         js.dump(command_dict,f,ensure_ascii=False,indent=2)
 
             
-            
-    for commands_to_run in all_commands_to_run:
-        run_in_parallel(commands_to_run)
+    
+    '''for commands_to_run in all_commands_to_run:
+        run_in_parallel(commands_to_run)'''
+
+    #New approach
+    commands_to_run = ['; sleep 10; '.join(commands) for gpu_id, commands in gpu_command_dict.items()]
+    run_in_parallel(commands_to_run=commands_to_run)
+
 
    
     
