@@ -31,7 +31,7 @@ class HierarchicalBert(nn.Module):
 
     def __init__(self, encoder, max_segments=64, max_segment_length=128):
         super(HierarchicalBert, self).__init__()
-        supported_models = ['bert', 'roberta', 'deberta','xlm-roberta']
+        supported_models = ['bert', 'roberta', 'deberta-v2','xlm-roberta','distilbert']
         assert encoder.config.model_type in supported_models  # other model types are not supported so far
         # Pre-trained segment (token-wise) encoder, e.g., BERT
         self.encoder = encoder
@@ -44,13 +44,24 @@ class HierarchicalBert(nn.Module):
                                                padding_idx=0,
                                                _weight=sinusoidal_init(max_segments + 1, encoder.config.hidden_size))
         # Init segment-wise transformer-based encoder
-        self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
+
+        if encoder.config.model_type =='distilbert':
+            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
                                           nhead=encoder.config.num_attention_heads,
-                                          batch_first=True, dim_feedforward=encoder.config.intermediate_size,
-                                          activation=encoder.config.hidden_act,
-                                          dropout=encoder.config.hidden_dropout_prob,
-                                          layer_norm_eps=encoder.config.layer_norm_eps,
+                                          batch_first=True, dim_feedforward=encoder.config.hidden_dim, #for some reason, intermediate_size is called differently in DistilBertConfig
+                                          activation=encoder.config.activation, #for some reason, hidden_act is called activation in DistilBertConfig
+                                          dropout=encoder.config.dropout, #for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
+                                          #layer_norm_eps=encoder.config.layer_norm_eps,
                                           num_encoder_layers=2, num_decoder_layers=0).encoder
+
+        else:
+            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
+                                            nhead=encoder.config.num_attention_heads,
+                                            batch_first=True, dim_feedforward=encoder.config.intermediate_size,
+                                            activation=encoder.config.hidden_act,
+                                            dropout=encoder.config.hidden_dropout_prob,
+                                            layer_norm_eps=encoder.config.layer_norm_eps,
+                                            num_encoder_layers=2, num_decoder_layers=0).encoder
 
     def forward(self,
                 input_ids=None,
