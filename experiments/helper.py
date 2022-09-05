@@ -30,7 +30,7 @@ from transformers import (
     RobertaTokenizerFast,
     XLMRobertaTokenizer,
     XLMRobertaTokenizerFast,
-    DebertaForSequenceClassification,
+    #DebertaForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
     RobertaForSequenceClassification,
@@ -41,7 +41,7 @@ from transformers import (
     DebertaForTokenClassification
 
 )
-
+from models.deberta import DebertaForSequenceClassification
 
 def split_into_languages(dataset):
     dataset_new = list()
@@ -155,9 +155,9 @@ def compute_metrics_multi_label(p: EvalPrediction):
             'macro-precision': precision_macro,
             'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
-            'macro-recall_score':recall_score_macro,
-            'micro-recall_score': recall_score_micro,
-            'weighted-recall_score': recall_score_weighted
+            'macro-recall':recall_score_macro,
+            'micro-recall': recall_score_micro,
+            'weighted-recall': recall_score_weighted
             }
 
 
@@ -188,9 +188,9 @@ def compute_metrics_multi_class(p: EvalPrediction):
             'macro-precision': precision_macro,
             'micro-precision':precision_micro,
             'weighted-precision': precision_weighted,
-            'macro-recall_score':recall_score_macro,
-            'micro-recall_score': recall_score_micro,
-            'weighted-recall_score': recall_score_weighted
+            'macro-recall':recall_score_macro,
+            'micro-recall': recall_score_micro,
+            'weighted-recall': recall_score_weighted
             }
 
 
@@ -483,15 +483,20 @@ def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,tr
 
 
 
-def config_wandb(training_args, model_args, data_args):
+def config_wandb(training_args, model_args, data_args, project_name=None):
 
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     #project_name = model_args.model_name_or_path
-    project_name = 'bfh_test'
-    project_name = re.sub('/','-',project_name)
+    if project_name is None:
+        project_name = 'bfh_test'
+        project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
-    wandb.run.name=data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
+    try:
+        run_name = data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__hierarchical_'+str(model_args.hierarchical)+'__time-'+time_now
+    except:
+        run_name = data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
+    wandb.run.name=run_name
 
 def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset):
     all_inputs = train_dataset['input'] + eval_dataset['input'] + predict_dataset['input']
