@@ -56,14 +56,14 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=128,
+        default=4096,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
         },
     )
     max_segments: Optional[int] = field(
-        default=64,
+        default=32,
         metadata={
             "help": "The maximum number of segments (paragraphs) to be considered. Sequences longer "
                     "than this will be truncated, sequences shorter will be padded."
@@ -181,7 +181,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args, project_name='testing_hierachical_model')
 
     
     # Setup distant debugging if needed
@@ -247,7 +247,7 @@ def main():
     if training_args.do_train:
         train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,100)])
+            train_dataset = train_dataset.select([n for n in range(0,50)])
         train_dataset = split_into_languages(train_dataset)
 
     if training_args.do_eval:
@@ -288,17 +288,21 @@ def main():
 
     if model_args.hierarchical:
         # Hack the classifier encoder to use hierarchical BERT
-        if config.model_type in ['bert', 'deberta']:
+        if config.model_type in ['bert','deberta-v2']:
             if config.model_type == 'bert':
                 segment_encoder = model.bert
-            else:
+            elif config.model_type =='distilbert':
+                segment_encoder = model.distilbert
+            elif config.model_type =='deberta-v2':
                 segment_encoder = model.deberta
             model_encoder = HierarchicalBert(encoder=segment_encoder,
                                              max_segments=data_args.max_segments,
                                              max_segment_length=data_args.max_seg_length)
             if config.model_type == 'bert':
                 model.bert = model_encoder
-            elif config.model_type == 'deberta':
+            elif config.model_type == 'distilbert':
+                model.distilbert = model_encoder
+            elif config.model_type == 'deberta-v2':
                 model.deberta = model_encoder
             else:
                 raise NotImplementedError(f"{config.model_type} is no supported yet!")
@@ -329,8 +333,9 @@ def main():
     def preprocess_function(examples):
         # Tokenize the texts
         if model_args.hierarchical:
-            case_template = [[0] * data_args.max_seq_length]
-            if config.model_type in ['roberta','xlm-roberta']:
+            case_template = [[0] * data_args.max_seg_length]
+            # DistilBERT doesn’t have token_type_ids, you don’t need to indicate which token belongs to which segment. Just separate your segments with the separation token tokenizer.sep_token (or [SEP]).
+            if config.model_type in ['roberta','xlm-roberta','distilbert'] or model_args.model_name_or_path=='microsoft/Multilingual-MiniLM-L12-H384':
                 batch = {'input_ids': [], 'attention_mask': []}
                 for doc in examples['input']:
                     doc = re.split('\n', doc)
@@ -428,7 +433,11 @@ def main():
     # Initialize our Trainer
     training_args.metric_for_best_model = "macro-f1"
     training_args.evaluation_strategy = IntervalStrategy.STEPS
+    #training_args.logging_strategy = IntervalStrategy.STEPS
     training_args.eval_steps = 1000
+    training_args.logging_steps = 1000
+    
+
 
     trainer = MultilabelTrainer(
         model=model,
