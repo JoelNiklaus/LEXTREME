@@ -33,24 +33,24 @@ models_to_be_used_large = [
 
 
 task_code_mapping = {
-    #'run_greek_legal_ner': 'run_greek_legal_ner.py',
-    #'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
-    #'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    #'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    #'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    #'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    'run_greek_legal_ner': 'run_greek_legal_ner.py',
+    'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
+    'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
+    'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
+    'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
     'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
     'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
     'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    #'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    #'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
-    #'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
-    #'run_legalnero': 'run_legalnero.py',
-    #'run_german_argument_mining': 'run_german_argument_mining.py',
-    #'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
+    'run_legalnero': 'run_legalnero.py',
+    'run_german_argument_mining': 'run_german_argument_mining.py',
+    'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
     'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
-    #'run_lener_br': 'run_lener_br.py',
-    #'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
+    'run_lener_br': 'run_lener_br.py',
+    'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
     }
 
 
