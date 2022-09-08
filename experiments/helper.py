@@ -8,6 +8,7 @@ from ast import literal_eval
 from datasets import Dataset, load_metric
 from transformers import EvalPrediction
 from scipy.special import expit
+from sklearn.utils.extmath import softmax
 from seqeval.metrics import f1_score as seqeval_f1_score
 from seqeval.metrics import precision_score as seqeval_precision_score
 from seqeval.metrics import recall_score as seqeval_recall_score
@@ -17,6 +18,7 @@ import numpy as np
 import datetime
 import wandb
 import re
+
 from transformers import (
     AutoConfig,
     DistilBertConfig,
@@ -42,11 +44,8 @@ from transformers import (
 
 )
 
-
-
 from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
-
 
 
 
@@ -70,6 +69,15 @@ def split_into_languages(dataset):
     dataset_new = Dataset.from_pandas(dataset_new)
     
     return  dataset_new
+    
+
+def split_into_segments(text, max_seg_length):
+
+    text_split = text.split()
+
+    for i in range(0, len(text_split), max_seg_length):
+        yield text_split[i:i + max_seg_length]
+
 
 
 def get_label_dict(main_path:str,label_column:str='label')->dict:
@@ -315,6 +323,8 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
                 language_specific_metrics.append(metrics)
         
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+
+    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
 
     print('\n\n###################predictions##########################\n\n')
     print(predictions)
