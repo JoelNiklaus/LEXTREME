@@ -30,7 +30,7 @@ from transformers import (
     RobertaTokenizerFast,
     XLMRobertaTokenizer,
     XLMRobertaTokenizerFast,
-    #DebertaForSequenceClassification,
+    DebertaForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
     RobertaForSequenceClassification,
@@ -41,7 +41,14 @@ from transformers import (
     DebertaForTokenClassification
 
 )
-from models.deberta import DebertaForSequenceClassification
+
+
+
+from models.deberta import HierDebertaForSequenceClassification
+from models.distilbert import HierDistilBertForSequenceClassification
+
+
+
 
 def split_into_languages(dataset):
     dataset_new = list()
@@ -511,8 +518,6 @@ def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_datas
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
 
-
-
     model_types = {
                     "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
                     "distilbert": ["distilbert-base-multilingual-cased"],
@@ -535,9 +540,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
-
         tokenizer = DistilBertTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
@@ -546,16 +548,31 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = DistilBertForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
 
+        if model_args.hierarchical==True:
+            model = HierDistilBertForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+        
+
+        if model_args.hierarchical==False:
+            model = DistilBertForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+
+    
     elif model_args.model_name_or_path in model_types['roberta']:
         
         # Load pretrained model and tokenizer
@@ -569,9 +586,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
 
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
         tokenizer = RobertaTokenizerFast.from_pretrained(
@@ -603,9 +617,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
-
         # DebertaTokenizer is buggy, therefore we use the AutTokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
@@ -615,15 +626,28 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = DebertaForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+
+        if model_args.hierarchical==True:
+            model = HierDebertaForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+        elif model_args.hierarchical==False:
+            model = DebertaForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+
     
     elif model_args.model_name_or_path in model_types['MiniLM']:
         
@@ -636,9 +660,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
 
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
         tokenizer = XLMRobertaTokenizer.from_pretrained(
@@ -688,9 +709,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
-
         tokenizer = DistilBertTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
@@ -699,6 +717,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
+
         model = DistilBertForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -722,9 +741,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
 
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
         tokenizer = RobertaTokenizerFast.from_pretrained(
@@ -757,9 +773,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
-
         # DebertaTokenizer is buggy, therefore we use the AutTokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
@@ -790,9 +803,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-
-        if config.model_type == 'big_bird':
-            config.attention_type = 'original_full'
 
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
         tokenizer = XLMRobertaTokenizerFast.from_pretrained(
