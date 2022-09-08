@@ -360,27 +360,14 @@ def main():
                                 data_args.max_segments - len(doc_encodings['attention_mask'])))
                     batch['token_type_ids'].append(doc_encodings['token_type_ids'] + case_template * (
                                 data_args.max_segments - len(doc_encodings['token_type_ids'])))
-        elif config.model_type in ['longformer', 'big_bird']:
-            cases = []
-            max_position_embeddings = config.max_position_embeddings - 2 if config.model_type == 'longformer' \
-                else config.max_position_embeddings
-            for doc in examples['input']:
-                doc = re.split('\n', doc)
-                cases.append(f' {tokenizer.sep_token} '.join([' '.join(paragraph.split()[:data_args.max_seg_length])
-                                                              for paragraph in doc[:data_args.max_segments]]))
-            batch = tokenizer(cases, padding=padding, max_length=max_position_embeddings, truncation=True)
-            if config.model_type == 'longformer':
-                global_attention_mask = np.zeros((len(cases), max_position_embeddings), dtype=np.int32)
-                # global attention on cls token
-                global_attention_mask[:, 0] = 1
-                batch['global_attention_mask'] = list(global_attention_mask)
+
         else:
             batch = tokenizer(
-            examples["input"],
-            padding=padding,
-            max_length=data_args.max_seq_length,
-            truncation=True,
-        )
+                examples["input"],
+                padding=padding,
+                max_length=data_args.max_seq_length,
+                truncation=True,
+                )
 
         batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in examples["label"]]
 

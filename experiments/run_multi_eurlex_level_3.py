@@ -12,13 +12,14 @@ from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
 import numpy as np
-
 import datasets
 from datasets import load_dataset, Dataset
 from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages
 from trainer import MultilabelTrainer
 import glob
 import shutil
+from models.hierbert import HierarchicalBert
+from torch import nn
 
 
 import transformers
@@ -55,10 +56,24 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=512,
+        default=4096,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    max_segments: Optional[int] = field(
+        default=32,
+        metadata={
+            "help": "The maximum number of segments (paragraphs) to be considered. Sequences longer "
+                    "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    max_seg_length: Optional[int] = field(
+        default=128,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+                    "than this will be truncated, sequences shorter will be padded."
         },
     )
     overwrite_cache: bool = field(
@@ -121,7 +136,9 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    hierarchical: bool = field(
+        default=True, metadata={"help": "Whether to use a hierarchical variant or not"}
+    )
     model_name_or_path: str = field(
         default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -164,7 +181,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args, project_name='testing_hierachical_model')
 
     
     # Setup distant debugging if needed
@@ -230,7 +247,7 @@ def main():
     if training_args.do_train:
         train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,100)])
+            train_dataset = train_dataset.select([n for n in range(0,10)])
         train_dataset = split_into_languages(train_dataset)
 
     if training_args.do_eval:
@@ -267,7 +284,46 @@ def main():
 
 
 
-    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+    model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+
+    if model_args.hierarchical:
+        # Hack the classifier encoder to use hierarchical BERT
+        if config.model_type in ['bert','deberta-v2','distilbert']:
+            if config.model_type == 'bert':
+                segment_encoder = model.bert
+            elif config.model_type =='distilbert':
+                segment_encoder = model.distilbert
+            elif config.model_type =='deberta-v2':
+                segment_encoder = model.deberta
+            model_encoder = HierarchicalBert(encoder=segment_encoder,
+                                             max_segments=data_args.max_segments,
+                                             max_segment_length=data_args.max_seg_length)
+            if config.model_type == 'bert':
+                model.bert = model_encoder
+            elif config.model_type == 'distilbert':
+                model.distilbert = model_encoder
+            elif config.model_type == 'deberta-v2':
+                model.deberta = model_encoder
+            else:
+                raise NotImplementedError(f"{config.model_type} is no supported yet!")
+
+        elif config.model_type in ['roberta','xlm-roberta']:
+            model_encoder = HierarchicalBert(encoder=model.roberta, 
+                                            max_segments=data_args.max_segments,
+                                            max_segment_length=data_args.max_seg_length)
+            model.roberta = model_encoder
+            # Build a new classification layer, as well
+            dense = nn.Linear(config.hidden_size, config.hidden_size)
+            dense.load_state_dict(model.classifier.dense.state_dict())  # load weights
+            dropout = nn.Dropout(config.hidden_dropout_prob).to(model.device)
+            out_proj = nn.Linear(config.hidden_size, config.num_labels).to(model.device)
+            out_proj.load_state_dict(model.classifier.out_proj.state_dict())  # load weights
+            model.classifier = nn.Sequential(dense, dropout, out_proj).to(model.device)
+
+        elif config.model_type in ['longformer', 'big_bird']:
+            pass
+        else:
+            raise NotImplementedError(f"{config.model_type} is no supported yet!")
 
     # Preprocessing the datasets
     # Padding strategy
@@ -279,14 +335,40 @@ def main():
 
     def preprocess_function(examples):
         # Tokenize the texts
-       
-        batch = tokenizer(
-            examples["input"],
-            padding=padding,
-            max_length=data_args.max_seq_length,
-            truncation=True,
-        )
-        
+        if model_args.hierarchical:
+            case_template = [[0] * data_args.max_seg_length]
+            # DistilBERT doesn’t have token_type_ids, you don’t need to indicate which token belongs to which segment. Just separate your segments with the separation token tokenizer.sep_token (or [SEP]).
+            if config.model_type in ['roberta','xlm-roberta','distilbert'] or model_args.model_name_or_path=='microsoft/Multilingual-MiniLM-L12-H384':
+                batch = {'input_ids': [], 'attention_mask': []}
+                for doc in examples['input']:
+                    doc = re.split('\n', doc)
+                    doc_encodings = tokenizer(doc[:data_args.max_segments], padding=padding,
+                                              max_length=data_args.max_seg_length, truncation=True)
+                    batch['input_ids'].append(doc_encodings['input_ids'] + case_template * (
+                            data_args.max_segments - len(doc_encodings['input_ids'])))
+                    batch['attention_mask'].append(doc_encodings['attention_mask'] + case_template * (
+                            data_args.max_segments - len(doc_encodings['attention_mask'])))
+            else:
+                batch = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
+                for doc in examples['input']:
+                    doc = re.split('\n', doc)
+                    doc_encodings = tokenizer(doc[:data_args.max_segments], padding=padding,
+                                              max_length=data_args.max_seg_length, truncation=True)
+                    batch['input_ids'].append(doc_encodings['input_ids'] + case_template * (
+                                data_args.max_segments - len(doc_encodings['input_ids'])))
+                    batch['attention_mask'].append(doc_encodings['attention_mask'] + case_template * (
+                                data_args.max_segments - len(doc_encodings['attention_mask'])))
+                    batch['token_type_ids'].append(doc_encodings['token_type_ids'] + case_template * (
+                                data_args.max_segments - len(doc_encodings['token_type_ids'])))
+
+        else:
+            batch = tokenizer(
+                examples["input"],
+                padding=padding,
+                max_length=data_args.max_seq_length,
+                truncation=True,
+                )
+
         batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in examples["label"]]
 
         del examples["label"]
@@ -303,7 +385,6 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
-        
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
@@ -342,7 +423,11 @@ def main():
     # Initialize our Trainer
     training_args.metric_for_best_model = "macro-f1"
     training_args.evaluation_strategy = IntervalStrategy.STEPS
+    #training_args.logging_strategy = IntervalStrategy.STEPS
     training_args.eval_steps = 1000
+    training_args.logging_steps = 1000
+    
+
 
     trainer = MultilabelTrainer(
         model=model,
