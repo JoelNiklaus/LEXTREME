@@ -287,7 +287,11 @@ def convert_id2label(label_output:list,id2label:dict)->list:
 
 
 
-
+def process_results(preds, labels):
+    preds = preds[0] if isinstance(preds, tuple) else preds
+    probs = softmax(preds)
+    preds = np.argmax(preds, axis=1)
+    return preds, labels, probs
 
 
 
@@ -311,6 +315,11 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
                 language_specific_metrics.append(metrics)
         
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+
+    print('\n\n###################predictions##########################\n\n')
+    print(predictions)
+    print('\n\n###################predictions##########################\n\n')
+
 
     
 
@@ -378,7 +387,8 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
 
     predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
 
-    
+    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
+
 
     max_predict_samples = (
         data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
@@ -394,12 +404,12 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     wandb.log(language_specific_metrics)
 
 
-    output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
+    '''output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
     if trainer.is_world_process_zero():
         with open(output_predict_file, "w") as writer:
             for index, pred_list in enumerate(predictions):
                 pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                writer.write(f"{index}\t{pred_line}\n")
+                writer.write(f"{index}\t{pred_line}\n")'''
 
     predict_dataset_df = pd.DataFrame(predict_dataset)
 

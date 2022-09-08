@@ -2,7 +2,6 @@
 # coding=utf-8
 
 
-from cProfile import label
 import logging
 import os
 import random
@@ -13,7 +12,7 @@ from typing import Optional
 import pandas as pd
 import numpy as np
 import datasets
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages
 from trainer import MultilabelTrainer
 import glob
@@ -181,7 +180,7 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args, project_name='testing_hierachical_model')
+    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
     
     # Setup distant debugging if needed
@@ -385,6 +384,7 @@ def main():
                 load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
+            
         # Log a few random samples from the training set:
         for index in random.sample(range(len(train_dataset)), 3):
             logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
