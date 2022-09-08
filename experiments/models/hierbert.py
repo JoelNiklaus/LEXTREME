@@ -92,14 +92,11 @@ class HierarchicalBert(nn.Module):
         if self.encoder.config.model_type=='distilbert':
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                         attention_mask=attention_mask_reshape)[0]
-            print(encoder_outputs.shape)
 
         else:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                         attention_mask=attention_mask_reshape,
                                         token_type_ids=token_type_ids_reshape)[0]
-
-            print(encoder_outputs.shape)
         
 
         # Reshape back to (batch_size, n_segments, max_segment_length, output_size) --> (4, 64, 128, 768)
@@ -109,7 +106,6 @@ class HierarchicalBert(nn.Module):
 
         # Gather CLS outputs per segment --> (4, 64, 768)
         encoder_outputs = encoder_outputs[:, :, 0]
-        print(encoder_outputs.shape)
 
         # Infer real segments, i.e., mask paddings
         seg_mask = (torch.sum(input_ids, 2) != 0).to(input_ids.dtype)
@@ -123,9 +119,6 @@ class HierarchicalBert(nn.Module):
 
         # Collect document representation
         outputs, _ = torch.max(seg_encoder_outputs, 1) 
-
-        print('\n\n\n\n\n\n\n\n\n\n\n\n Distil ################################## Distil \n\n\n\n\n\n\n\n\n\n\n\n')
-        print(outputs.shape)
 
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
