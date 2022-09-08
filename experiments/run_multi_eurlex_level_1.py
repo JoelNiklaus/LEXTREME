@@ -247,7 +247,7 @@ def main():
     if training_args.do_train:
         train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,50)])
+            train_dataset = train_dataset.select([n for n in range(0,10)])
         train_dataset = split_into_languages(train_dataset)
 
     if training_args.do_eval:
@@ -288,7 +288,7 @@ def main():
 
     if model_args.hierarchical:
         # Hack the classifier encoder to use hierarchical BERT
-        if config.model_type in ['bert','deberta-v2']:
+        if config.model_type in ['bert','deberta-v2','distilbert']:
             if config.model_type == 'bert':
                 segment_encoder = model.bert
             elif config.model_type =='distilbert':
@@ -306,9 +306,11 @@ def main():
                 model.deberta = model_encoder
             else:
                 raise NotImplementedError(f"{config.model_type} is no supported yet!")
+
         elif config.model_type in ['roberta','xlm-roberta']:
-            model_encoder = HierarchicalBert(encoder=model.roberta, max_segments=data_args.max_segments,
-                                             max_segment_length=data_args.max_seg_length)
+            model_encoder = HierarchicalBert(encoder=model.roberta, 
+                                            max_segments=data_args.max_segments,
+                                            max_segment_length=data_args.max_seg_length)
             model.roberta = model_encoder
             # Build a new classification layer, as well
             dense = nn.Linear(config.hidden_size, config.hidden_size)
@@ -317,6 +319,7 @@ def main():
             out_proj = nn.Linear(config.hidden_size, config.num_labels).to(model.device)
             out_proj.load_state_dict(model.classifier.out_proj.state_dict())  # load weights
             model.classifier = nn.Sequential(dense, dropout, out_proj).to(model.device)
+
         elif config.model_type in ['longformer', 'big_bird']:
             pass
         else:

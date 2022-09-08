@@ -118,7 +118,9 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    hierarchical: bool = field(
+        default=False, metadata={"help": "Whether to use a hierarchical variant or not"}
+    )
     model_name_or_path: str = field(
         default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -254,7 +256,7 @@ def main():
     
     
     
-    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+    model, tokenizer, _ = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
