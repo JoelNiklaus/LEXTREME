@@ -76,7 +76,7 @@ def split_into_segments(text, max_seg_length):
     text_split = text.split()
 
     for i in range(0, len(text_split), max_seg_length):
-        yield text_split[i:i + max_seg_length]
+        yield ' '.join(text_split[i:i + max_seg_length])
 
 
 
@@ -514,9 +514,9 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
 
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
-    #project_name = model_args.model_name_or_path
     if project_name is None:
-        project_name = 'bfh_test'
+        #project_name = 'bfh_test'
+        project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     try:

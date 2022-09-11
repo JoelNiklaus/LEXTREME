@@ -180,6 +180,11 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    if model_args.hierarchical==True:
+        data_args.max_seq_length=4096
+    elif model_args.hierarchical==False:
+        data_args.max_seq_length=512
+
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
     
@@ -246,7 +251,7 @@ def main():
     if training_args.do_train:
         train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,10)])
+            train_dataset = train_dataset.select([n for n in range(0,100)])
         train_dataset = split_into_languages(train_dataset)
 
     if training_args.do_eval:
@@ -422,10 +427,16 @@ def main():
 
     # Initialize our Trainer
     training_args.metric_for_best_model = "macro-f1"
-    training_args.evaluation_strategy = IntervalStrategy.STEPS
-    #training_args.logging_strategy = IntervalStrategy.STEPS
-    training_args.eval_steps = 1000
-    training_args.logging_steps = 1000
+    # Initialize our Trainer
+    training_args.metric_for_best_model = "macro-f1"
+    if data_args.running_mode=="experimental":
+        training_args.evaluation_strategy = IntervalStrategy.EPOCH
+        training_args.logging_strategy = IntervalStrategy.EPOCH
+    else:
+        training_args.evaluation_strategy = IntervalStrategy.STEPS
+        training_args.logging_strategy = IntervalStrategy.STEPS
+        training_args.eval_steps = 1000
+        training_args.logging_steps = 1000
     
 
 
