@@ -4,6 +4,7 @@
 # In[1]:
 
 
+from calendar import LocaleTextCalendar
 import pandas as pd
 from datasets import load_dataset
 from matplotlib import pyplot as plt
@@ -96,7 +97,8 @@ def split_into_languages(dataset):
     
     return  dataset_new
 
-def generate_historgram(dataset_name, dataframe,percentile=False,language=None):
+def generate_historgram(dataset_name, dataframe,percentile,pathname,language=None):
+
     
     if language is None:
         all_data_as_df_filtered = dataframe
@@ -142,15 +144,16 @@ def generate_historgram(dataset_name, dataframe,percentile=False,language=None):
     plt.title(dataset_name, fontsize=16)
     
     if language is None:
-        plt.savefig('../figures/'+dataset_name+'/histogram_'+'_'.join(dataset_name.split())+'.jpg')
+        plt.savefig(pathname+dataset_name+'/histogram_'+'_'.join(dataset_name.split())+'.jpg')
         
     else:
-        plt.savefig('../figures/'+dataset_name+'/histogram_'+'_'.join(dataset_name.split())+'__'+language+'.jpg')
+        plt.savefig(pathname+dataset_name+'/histogram_'+'_'.join(dataset_name.split())+'__'+language+'.jpg')
         
     
         
 
 def create_histograms(dataset_name, percentile, language='all'):
+    
     
     if percentile == False:
         pathname = '../figures/'
@@ -162,8 +165,8 @@ def create_histograms(dataset_name, percentile, language='all'):
         os.mkdir(pathname+dataset_name)
     else:
         os.mkdir(pathname+dataset_name)
-        
-    
+
+
     dataset = load_dataset("joelito/lextreme",dataset_name) 
 
     all_data_as_df = list()
@@ -181,7 +184,7 @@ def create_histograms(dataset_name, percentile, language='all'):
             
     for lmt in models_to_be_used:
         tokenizer = AutoTokenizer.from_pretrained(lmt)
-        all_data_as_df[lmt]=all_data_as_df.input.apply(lambda x: get_tokenization_length(tokenizer,x))
+        all_data_as_df[lmt]=all_data_as_df.input.parallel_apply(lambda x: get_tokenization_length(tokenizer,x))
     
     if language == 'all':
         
@@ -189,28 +192,30 @@ def create_histograms(dataset_name, percentile, language='all'):
             
             for lang in all_data_as_df.language.unique():
             
-                generate_historgram(dataset_name,all_data_as_df,lang)
+                generate_historgram(dataset_name,all_data_as_df,percentile,pathname,lang)
         
         if len(all_data_as_df.language.unique())>1:
             
-            generate_historgram(dataset_name,all_data_as_df)
+            generate_historgram(dataset_name,all_data_as_df,percentile,pathname)
             
     else:
-        generate_historgram(dataset_name,all_data_as_df,language)
+        generate_historgram(dataset_name,all_data_as_df,percentile,language,pathname)
 
 
 # In[ ]:
 
-
+'''
 with Pool() as p:
-    print(p.map(create_histograms, [(x,False) for x in lextreme_datasets]))
+    print(p.starmap(create_histograms, [(x,False) for x in lextreme_datasets]))
     
 
 #Considering only the data within 98 percentile
 with Pool() as p:
-    print(p.map(create_histograms, [(x,True) for x in lextreme_datasets]))
+    print(p.starmap(create_histograms, [(x,True) for x in lextreme_datasets]))'''
 
-
+for ds in lextreme_datasets:
+    create_histograms(ds,True)
+    create_histograms(ds,False)
 # In[ ]:
 
 
