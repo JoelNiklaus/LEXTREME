@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[10]:
+# In[1]:
 
 
 import pandas as pd
@@ -20,6 +20,13 @@ plt.style.use('ggplot')
 #plt.style.use('seaborn-deep')
 
 
+# In[2]:
+
+
+from pandarallel import pandarallel
+
+pandarallel.initialize(progress_bar=False)
+
 
 # In[3]:
 
@@ -37,8 +44,6 @@ def get_tokenization_length(tokenizer, text):
                 result = tokenizer(text, is_split_into_words=True,add_special_tokens=False, return_length=True)
             except:
                 print(text)
-    else:
-        text = str(text)
     if type(result['length'])==int:
         return result['length']
     elif type(result['length'])==list:
@@ -64,11 +69,11 @@ lextreme_datasets = ['brazilian_court_decisions_judgment', 'brazilian_court_deci
                      'swiss_judgment_prediction', 'german_argument_mining', 'greek_legal_code_volume', 
                      'greek_legal_code_chapter', 'greek_legal_code_subject', 
                      'online_terms_of_service_unfairness_levels', 'online_terms_of_service_clause_topics', 
-                     'covid19_emergency_event', 'multi_eurlex_level_1', 'lener_br', 'legalnero', 
-                     'greek_legal_ner', 'mapa_coarse', 'mapa_fine']
+                     'covid19_emergency_event', 'lener_br', 'legalnero', 
+                     'greek_legal_ner', 'mapa_coarse', 'mapa_fine'] #'multi_eurlex_level_1'
 
 
-# In[8]:
+# In[6]:
 
 
 def split_into_languages(dataset):
@@ -91,7 +96,7 @@ def split_into_languages(dataset):
     
     return  dataset_new
 
-def generate_historgram(dataset_name, dataframe,language=None):
+def generate_historgram(dataset_name, dataframe,percentile=False,language=None):
     
     if language is None:
         all_data_as_df_filtered = dataframe
@@ -105,17 +110,24 @@ def generate_historgram(dataset_name, dataframe,language=None):
     plots = list()
     labels = list()
     for lmt in set(models_to_be_used):
-        bins = np.linspace(0, max(list(all_data_as_df_filtered[lmt])),100)
+        
+        if percentile==False:
+            bins = np.linspace(0, max(list(all_data_as_df_filtered[lmt])),round(max(list(all_data_as_df_filtered[lmt]))/100))
+        
+        elif percentile ==True:
+            bins = np.linspace(0, np.percentile(sorted(all_data_as_df_filtered[lmt].tolist()), 98),round(max(list(all_data_as_df_filtered[lmt]))/100))
+        
         plots.append(list(all_data_as_df_filtered[lmt]))
         labels.append(lmt)
     
     plt.hist(plots, bins, alpha=0.5, label=labels)
     
     
-    if dataset_name=='multi_eurlex_level_1':   
-        plt.xlim(0, 30000)
-    elif dataset_name.startswith('greek_legal_code'):
-        plt.xlim(0, 20000)
+    if percentile==False:
+        if dataset_name=='multi_eurlex_level_1':   
+            plt.xlim(0, 30000)
+        elif dataset_name.startswith('greek_legal_code'):
+            plt.xlim(0, 20000)
         
 
     
@@ -135,19 +147,24 @@ def generate_historgram(dataset_name, dataframe,language=None):
     else:
         plt.savefig('../figures/'+dataset_name+'/histogram_'+'_'.join(dataset_name.split())+'__'+language+'.jpg')
         
-    #plt.clf()
+    
         
 
-def create_histograms(dataset_name, language='all'):
+def create_histograms(dataset_name, percentile, language='all'):
     
-    if Path('../figures/'+dataset_name).exists():
-        shutil.rmtree('../figures/'+dataset_name)
-        os.mkdir('../figures/'+dataset_name)
+    if percentile == False:
+        pathname = '../figures/'
+    elif percentile ==True:
+        pathname = '../figures_percentile_98/'
+    
+    if Path(pathname+dataset_name).exists():
+        shutil.rmtree(pathname+dataset_name)
+        os.mkdir(pathname+dataset_name)
     else:
-        os.mkdir('../figures/'+dataset_name)
+        os.mkdir(pathname+dataset_name)
         
     
-    dataset = load_dataset("joelito/lextreme",dataset_name, download_mode="force_redownload") 
+    dataset = load_dataset("joelito/lextreme",dataset_name) 
 
     all_data_as_df = list()
 
@@ -185,17 +202,13 @@ def create_histograms(dataset_name, language='all'):
 # In[ ]:
 
 
-#for ds in lextreme_datasets:
-    #create_histograms(ds)
-
-
-# In[ ]:
-
-
-from multiprocessing import Pool
-
 with Pool() as p:
-    print(p.map(create_histograms, lextreme_datasets))
+    print(p.map(create_histograms, [(x,False) for x in lextreme_datasets]))
+    
+
+#Considering only the data within 98 percentile
+with Pool() as p:
+    print(p.map(create_histograms, [(x,True) for x in lextreme_datasets]))
 
 
 # In[ ]:
