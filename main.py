@@ -61,7 +61,10 @@ def generate_command(time_stamp, **data):
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
 
     
-    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"]) # I must be careful, it another stragey might require greater_is_better = False
+    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"])
+
+    if "hierarchical" in data.keys():
+        final_command += ' --hierarchical '+data["hierarchical"]
     
     file_name = './temporary/'+data["task"]+"_"+str(data["gpu_number"])+"_"+str(data["seed"])+"_"+str(data["model_name"]).replace('/','_')+"_"+time_now+".sh"
     
@@ -79,7 +82,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(language_model_type='all',running_mode='default', task='all',list_of_seeds=None,lower_case=True,num_train_epochs=50,batch_size=None,accumulation_steps=None,language='all_languages',learning_rate=1e-5,gpu_number=None):
+def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_train_epochs,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number):
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -96,7 +99,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     if type(list_of_seeds)==list:
         list_of_seeds = [int(s) for s in list_of_seeds if s]
     elif list_of_seeds is None:
-        list_of_seeds=[1,2,3,4]
+        list_of_seeds=[1,2,3,4,5]
     elif type(list_of_seeds)==str:
         list_of_seeds = list_of_seeds.split(',')
         list_of_seeds = [int(s) for s in list_of_seeds if s]
@@ -127,8 +130,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     number_of_parallel_commands = len(gpu_number)-1
     commands_to_run = list()
     if task=='all': 
-        #all_variables = [[t for t in list(task_code_mapping.keys()) if t not in ['run_multi_eurlex_level_1','run_multi_eurlex_level_2', 'run_multi_eurlex_level_3']]+['run_multi_eurlex_level_1','run_multi_eurlex_level_2', 'run_multi_eurlex_level_3'],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
-        all_variables = [[t for t in list(task_code_mapping.keys()) if t not in ['run_multi_eurlex_level_1','run_multi_eurlex_level_2', 'run_multi_eurlex_level_3']],models_to_be_used,list_of_seeds] #Remove multi_eur_lex and put it at the end because it takes ages to finish
+        all_variables = [[t for t in list(task_code_mapping.keys())],models_to_be_used,list_of_seeds]
         all_variables_perturbations = list(itertools.product(*all_variables))
         all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]        
         all_variables_perturbations = list(zip(cycle(gpu_number), all_variables_perturbations)) 
@@ -215,12 +217,7 @@ def run_experiment(language_model_type='all',running_mode='default', task='all',
     with open('command_dict.json','w') as f:
         js.dump(command_dict,f,ensure_ascii=False,indent=2)
 
-            
-    
-    '''for commands_to_run in all_commands_to_run:
-        run_in_parallel(commands_to_run)'''
-
-    #New approach
+        
     commands_to_run = ['; sleep 10; '.join(commands) for gpu_id, commands in gpu_command_dict.items()]
     run_in_parallel(commands_to_run=commands_to_run)
 
@@ -245,19 +242,33 @@ if __name__=='__main__':
     
 
     parser = argparse.ArgumentParser()
-    
+
+    parser.add_argument('-gn','--gpu_number', help='Define which gpu you would like to use.', default=None)
+    parser.add_argument('-lang','--language', help='Define if you want to filter the training dataset by language.', default='all_languages')
+    parser.add_argument('-lc','--lower_case', help='Define if lower case or not.', default=True)
     parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all')
+    parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
-    parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=10)
+    parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=None)
+    parser.add_argument('-as','--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=50)
-    parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', type=str)
+    parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     
 
     args = parser.parse_args()
     
     
 
-    run_experiment(language_model_type=args.language_model_type,running_mode=args.running_mode,task=args.task,batch_size=args.batch_size,num_train_epochs=args.num_train_epochs,list_of_seeds=args.list_of_seeds)
+    run_experiment(language_model_type=args.language_model_type,
+                    running_mode=args.running_mode,
+                    task=args.task,
+                    batch_size=args.batch_size,
+                    num_train_epochs=args.num_train_epochs,
+                    list_of_seeds=args.list_of_seeds,
+                    accumulation_steps=args.accumulation_steps, 
+                    lower_case=args.lower_case, 
+                    language=args.language, 
+                    learning_rate=args.learning_rate)
 
     
