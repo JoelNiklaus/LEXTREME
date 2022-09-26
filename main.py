@@ -10,11 +10,11 @@ import setproctitle
 import shutil
 import torch
 
-os.chdir('./scripts')
+
 
 #Empty folder with temporary scripts
-shutil.rmtree('./temporary', ignore_errors=True)
-os.mkdir('./temporary')
+shutil.rmtree('./temporary_scripts', ignore_errors=True)
+os.mkdir('./temporary_scripts')
 
 
 models_to_be_used_small = [
@@ -58,7 +58,7 @@ def generate_command(time_stamp, **data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ../experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
 
     
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"])
@@ -66,7 +66,7 @@ def generate_command(time_stamp, **data):
     if "hierarchical" in data.keys():
         final_command += ' --hierarchical '+data["hierarchical"]
     
-    file_name = './temporary/'+data["task"]+"_"+str(data["gpu_number"])+"_"+str(data["seed"])+"_"+str(data["model_name"]).replace('/','_')+"_"+time_now+".sh"
+    file_name = './temporary_scripts/'+data["task"]+"_"+str(data["gpu_number"])+"_"+str(data["seed"])+"_"+str(data["model_name"]).replace('/','_')+"_"+time_now+".sh"
     
     with open(file_name,"w") as f:
         print(final_command,file=f)
