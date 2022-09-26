@@ -72,6 +72,52 @@ def generate_command(time_stamp, **data):
         print(final_command,file=f)
      
     return file_name
+
+def get_optimal_batch_size(language_model:str, hierarchical:bool):
+
+
+    if str(hierarchical).lower()=="false":
+
+        if language_model=="distilbert-base-multilingual-cased":
+            batch_size= 64
+            accumulation_steps=1
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+            batch_size= 32
+            accumulation_steps=2
+        elif language_model=="xlm-roberta-base":
+            batch_size= 32
+            accumulation_steps=2
+        elif language_model=="microsoft/mdeberta-v3-base":
+            batch_size= 16
+            accumulation_steps=4
+        elif language_model=="xlm-roberta-large":
+            batch_size= 16
+            accumulation_steps=4
+        
+        return batch_size, accumulation_steps
+
+    elif str(hierarchical).lower()=="true":
+
+        if language_model=="distilbert-base-multilingual-cased":
+            batch_size= 16
+            accumulation_steps=4
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+            batch_size= 16
+            accumulation_steps=4
+        elif language_model=="xlm-roberta-base":
+            batch_size= 8
+            accumulation_steps=8
+        elif language_model=="microsoft/mdeberta-v3-base":
+            batch_size= 4
+            accumulation_steps=16
+        elif language_model=="xlm-roberta-large":
+            batch_size= 4
+            accumulation_steps=16
+        
+        return batch_size, accumulation_steps
+    
+    
+
     
 def run_script(command):
     try:
@@ -85,7 +131,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_train_epochs,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number):
+def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_train_epochs,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number,hierarchical):
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -150,15 +196,11 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
             gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
-                if model_name=="large" or model_name in models_to_be_used_large:
-                    batch_size=8
-                    accumulation_steps=2
-                else:
-                    batch_size=16
-                    accumulation_steps=1
-            if batch_size is not None and accumulation_steps is None:
-                accumulation_steps=1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
+                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical)
+            else:
+                if accumulation_steps is None:
+                    accumulation_steps = 1
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 gpu_command_dict[gpu_id].append(command)
@@ -187,15 +229,11 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
             gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
-                if model_name=="large" or model_name in models_to_be_used_large:
-                    batch_size=8
-                    accumulation_steps=2
-                else:
-                    batch_size=16
-                    accumulation_steps=1
-            if batch_size is not None and accumulation_steps is None:
-                accumulation_steps=1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model)
+                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical)
+            else:
+                if accumulation_steps is None:
+                    accumulation_steps = 1
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 gpu_command_dict[gpu_id].append(command)
@@ -237,8 +275,9 @@ if __name__=='__main__':
     parser.add_argument('-as','--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-gn','--gpu_number', help='Define which gpu you would like to use.', default=None)
+    parser.add_argument('-hier','--hierarchical', help='Define whether you want to use a hierarchical model or not. Caution: this will not work for every task', default=None)
     parser.add_argument('-lang','--language', help='Define if you want to filter the training dataset by language.', default='all_languages')
-    parser.add_argument('-lc','--lower_case', help='Define if lower case or not.', default=True)
+    parser.add_argument('-lc','--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all')
     parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
@@ -255,6 +294,7 @@ if __name__=='__main__':
                     accumulation_steps=args.accumulation_steps, 
                     batch_size=args.batch_size,
                     gpu_number=args.gpu_number,
+                    hierarchical=args.hierarchical,
                     language=args.language, 
                     language_model_type=args.language_model_type,
                     learning_rate=args.learning_rate,
