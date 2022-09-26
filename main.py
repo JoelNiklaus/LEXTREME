@@ -1,14 +1,14 @@
-import os
-import argparse
-from multiprocessing import Pool
-import torch
-from itertools import cycle
-import datetime
-import json as js
-import shutil
-import itertools
-import setproctitle
 from collections import defaultdict
+from itertools import cycle
+from multiprocessing import Pool
+import argparse
+import datetime
+import itertools
+import json as js
+import os
+import setproctitle
+import shutil
+import torch
 
 os.chdir('./scripts')
 
@@ -74,7 +74,10 @@ def generate_command(time_stamp, **data):
     return file_name
     
 def run_script(command):
-    os.system(command=command)
+    try:
+        os.system(command=command)
+    except KeyboardInterrupt:
+        print ('Process interrupted.')
 
 
 def run_in_parallel(commands_to_run):
@@ -222,18 +225,6 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
     run_in_parallel(commands_to_run=commands_to_run)
 
 
-   
-    
-            
-
-
-            
-
-
-            
-
-           
-
 
 
 
@@ -243,32 +234,35 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-as','--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
+    parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-gn','--gpu_number', help='Define which gpu you would like to use.', default=None)
     parser.add_argument('-lang','--language', help='Define if you want to filter the training dataset by language.', default='all_languages')
     parser.add_argument('-lc','--lower_case', help='Define if lower case or not.', default=True)
     parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all')
+    parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
+    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=50)
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
-    parser.add_argument('-bz','--batch_size', help='Define the batch size.', default=None)
-    parser.add_argument('-as','--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
-    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=50)
-    parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     
 
     args = parser.parse_args()
     
     
 
-    run_experiment(language_model_type=args.language_model_type,
+    run_experiment(
+                    accumulation_steps=args.accumulation_steps, 
+                    batch_size=args.batch_size,
+                    gpu_number=args.gpu_number,
+                    language=args.language, 
+                    language_model_type=args.language_model_type,
+                    learning_rate=args.learning_rate,
+                    list_of_seeds=args.list_of_seeds,
+                    lower_case=args.lower_case, 
+                    num_train_epochs=args.num_train_epochs,
                     running_mode=args.running_mode,
                     task=args.task,
-                    batch_size=args.batch_size,
-                    num_train_epochs=args.num_train_epochs,
-                    list_of_seeds=args.list_of_seeds,
-                    accumulation_steps=args.accumulation_steps, 
-                    lower_case=args.lower_case, 
-                    language=args.language, 
-                    learning_rate=args.learning_rate)
+                    )
 
     
