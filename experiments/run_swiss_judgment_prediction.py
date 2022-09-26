@@ -377,7 +377,7 @@ def main():
             tokenized = tokenizer(
                 batch["input"],
                 padding=padding,
-                max_length=data_args.max_seq_length,
+                max_length=512, #Otherwise it would through an error, since the default value is too high, because per default we use the hierarchical model
                 truncation=True,
                 )
 
