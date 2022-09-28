@@ -255,7 +255,7 @@ class Seqeval():
         micro_recall = seqeval_recall_score(true_predictions, true_labels, average="micro", zero_division=0, mode='strict', scheme=IOB2)
         weighted_recall = seqeval_recall_score(true_predictions, true_labels, average="weighted", zero_division=0, mode='strict', scheme=IOB2)
 
-        accuracy_normalized = seqeval_accuracy_score(true_predictions, true_labels, mode='strict', scheme=IOB2)
+        accuracy_normalized = seqeval_accuracy_score(true_predictions, true_labels) #mode and scheme cannot be used with accuracy
         
         flattened_results = {
             "macro-f1":macro_f1,
