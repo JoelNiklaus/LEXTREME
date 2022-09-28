@@ -221,20 +221,22 @@ def main():
 
     
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train',download_mode="force_redownload")
         train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation',download_mode="force_redownload")
         eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test',download_mode="force_redownload")
         predict_dataset = predict_dataset.rename_column("label", "labels")
 
     
     # Labels
-    label_list =  ['building','city','country','place','postcode','street','territory','unit','value','year','standard abbreviation','month','day of the week','day','calender event','age','email','ethnic category','family name','financial','given name – female','given name – male','health insurance number','id document number','initial name','marital status','medical record number','nationality','profession','role','social security number','title','url','build year','colour','license plate number','model','type','o']
+    label_list =   ['O', 'B-BUILDING', 'I-BUILDING', 'B-CITY', 'I-CITY', 'B-COUNTRY', 'I-COUNTRY', 'B-PLACE', 'I-PLACE', 'B-TERRITORY', 'I-TERRITORY', 'I-UNIT', 'B-UNIT', 'B-VALUE', 'I-VALUE', 'B-YEAR', 'I-YEAR', 'B-STANDARD ABBREVIATION', 'I-STANDARD ABBREVIATION', 'B-MONTH', 'I-MONTH', 'B-DAY', 'I-DAY', 'B-AGE', 'I-AGE', 'B-ETHNIC CATEGORY', 'I-ETHNIC CATEGORY', 'B-FAMILY NAME', 'I-FAMILY NAME', 'B-INITIAL NAME', 'I-INITIAL NAME', 'B-MARITAL STATUS', 'I-MARITAL STATUS', 'B-PROFESSION', 'I-PROFESSION', 'B-ROLE', 'I-ROLE', 'B-NATIONALITY', 'I-NATIONALITY', 'B-TITLE', 'I-TITLE', 'B-URL', 'I-URL', 'B-TYPE', 'I-TYPE']
+
+
     num_labels = len(label_list)
 
     label2id = dict()

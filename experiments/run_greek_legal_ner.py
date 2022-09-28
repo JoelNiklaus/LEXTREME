@@ -222,20 +222,21 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train',download_mode="force_redownload")
         train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation',download_mode="force_redownload")
         eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test',download_mode="force_redownload")
         predict_dataset = predict_dataset.rename_column("label", "labels")
 
     
     # Labels
-    label_list = ["FACILITY", "GPE", "LEG-REFS", "LOCATION-NAT", "LOCATION-UNK", "ORG", "PERSON", "PUBLIC-DOCS", "O"]
+    label_list = ['O', 'B-ORG', 'I-ORG', 'B-GPE', 'I-GPE', 'B-LEG-REFS', 'I-LEG-REFS', 'B-PUBLIC-DOCS', 'I-PUBLIC-DOCS', 'B-PERSON', 'I-PERSON', 'B-FACILITY', 'I-FACILITY', 'B-LOCATION-UNK', 'I-LOCATION-UNK', 'B-LOCATION-NAT', 'I-LOCATION-NAT']
+    
     num_labels = len(label_list)
 
     label2id = dict()

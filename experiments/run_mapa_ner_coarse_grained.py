@@ -221,20 +221,21 @@ def main():
 
     
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train',download_mode="force_redownload")
         train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation',download_mode="force_redownload")
         eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test',download_mode="force_redownload")
         predict_dataset = predict_dataset.rename_column("label", "labels")
 
     
     # Labels
-    label_list =  ['ADDRESS', 'AMOUNT', 'DATE', 'PERSON', 'ORGANISATION', 'TIME', 'VEHICLE', 'O']
+    label_list =  ['O', 'B-ORGANISATION', 'I-ORGANISATION', 'B-ADDRESS', 'I-ADDRESS', 'B-DATE', 'I-DATE', 'B-PERSON', 'I-PERSON', 'B-AMOUNT', 'I-AMOUNT', 'B-TIME', 'I-TIME']
+
     num_labels = len(label_list)
 
     label2id = dict()
