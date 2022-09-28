@@ -14,6 +14,7 @@ from seqeval.metrics import precision_score as seqeval_precision_score
 from seqeval.metrics import recall_score as seqeval_recall_score
 from seqeval.metrics import accuracy_score as seqeval_accuracy_score
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, matthews_corrcoef
+from seqeval.scheme import IOB2
 import numpy as np
 import datetime
 import wandb
@@ -164,7 +165,6 @@ def compute_metrics_multi_label(p: EvalPrediction):
     return {'macro-f1': macro_f1, 
             'micro-f1': micro_f1,
             'weighted-f1':weighted_f1,
-            #'mcc':mcc, 
             'accuracy_normalized':accuracy_normalized,
             'accuracy_not_normalized':accuracy_not_normalized,
             'macro-precision': precision_macro,
@@ -232,30 +232,30 @@ class Seqeval():
         # Adding the prefix I- because the seqeval cuts the first letter because it, presumably, assumes that one of these tagging schemes has been used: ["IOB1", "IOB2", "IOE1", "IOE2", "IOBES", "BILOU"]
         # By adding the prefix I- we make sure that the labels returned are the original labels
         true_predictions = [
-            ['I-'+self.label_list[p] for (p, l) in zip(prediction, label) if l != -100] 
+            [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100] 
             for prediction, label in zip(predictions, labels)
         ]
         true_labels = [
-            ['I-'+self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+            [self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
 
         results = self.metric.compute(predictions=true_predictions, references=true_labels, zero_division=0)
 
-        macro_f1 = seqeval_f1_score(true_predictions, true_labels, average="macro", zero_division=0)
-        micro_f1 = seqeval_f1_score(true_predictions, true_labels, average="micro", zero_division=0)
-        weighted_f1 = seqeval_f1_score(true_predictions, true_labels, average="weighted", zero_division=0)
+        macro_f1 = seqeval_f1_score(true_predictions, true_labels, average="macro", zero_division=0, mode='strict', scheme=IOB2)
+        micro_f1 = seqeval_f1_score(true_predictions, true_labels, average="micro", zero_division=0, mode='strict', scheme=IOB2)
+        weighted_f1 = seqeval_f1_score(true_predictions, true_labels, average="weighted", zero_division=0, mode='strict', scheme=IOB2)
 
-        macro_precision = seqeval_precision_score(true_predictions, true_labels, average="macro", zero_division=0)
-        micro_precision = seqeval_precision_score(true_predictions, true_labels, average="micro", zero_division=0)
-        weighted_precision = seqeval_precision_score(true_predictions, true_labels, average="weighted", zero_division=0)
+        macro_precision = seqeval_precision_score(true_predictions, true_labels, average="macro", zero_division=0, mode='strict', scheme=IOB2)
+        micro_precision = seqeval_precision_score(true_predictions, true_labels, average="micro", zero_division=0, mode='strict', scheme=IOB2)
+        weighted_precision = seqeval_precision_score(true_predictions, true_labels, average="weighted", zero_division=0, mode='strict', scheme=IOB2)
 
 
-        macro_recall = seqeval_recall_score(true_predictions, true_labels, average="macro", zero_division=0)
-        micro_recall = seqeval_recall_score(true_predictions, true_labels, average="micro", zero_division=0)
-        weighted_recall = seqeval_recall_score(true_predictions, true_labels, average="weighted", zero_division=0)
+        macro_recall = seqeval_recall_score(true_predictions, true_labels, average="macro", zero_division=0, mode='strict', scheme=IOB2)
+        micro_recall = seqeval_recall_score(true_predictions, true_labels, average="micro", zero_division=0, mode='strict', scheme=IOB2)
+        weighted_recall = seqeval_recall_score(true_predictions, true_labels, average="weighted", zero_division=0, mode='strict', scheme=IOB2)
 
-        accuracy_normalized = seqeval_accuracy_score(true_predictions, true_labels)
+        accuracy_normalized = seqeval_accuracy_score(true_predictions, true_labels, mode='strict', scheme=IOB2)
         
         flattened_results = {
             "macro-f1":macro_f1,
@@ -515,8 +515,8 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        #project_name = 'bfh_test'
-        project_name = model_args.model_name_or_path
+        project_name = 'bfh_test'
+        #project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     try:

@@ -33,24 +33,24 @@ models_to_be_used_large = [
 
 
 task_code_mapping = {
-    'run_greek_legal_ner': 'run_greek_legal_ner.py',
-    'run_covid19_emergency_event': 'run_covid19_emergency_event.py',
-    'run_brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    'run_greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'run_online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    'run_mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    'run_multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
-    'run_multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
-    'run_multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    'run_greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    'run_online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
-    'run_brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
-    'run_legalnero': 'run_legalnero.py',
-    'run_german_argument_mining': 'run_german_argument_mining.py',
-    'run_mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    'run_swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
-    'run_lener_br': 'run_lener_br.py',
-    'run_greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py'
+    #'brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
+    #'brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
+    #'covid19_emergency_event': 'run_covid19_emergency_event.py',
+    #'german_argument_mining': 'run_german_argument_mining.py',
+    #'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
+    #'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
+    #'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'greek_legal_ner': 'run_greek_legal_ner.py',
+    'legalnero': 'run_legalnero.py',
+    'lener_br': 'run_lener_br.py',
+    'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    #'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    #'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    #'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
+    #'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    #'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    #'swiss_judgment_prediction': 'run_swiss_judgment_prediction.py'
     }
 
 
@@ -58,22 +58,35 @@ def generate_command(time_stamp, **data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+    if "gpu_number" not in data.keys() or data["gpu_number"] is None:
+        
+        data["gpu_number"]=""
+
+        #If no GPU available, we cannot make use of --fp16 --fp16_full_eval
+        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+    else:
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --fp16 --fp16_full_eval --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
 
     
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"])
 
-    if "hierarchical" in data.keys():
+    if "hierarchical" in data.keys() and data["hierarchical"] is not None:
         final_command += ' --hierarchical '+data["hierarchical"]
     
     file_name = './temporary_scripts/'+data["task"]+"_"+str(data["gpu_number"])+"_"+str(data["seed"])+"_"+str(data["model_name"]).replace('/','_')+"_"+time_now+".sh"
     
     with open(file_name,"w") as f:
         print(final_command,file=f)
-     
+
     return file_name
 
-def get_optimal_batch_size(language_model:str, hierarchical:bool):
+def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
+
+    if hierarchical is None:
+        if task in ['swiss_judgment_prediction']:
+            hierarchical=True
+        else:
+            hierarchical=False
 
 
     if str(hierarchical).lower()=="false":
@@ -93,7 +106,7 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool):
         elif language_model=="xlm-roberta-large":
             batch_size= 16
             accumulation_steps=4
-        
+    
         return batch_size, accumulation_steps
 
     elif str(hierarchical).lower()=="true":
@@ -137,6 +150,8 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
 
     if gpu_number is None:
         gpu_number = [n for n in range(0,torch.cuda.device_count())]
+        if len(gpu_number)==0:
+            gpu_number=[None] #In that case we use the CPU
     else:
         gpu_number = [gpu_number]
 
@@ -193,10 +208,11 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            gpu_id = int(gpu_id)
+            if gpu_id is not None:
+                gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
-                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical)
+                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical,task)
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
@@ -226,10 +242,11 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            gpu_id = int(gpu_id)
+            if gpu_id is not None:
+                gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
-                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical)
+                batch_size, accumulation_steps = get_optimal_batch_size(model_name,hierarchical,task)
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
