@@ -23,16 +23,16 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 
 ### How to run experiments?
 
-The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. In order to do so, you need to provide at least a two arguments: ```output_dir```, i.e. where you want to store the output of the finetuning, and ```model_name_or_path```, i.e. the pretrained language model that you want to use (e.g. ```distilbert-base-multilingual-cased*```). Optionally and depending on your hardware, you can specify the GPU number in order to speed up the process by providing ```CUDA_VISIBLE_DEVICES={GPU_NUMBER}```.
+The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. In order to do so, you need to provide at least a two arguments: ```output_dir```, i.e. where you want to store the output of the finetuning, and ```model_name_or_path```, i.e. the pretrained language model that you want to use (e.g. ```distilbert-base-multilingual-cased```). Optionally and depending on your hardware, you can specify the GPU number in order to speed up the process by providing ```CUDA_VISIBLE_DEVICES={GPU_NUMBER}```.
 
-For example, if you want to finetune on the swiss_judgment_prediction dataset, you type the following command and replace the curly brackets and the content therein with your variables:  
-
-```
-CUDA_VISIBLE_DEVICES={GPU_NUMBER} python run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH}
+For example, if you want to finetune on the swiss_judgment_prediction``` dataset, you type the following command and replace the curly brackets and the content therein with your variables:  
 
 ```
+CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ```run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH}
 
-Note that the command will make use of the predefined configurations as described in the paper, i.e. it will train for 50 epochs with an early stopping patience of 5. In order to override these configurations, you can either change the code itself, or can do it in the command line. For example, in order to reduce the number of epochs to, let's say 3, you can add the following:
+```
+
+Note that the command will make use of the predefined configurations as described in the paper, i.e. it will train for 50 epochs with an early stopping patience of 5. In order to override these configurations, you can either change the code itself, or you can provide required arguments in the command line. For example, in order to reduce the number of epochs to, let's say, 3, you can do the following:
 
 ```
 CUDA_VISIBLE_DEVICES={GPU_NUMBER} python run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH} --num_train_epochs 3
@@ -41,7 +41,7 @@ CUDA_VISIBLE_DEVICES={GPU_NUMBER} python run_swiss_judgment_prediction.py --outp
 
 ### How reproduce the results of the paper?
 
-It is possible to reproduce the results of the paper by running the finetung for each dataset separately. The hyperparamters predefined in the scripts so that no adjustments are needed. Alternatively, you can run ```main.py``` which, in a nutshell, will generate bash scripts and run them on every available GPU your system. 
+It is possible to reproduce the results of the paper by running the finetung for each dataset separately. Alternatively, you can run ```main.py``` which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available). 
 
 The following command will make sure that you run all experiments as described in the paper:
 
@@ -50,7 +50,7 @@ python main.py
 
 ```
 
-However, it allows a certain degree of customizability by specifying the following arguments:
+It allows a certain degree of customizability by specifying the following arguments:
 
 
 | short argument name   | full argument name   | description                                                                                                                            | default value                                                                                                                                                                |
@@ -82,4 +82,10 @@ If you want to finetune only on, let's say, ```xlm-roberta-large```.
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large
+```
+
+If, additionally, you don't want to make use of a hierarchical model (```swiss_judgment_prediction``` makes use of hierarchical due to the length of the input documents), you type the following.
+```
+python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
+ 1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
