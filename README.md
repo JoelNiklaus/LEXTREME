@@ -83,7 +83,7 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large
 ```
 
-If, additionally, you don't want to make use of a hierarchical model (```swiss_judgment_prediction``` makes use of hierarchical due to the length of the input documents), you type the following.
+If, additionally, you don't want to make use of a hierarchical model (```swiss_judgment_prediction``` makes use of hierarchical models due to the length of the input documents), you type the following.
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
