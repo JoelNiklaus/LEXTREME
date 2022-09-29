@@ -88,46 +88,44 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         else:
             hierarchical=False
 
-
     if str(hierarchical).lower()=="false":
 
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 64
             accumulation_steps=1
-        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 32
             accumulation_steps=2
-        elif language_model=="xlm-roberta-base":
+        if language_model=="xlm-roberta-base":
             batch_size= 32
             accumulation_steps=2
-        elif language_model=="microsoft/mdeberta-v3-base":
+        if language_model=="microsoft/mdeberta-v3-base":
             batch_size= 16
             accumulation_steps=4
-        elif language_model=="xlm-roberta-large":
+        if language_model=="xlm-roberta-large":
             batch_size= 16
             accumulation_steps=4
     
-        return batch_size, accumulation_steps
 
     elif str(hierarchical).lower()=="true":
 
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 16
             accumulation_steps=4
-        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 16
             accumulation_steps=4
-        elif language_model=="xlm-roberta-base":
+        if language_model=="xlm-roberta-base":
             batch_size= 8
             accumulation_steps=8
-        elif language_model=="microsoft/mdeberta-v3-base":
+        if language_model=="microsoft/mdeberta-v3-base":
             batch_size= 4
             accumulation_steps=16
-        elif language_model=="xlm-roberta-large":
-            batch_size= 4
-            accumulation_steps=16
-        
-        return batch_size, accumulation_steps
+        if language_model=="xlm-roberta-large":
+            batch_size= 2
+            accumulation_steps=32
+    
+    return batch_size, accumulation_steps
     
     
 
@@ -217,6 +215,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 if accumulation_steps is None:
                     accumulation_steps = 1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
+            batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 gpu_command_dict[gpu_id].append(command)
@@ -251,6 +250,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 if accumulation_steps is None:
                     accumulation_steps = 1
             script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
+            batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
                 gpu_command_dict[gpu_id].append(command)
