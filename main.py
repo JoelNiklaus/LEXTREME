@@ -103,8 +103,8 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
             batch_size= 16
             accumulation_steps=4
         if language_model=="xlm-roberta-large":
-            batch_size= 16
-            accumulation_steps=4
+            batch_size= 8
+            accumulation_steps=8
     
 
     elif str(hierarchical).lower()=="true":
