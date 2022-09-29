@@ -56,14 +56,14 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=4096,
+        default=2048,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
         },
     )
     max_segments: Optional[int] = field(
-        default=32,
+        default=16,
         metadata={
             "help": "The maximum number of segments (paragraphs) to be considered. Sequences longer "
                     "than this will be truncated, sequences shorter will be padded."
@@ -273,7 +273,6 @@ def main():
         data_args.max_eval_samples=200
         data_args.max_predict_samples=100
 
-    
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     if model_args.hierarchical:
@@ -349,19 +348,8 @@ def main():
                 batch['segments'].append(string_blocks)
                 
             
-            # Tokenize the texts
-
-            # DistilBERT doesn’t have token_type_ids, you don’t need to indicate which token belongs to which segment. Just separate your segments with the separation token tokenizer.sep_token (or [SEP]).
-            '''if config.model_type in ['roberta','xlm-roberta','distilbert'] or model_args.model_name_or_path=='microsoft/Multilingual-MiniLM-L12-H384':
-                tokenized = {'input_ids': [], 'attention_mask': []}
-                for case in batch['segments']:
-                    case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
-                                            max_length=data_args.max_seg_length, return_token_type_ids=True)
-                    tokenized['input_ids'].append(append_zero_segments(case_encodings['input_ids'], pad_id))
-                    tokenized['attention_mask'].append(append_zero_segments(case_encodings['attention_mask'], 0))
-                    #tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0))
-
-            else:'''
+            # Tokenize the text
+            
             tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
             for case in batch['segments']:
                 case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,

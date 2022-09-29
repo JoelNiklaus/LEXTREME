@@ -9,14 +9,16 @@ import sys
 import re
 from dataclasses import dataclass, field
 from typing import Optional
-import pandas as pd
 
 import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
-from datasets import load_dataset, Dataset
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_segments
+import pandas as pd
+from datasets import load_dataset
 import numpy as np
 import glob
 import shutil
+from models.hierbert import HierarchicalBert
+from torch import nn
 
 
 import transformers
@@ -53,7 +55,21 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=512,
+        default=1024,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    max_segments: Optional[int] = field(
+        default=8,
+        metadata={
+            "help": "The maximum number of segments (paragraphs) to be considered. Sequences longer "
+                    "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    max_seg_length: Optional[int] = field(
+        default=128,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -120,7 +136,7 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
     hierarchical: bool = field(
-        default=False, metadata={"help": "Whether to use a hierarchical variant or not"}
+        default=True, metadata={"help": "Whether to use a hierarchical variant or not"}
     )
     model_name_or_path: str = field(
         default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
@@ -254,7 +270,46 @@ def main():
         data_args.max_eval_samples=200
         data_args.max_predict_samples=100
 
-    model, tokenizer, _ = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+    model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+
+    if model_args.hierarchical:
+        # Hack the classifier encoder to use hierarchical BERT
+        if config.model_type in ['bert','deberta-v2','distilbert']:
+            if config.model_type == 'bert':
+                segment_encoder = model.bert
+            elif config.model_type =='distilbert':
+                segment_encoder = model.distilbert
+            elif config.model_type =='deberta-v2':
+                segment_encoder = model.deberta
+            model_encoder = HierarchicalBert(encoder=segment_encoder,
+                                             max_segments=data_args.max_segments,
+                                             max_segment_length=data_args.max_seg_length)
+            if config.model_type == 'bert':
+                model.bert = model_encoder
+            elif config.model_type == 'distilbert':
+                model.distilbert = model_encoder
+            elif config.model_type == 'deberta-v2':
+                model.deberta = model_encoder
+            else:
+                raise NotImplementedError(f"{config.model_type} is no supported yet!")
+
+        elif config.model_type in ['roberta','xlm-roberta']:
+            model_encoder = HierarchicalBert(encoder=model.roberta, 
+                                            max_segments=data_args.max_segments,
+                                            max_segment_length=data_args.max_seg_length)
+            model.roberta = model_encoder
+            # Build a new classification layer, as well
+            dense = nn.Linear(config.hidden_size, config.hidden_size)
+            dense.load_state_dict(model.classifier.dense.state_dict())  # load weights
+            dropout = nn.Dropout(config.hidden_dropout_prob).to(model.device)
+            out_proj = nn.Linear(config.hidden_size, config.num_labels).to(model.device)
+            out_proj.load_state_dict(model.classifier.out_proj.state_dict())  # load weights
+            model.classifier = nn.Sequential(dense, dropout, out_proj).to(model.device)
+
+        elif config.model_type in ['longformer', 'big_bird']:
+            pass
+        else:
+            raise NotImplementedError(f"{config.model_type} is no supported yet!")
 
     # Preprocessing the datasets
     # Padding strategy
@@ -264,20 +319,54 @@ def main():
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
 
+    def append_zero_segments(case_encodings, pad_token_id):
+        """appends a list of zero segments to the encodings to make up for missing segments"""
+        return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
+                data_args.max_segments - len(case_encodings))
     
-    # Chossing the optimal maximal sequence length depending on the dataset
-    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
+    def preprocess_function(batch):
 
-    def preprocess_function(examples):
-        # Tokenize the texts
-        batch = tokenizer(
-            examples["input"],
+        pad_id = tokenizer.pad_token_id
+
+        if model_args.hierarchical:
+            batch['segments'] = []
+
+            tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
+                                    max_length=data_args.max_segments * data_args.max_seg_length,
+                                    add_special_tokens=False)  # prevent it from adding the cls and sep tokens twice
+            for ids in tokenized['input_ids']:
+                # convert ids to tokens and then back to strings
+                id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length) if
+                                ids[i] != pad_id]  # remove blocks containing only ids
+                id_blocks[-1] = [id for id in id_blocks[-1] if
+                                    id != pad_id]  # remove remaining pad_tokens_ids from the last block
+                token_blocks = [tokenizer.convert_ids_to_tokens(ids) for ids in id_blocks]
+                string_blocks = [tokenizer.convert_tokens_to_string(tokens) for tokens in token_blocks]
+                batch['segments'].append(string_blocks)
+                
+            
+            # Tokenize the text
+            
+            tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
+            for case in batch['segments']:
+                case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
+                                        max_length=data_args.max_seg_length, return_token_type_ids=True)
+                tokenized['input_ids'].append(append_zero_segments(case_encodings['input_ids'], pad_id))
+                tokenized['attention_mask'].append(append_zero_segments(case_encodings['attention_mask'], 0))
+                tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0))
+
+            
+            del batch['segments']
+
+        else:
+            tokenized = tokenizer(
+                batch["input"],
             padding=padding,
-            max_length=data_args.max_seq_length,
+                max_length=512, #Otherwise it would through an error, since the default value is too high, because per default we use the hierarchical model
             truncation=True,
         )
 
-        return batch
+        return tokenized
 
     if training_args.do_train:
         if data_args.max_train_samples is not None:
