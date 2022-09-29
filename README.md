@@ -75,7 +75,7 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
  1,2,3 --num_train_epochs 10
 ```
 
-Temporary bash files will be created and saved in the folder ```temporary``` and they will be run immediately. These bash files will be overwritten the next time you run main.py.
+Temporary bash files will be created and saved in the folder ```temporary_scripts``` and they will be run immediately. These bash files will be overwritten the next time you run main.py.
 
 If you want to finetune only on, let's say, ```xlm-roberta-large```.
 ```
