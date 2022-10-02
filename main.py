@@ -59,7 +59,7 @@ def generate_command(time_stamp, **data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    if "gpu_number" not in data.keys() or bool(re.search("\d",data["gpu_number"]))==False:
+    if "gpu_number" not in data.keys() or bool(re.search("\d",str(data["gpu_number"])))==False:
         
         data["gpu_number"]=""
 
@@ -207,7 +207,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            if bool(re.search('\d',gpu_id)):
+            if bool(re.search('\d',str(gpu_id))):
                 gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
@@ -242,7 +242,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            if bool(re.search('\d',gpu_id)):
+            if bool(re.search('\d',str(gpu_id))):
                 gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
