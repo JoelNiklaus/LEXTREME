@@ -88,3 +88,23 @@ If, additionally, you don't want to make use of a hierarchical model (```swiss_j
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
+
+
+## References
+
+```
+@inproceedings{niklaus-etal-2021-swiss,
+    title = "{S}wiss-Judgment-Prediction: A Multilingual Legal Judgment Prediction Benchmark",
+    author = {Niklaus, Joel  and
+      Chalkidis, Ilias  and
+      St{\"u}rmer, Matthias},
+    booktitle = "Proceedings of the Natural Legal Language Processing Workshop 2021",
+    month = nov,
+    year = "2021",
+    address = "Punta Cana, Dominican Republic",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2021.nllp-1.3",
+    doi = "10.18653/v1/2021.nllp-1.3",
+    pages = "19--35",
+    abstra
+´´´
