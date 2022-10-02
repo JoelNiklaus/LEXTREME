@@ -6,6 +6,7 @@ import datetime
 import itertools
 import json as js
 import os
+import re
 import setproctitle
 import shutil
 import torch
@@ -35,21 +36,21 @@ models_to_be_used_large = [
 task_code_mapping = {
     'brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
     'brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    'covid19_emergency_event': 'run_covid19_emergency_event.py',
-    'german_argument_mining': 'run_german_argument_mining.py',
+    #'covid19_emergency_event': 'run_covid19_emergency_event.py',
+    #'german_argument_mining': 'run_german_argument_mining.py',
     'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
-    'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    'greek_legal_ner': 'run_greek_legal_ner.py',
-    'legalnero': 'run_legalnero.py',
-    'lener_br': 'run_lener_br.py',
-    'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
-    'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
-    'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    #'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
+    #'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    #'greek_legal_ner': 'run_greek_legal_ner.py',
+    #'legalnero': 'run_legalnero.py',
+    #'lener_br': 'run_lener_br.py',
+    #'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    #'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    #'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    #'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    #'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
+    #'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    #'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'swiss_judgment_prediction': 'run_swiss_judgment_prediction.py'
     }
 
@@ -58,7 +59,7 @@ def generate_command(time_stamp, **data):
 
     time_now = datetime.datetime.now().isoformat().split(':')[:1][0]
 
-    if "gpu_number" not in data.keys() or data["gpu_number"] is None:
+    if "gpu_number" not in data.keys() or bool(re.search("\d",data["gpu_number"]))==False:
         
         data["gpu_number"]=""
 
@@ -206,7 +207,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            if gpu_id is not None:
+            if bool(re.search('\d',gpu_id)):
                 gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
@@ -241,7 +242,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
                 metric_for_best_model="macro-f1"
             else:
                 metric_for_best_model="mcc"
-            if gpu_id is not None:
+            if bool(re.search('\d',gpu_id)):
                 gpu_id = int(gpu_id)
             seed = int(seed)
             if batch_size is None:
