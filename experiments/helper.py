@@ -19,34 +19,35 @@ import numpy as np
 import datetime
 import wandb
 import re
+import sys
+
 
 from transformers import (
     AutoConfig,
     DistilBertConfig,
-    BertConfig,
-    RobertaConfig,
+    XLMRobertaConfig,
     DebertaConfig,
     AutoTokenizer,
     DistilBertTokenizer,
     DistilBertTokenizerFast,
-    RobertaTokenizer,
-    RobertaTokenizerFast,
     XLMRobertaTokenizer,
     XLMRobertaTokenizerFast,
     DebertaForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
-    RobertaForSequenceClassification,
+    XLMRobertaForSequenceClassification,
     DistilBertForSequenceClassification,
     BertForTokenClassification,
     DistilBertForTokenClassification,
-    RobertaForTokenClassification,
+    XLMRobertaForTokenClassification,
     DebertaForTokenClassification
 
 )
 
+
 from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
+
 
 
 
@@ -326,11 +327,6 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
 
     predictions = predictions[0] if isinstance(predictions, tuple) else predictions
 
-    print('\n\n###################predictions##########################\n\n')
-    print(predictions)
-    print('\n\n###################predictions##########################\n\n')
-
-
     
 
     max_predict_samples = (
@@ -413,13 +409,6 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     trainer.save_metrics("predict", language_specific_metrics)
     wandb.log(language_specific_metrics)
 
-
-    '''output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
-    if trainer.is_world_process_zero():
-        with open(output_predict_file, "w") as writer:
-            for index, pred_list in enumerate(predictions):
-                pred_line = '\t'.join([f'{pred:.5f}' for pred in pred_list])
-                writer.write(f"{index}\t{pred_line}\n")'''
 
     predict_dataset_df = pd.DataFrame(predict_dataset)
 
@@ -515,7 +504,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = 'bfh_test'
+        project_name = 'bfh_test_hierachical'
         #project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
@@ -542,7 +531,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
                     "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
                     "distilbert": ["distilbert-base-multilingual-cased"],
                     "deberta" : ["microsoft/mdeberta-v3-base"],
-                    "roberta" : ["xlm-roberta-base","xlm-roberta-large"]
+                    "xlm-roberta" : ["xlm-roberta-base","xlm-roberta-large"]
     }
 
     
@@ -593,7 +582,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             )
 
     
-    elif model_args.model_name_or_path in model_types['roberta']:
+    elif model_args.model_name_or_path in model_types["xlm-roberta"]:
         
         # Load pretrained model and tokenizer
         # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
@@ -608,7 +597,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         )
 
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
-        tokenizer = RobertaTokenizerFast.from_pretrained(
+        tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
@@ -616,15 +605,26 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = RobertaForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+        if model_args.hierarchical==True:
+            model = XLMRobertaForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+        if model_args.hierarchical==False:
+            model = XLMRobertaForSequenceClassification.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                ignore_mismatched_sizes=True,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
 
     elif model_args.model_name_or_path in model_types['deberta']:
 
@@ -748,12 +748,12 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-    elif model_args.model_name_or_path in model_types['roberta']:
+    elif model_args.model_name_or_path in model_types["xlm-roberta"]:
         
         # Load pretrained model and tokenizer
         # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
         # download model & vocab.
-        config = RobertaConfig.from_pretrained(
+        config = XLMRobertaConfig.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
@@ -763,7 +763,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         )
 
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
-        tokenizer = RobertaTokenizerFast.from_pretrained(
+        tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
             cache_dir=model_args.cache_dir,
@@ -772,7 +772,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = RobertaForTokenClassification.from_pretrained(
+        model = XLMRobertaForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
