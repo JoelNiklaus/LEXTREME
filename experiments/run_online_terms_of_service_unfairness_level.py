@@ -285,7 +285,6 @@ def main():
             train_dataset = train_dataset.map(
                 preprocess_function,
                 batched=True,
-                load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on train dataset",
             )
         
@@ -300,7 +299,6 @@ def main():
             eval_dataset = eval_dataset.map(
                 preprocess_function,
                 batched=True,
-                load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on validation dataset",
             )
 
@@ -311,7 +309,6 @@ def main():
             predict_dataset = predict_dataset.map(
                 preprocess_function,
                 batched=True,
-                load_from_cache_file=not data_args.overwrite_cache,
                 desc="Running tokenizer on prediction dataset",
             )
 
@@ -345,7 +342,7 @@ def main():
             checkpoint = training_args.resume_from_checkpoint
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
-        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        train_result = trainer.train()
         metrics = train_result.metrics
         max_train_samples = (
             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
