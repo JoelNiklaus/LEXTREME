@@ -49,7 +49,64 @@ from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 
 
+def append_zero_segments(case_encodings, pad_token_id, data_args):
+        """appends a list of zero segments to the encodings to make up for missing segments"""
+        return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
+                data_args.max_segments - len(case_encodings))
 
+def preprocess_function(batch, tokenizer, model_args, data_args):
+
+    '''Can be used with any task that requires hierarchical models'''
+
+    # Preprocessing the datasets
+    # Padding strategy
+    if data_args.pad_to_max_length:
+        padding = "max_length"
+    else:
+        # We will pad later, dynamically at batch creation, to the max sequence length in each batch
+        padding = False
+
+    pad_id = tokenizer.pad_token_id
+
+    if model_args.hierarchical == True:
+        batch['segments'] = []
+
+        tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
+                                max_length=data_args.max_segments * data_args.max_seg_length,
+                                add_special_tokens=False)  # prevent it from adding the cls and sep tokens twice
+        for ids in tokenized['input_ids']:
+            # convert ids to tokens and then back to strings
+            id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length) if
+                            ids[i] != pad_id]  # remove blocks containing only ids
+            id_blocks[-1] = [id for id in id_blocks[-1] if
+                                id != pad_id]  # remove remaining pad_tokens_ids from the last block
+            token_blocks = [tokenizer.convert_ids_to_tokens(ids) for ids in id_blocks]
+            string_blocks = [tokenizer.convert_tokens_to_string(tokens) for tokens in token_blocks]
+            batch['segments'].append(string_blocks)
+            
+        
+        # Tokenize the text
+        
+        tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
+        for case in batch['segments']:
+            case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
+                                    max_length=data_args.max_seg_length, return_token_type_ids=True)
+            tokenized['input_ids'].append(append_zero_segments(case_encodings['input_ids'], pad_id, data_args))
+            tokenized['attention_mask'].append(append_zero_segments(case_encodings['attention_mask'], 0, data_args))
+            tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0, data_args))
+
+        
+        del batch['segments']
+
+    elif model_args.hierarchical == False:
+        tokenized = tokenizer(
+            batch["input"],
+            padding=padding,
+            max_length=data_args.max_seq_length,
+            truncation=True,
+            )
+
+    return tokenized
 
 def split_into_languages(dataset):
     dataset_new = list()
