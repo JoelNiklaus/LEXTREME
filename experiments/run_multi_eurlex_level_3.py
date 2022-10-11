@@ -6,14 +6,12 @@ import logging
 import os
 import random
 import sys
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
-import numpy as np
 import datasets
 from datasets import load_dataset
-from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages, preprocess_function
 from trainer import MultilabelTrainer
 import glob
 import shutil
@@ -55,7 +53,7 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=4096,
+        default=512,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -148,11 +146,11 @@ class ModelArguments:
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default=None,
+        default='./datasets_cache_dir',
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
@@ -180,10 +178,6 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
-    if model_args.hierarchical==True:
-        data_args.max_seq_length=4096
-    elif model_args.hierarchical==False:
-        data_args.max_seq_length=512
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
@@ -257,13 +251,13 @@ def main():
     if training_args.do_eval:
         eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            eval_dataset = eval_dataset.select([n for n in range(0,10)])
+            eval_dataset = eval_dataset.select([n for n in range(0,100)])
         eval_dataset = split_into_languages(eval_dataset)
 
     if training_args.do_predict:
         predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
         if data_args.running_mode=="experimental":
-            predict_dataset = predict_dataset.select([n for n in range(0,10)])
+            predict_dataset = predict_dataset.select([n for n in range(0,100)])
         
         predict_dataset = split_into_languages(predict_dataset)
 
@@ -284,7 +278,6 @@ def main():
     for n,l in enumerate(label_list):
         label2id[l]=n
         id2label[n]=l
-
 
 
 
@@ -329,62 +322,14 @@ def main():
         else:
             raise NotImplementedError(f"{config.model_type} is no supported yet!")
 
-    # Preprocessing the datasets
-    # Padding strategy
-    if data_args.pad_to_max_length:
-        padding = "max_length"
-    else:
-        # We will pad later, dynamically at batch creation, to the max sequence length in each batch
-        padding = False
 
-    def preprocess_function(examples):
-        # Tokenize the texts
-        if model_args.hierarchical:
-            case_template = [[0] * data_args.max_seg_length]
-            # DistilBERT doesn’t have token_type_ids, you don’t need to indicate which token belongs to which segment. Just separate your segments with the separation token tokenizer.sep_token (or [SEP]).
-            if config.model_type in ['roberta','xlm-roberta','distilbert'] or model_args.model_name_or_path=='microsoft/Multilingual-MiniLM-L12-H384':
-                batch = {'input_ids': [], 'attention_mask': []}
-                for doc in examples['input']:
-                    doc = re.split('\n', doc)
-                    doc_encodings = tokenizer(doc[:data_args.max_segments], padding=padding,
-                                              max_length=data_args.max_seg_length, truncation=True)
-                    batch['input_ids'].append(doc_encodings['input_ids'] + case_template * (
-                            data_args.max_segments - len(doc_encodings['input_ids'])))
-                    batch['attention_mask'].append(doc_encodings['attention_mask'] + case_template * (
-                            data_args.max_segments - len(doc_encodings['attention_mask'])))
-            else:
-                batch = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
-                for doc in examples['input']:
-                    doc = re.split('\n', doc)
-                    doc_encodings = tokenizer(doc[:data_args.max_segments], padding=padding,
-                                              max_length=data_args.max_seg_length, truncation=True)
-                    batch['input_ids'].append(doc_encodings['input_ids'] + case_template * (
-                                data_args.max_segments - len(doc_encodings['input_ids'])))
-                    batch['attention_mask'].append(doc_encodings['attention_mask'] + case_template * (
-                                data_args.max_segments - len(doc_encodings['attention_mask'])))
-                    batch['token_type_ids'].append(doc_encodings['token_type_ids'] + case_template * (
-                                data_args.max_segments - len(doc_encodings['token_type_ids'])))
-
-        else:
-            batch = tokenizer(
-                examples["input"],
-                padding=padding,
-                max_length=data_args.max_seq_length,
-                truncation=True,
-                )
-
-        batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in examples["label"]]
-
-        del examples["label"]
-
-        return batch
 
     if training_args.do_train:
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args,id2label=id2label),
                 batched=True,
                 desc="Running tokenizer on train dataset",
             )
@@ -398,7 +343,7 @@ def main():
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args,id2label=id2label),
                 batched=True,
                 desc="Running tokenizer on validation dataset",
             )
@@ -408,7 +353,7 @@ def main():
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args,id2label=id2label),
                 batched=True,
                 desc="Running tokenizer on prediction dataset",
             )
@@ -423,9 +368,7 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
-    training_args.metric_for_best_model = "macro-f1"
-    # Initialize our Trainer
-    training_args.metric_for_best_model = "macro-f1"
+    training_args.metric_for_best_model = "eval_loss"
     if data_args.running_mode=="experimental":
         training_args.evaluation_strategy = IntervalStrategy.EPOCH
         training_args.logging_strategy = IntervalStrategy.EPOCH

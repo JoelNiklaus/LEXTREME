@@ -36,21 +36,21 @@ models_to_be_used_large = [
 task_code_mapping = {
     'brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
     'brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    #'covid19_emergency_event': 'run_covid19_emergency_event.py',
-    #'german_argument_mining': 'run_german_argument_mining.py',
+    'covid19_emergency_event': 'run_covid19_emergency_event.py',
+    'german_argument_mining': 'run_german_argument_mining.py',
     'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    #'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
-    #'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
-    #'greek_legal_ner': 'run_greek_legal_ner.py',
-    #'legalnero': 'run_legalnero.py',
-    #'lener_br': 'run_lener_br.py',
-    #'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    #'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    #'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
-    #'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
-    #'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    #'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    #'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
+    'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
+    'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'greek_legal_ner': 'run_greek_legal_ner.py',
+    'legalnero': 'run_legalnero.py',
+    'lener_br': 'run_lener_br.py',
+    'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
+    'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'swiss_judgment_prediction': 'run_swiss_judgment_prediction.py'
     }
 
@@ -64,12 +64,12 @@ def generate_command(time_stamp, **data):
         data["gpu_number"]=""
 
         #If no GPU available, we cannot make use of --fp16 --fp16_full_eval
-        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
     else:
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --do_lower_case {LOWER_CASE}  --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} --greater_is_better True --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} ' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
 
     
-    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"])
+    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],GREATER_IS_BETTER=data["greater_is_better"])
 
     if "hierarchical" in data.keys() and data["hierarchical"] is not None:
         final_command += ' --hierarchical '+data["hierarchical"]
@@ -114,8 +114,8 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
             batch_size= 16
             accumulation_steps=4
         if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
-            batch_size= 16
-            accumulation_steps=4
+            batch_size= 8
+            accumulation_steps=8
         if language_model=="xlm-roberta-base":
             batch_size= 8
             accumulation_steps=8
@@ -143,7 +143,13 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_train_epochs,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number,hierarchical):
+def run_experiment(running_mode,language_model_type, task,list_of_seeds,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number,hierarchical,num_train_epochs=None):
+
+    if num_train_epochs is None:
+        if bool(re.search('multi_eurlex',task))==True:
+            num_train_epochs=1
+        else:
+            num_train_epochs=50
 
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -192,6 +198,10 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
     all_commands_to_run = list()
     number_of_parallel_commands = len(gpu_number)-1
     commands_to_run = list()
+
+    metric_for_best_model="eval_loss"
+    greater_is_better=False
+
     if task=='all': 
         all_variables = [[t for t in list(task_code_mapping.keys())],models_to_be_used,list_of_seeds]
         all_variables_perturbations = list(itertools.product(*all_variables))
@@ -201,12 +211,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
         print(all_variables_perturbations)
              
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
-            if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br"]:
-                metric_for_best_model="macro-f1"
-            elif task in ["run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
-                metric_for_best_model="macro-f1"
-            else:
-                metric_for_best_model="mcc"
+            
             if bool(re.search('\d',str(gpu_id))):
                 gpu_id = int(gpu_id)
             seed = int(seed)
@@ -215,7 +220,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better)
             batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
@@ -238,10 +243,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
         all_variables_perturbations = [[x[0]]+x[1].split('$') for x in all_variables_perturbations]
              
         for (gpu_id,task,model_name,seed) in all_variables_perturbations:
-            if task in ["run_greek_legal_ner", "run_mapa_ner_fine_grained", "run_mapa_ner_coarse_grained", "run_legalnero", "run_lener_br", "run_covid19_emergency_event", "run_multi_eurlex", "run_online_terms_of_service_unfairness_category"]:
-                metric_for_best_model="macro-f1"
-            else:
-                metric_for_best_model="mcc"
+
             if bool(re.search('\d',str(gpu_id))):
                 gpu_id = int(gpu_id)
             seed = int(seed)
@@ -250,7 +252,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,num_trai
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better)
             batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
@@ -299,7 +301,7 @@ if __name__=='__main__':
     parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all')
     parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
-    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.', default=50)
+    parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
     

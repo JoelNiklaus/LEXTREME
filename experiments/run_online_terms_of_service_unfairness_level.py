@@ -9,13 +9,13 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
-import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, get_optimal_max_length, generate_Model_Tokenizer_for_SequenceClassification
-import pandas as pd
-from datasets import load_dataset
-import numpy as np
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset
+from datasets import load_dataset, utils
 import glob
 import shutil
+
+from torch import nn
+
 
 import transformers
 from transformers import (
@@ -25,6 +25,7 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
+    IntervalStrategy,
     Trainer
 )
 from transformers.trainer_utils import get_last_checkpoint
@@ -130,11 +131,11 @@ class ModelArguments:
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default=None,
+        default='./datasets_cache_dir',
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
@@ -161,6 +162,7 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
@@ -190,7 +192,7 @@ def main():
 
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level)
+    utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
@@ -227,14 +229,14 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
 
 
     # Labels
@@ -247,6 +249,12 @@ def main():
     for n,l in enumerate(label_list):
         label2id[l]=n
         id2label[n]=l
+
+
+    # NOTE: This is not optimized for multiclass classification
+    if training_args.do_train:
+        logger.info("Oversampling the minority class")
+        train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset,id2label=id2label,data_args=data_args)
 
     if data_args.running_mode=='experimental':
         data_args.max_train_samples=1000
@@ -322,8 +330,12 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+    training_args.metric_for_best_model = "eval_loss"
+    training_args.evaluation_strategy = IntervalStrategy.EPOCH
+    training_args.logging_strategy = IntervalStrategy.EPOCH
 
-    training_args.metric_for_best_model = "mcc"
+    
+
     trainer = Trainer(
         model=model,
         args=training_args,

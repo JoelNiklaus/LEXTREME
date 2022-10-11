@@ -6,18 +6,20 @@ import logging
 import os
 import random
 import sys
-import re
+
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
-import numpy as np
 
 import datasets
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification
 from trainer import MultilabelTrainer
 import glob
 import shutil
+
+from torch import nn
+
 
 import transformers
 from transformers import (
@@ -27,6 +29,7 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
+    IntervalStrategy
 )
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
@@ -118,7 +121,9 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
+    hierarchical: bool = field(
+        default=False, metadata={"help": "Whether to use a hierarchical variant or not"}
+    )
     model_name_or_path: str = field(
         default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -129,11 +134,11 @@ class ModelArguments:
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default=None,
+        default='./datasets_cache_dir',
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
@@ -160,6 +165,7 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
     
@@ -224,16 +230,18 @@ def main():
     # Downloading and loading eurlex dataset from the hub.
     
     
-    
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train')
-        
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
+
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation')
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
+
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test')
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
+
+
 
     # Labels
     label_list = ["event1", "event2", "event3", "event4", "event5", "event6", "event7", "event8"]
@@ -254,7 +262,7 @@ def main():
     
 
     
-    model, tokenizer = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+    model, tokenizer, _ = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -323,8 +331,18 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
+    training_args.metric_for_best_model = "eval_loss"
+    if data_args.running_mode=="experimental":
+        training_args.evaluation_strategy = IntervalStrategy.EPOCH
+        training_args.logging_strategy = IntervalStrategy.EPOCH
+    else:
+        training_args.evaluation_strategy = IntervalStrategy.STEPS
+        training_args.logging_strategy = IntervalStrategy.STEPS
+        training_args.eval_steps = 1000
+        training_args.logging_steps = 1000
+    
 
-    training_args.metric_for_best_model = "macro-f1"
+
     trainer = MultilabelTrainer(
         model=model,
         args=training_args,
@@ -375,6 +393,7 @@ def main():
         langs = sorted(list(set(langs)))
 
         make_predictions_multi_label(trainer=trainer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args,list_of_languages=langs)
+
 
 
     # Clean up checkpoints

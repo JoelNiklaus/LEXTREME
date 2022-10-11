@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import json as js
 from ast import literal_eval
-from datasets import Dataset, load_metric
+from datasets import Dataset, load_metric, concatenate_datasets
 from transformers import EvalPrediction
 from scipy.special import expit
 from sklearn.utils.extmath import softmax
@@ -54,9 +54,44 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
         return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
                 data_args.max_segments - len(case_encodings))
 
-def preprocess_function(batch, tokenizer, model_args, data_args):
+
+def add_oversampling_to_multiclass_dataset(train_dataset,id2label,data_args):
+
+    # NOTE: This is not optimized for multiclass classification
+    
+    label_datasets = dict()
+    minority_len, majority_len = len(train_dataset), 0
+    for label_id in id2label.keys():
+        label_datasets[label_id] = train_dataset.filter(lambda item: item['label'] == label_id,
+                                                        load_from_cache_file=data_args.overwrite_cache)
+        if len(label_datasets[label_id]) < minority_len:
+            minority_len = len(label_datasets[label_id])
+            minority_id = label_id
+        if len(label_datasets[label_id]) > majority_len:
+            majority_len = len(label_datasets[label_id])
+            majority_id = label_id
+
+    datasets = [train_dataset]
+    num_full_minority_sets = int(majority_len / minority_len)
+    for i in range(num_full_minority_sets - 1):  # -1 because one is already included in the training dataset
+        datasets.append(label_datasets[minority_id])
+
+    remaining_minority_samples = majority_len % minority_len
+    random_ids = np.random.choice(minority_len, remaining_minority_samples, replace=False)
+    datasets.append(label_datasets[minority_id].select(random_ids))
+    train_dataset = concatenate_datasets(datasets)
+
+    return train_dataset
+
+def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
+
 
     '''Can be used with any task that requires hierarchical models'''
+
+    if type(id2label)==dict:
+        batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in batch["label"]]
+        del batch["label"]
+
 
     # Preprocessing the datasets
     # Padding strategy
@@ -68,12 +103,14 @@ def preprocess_function(batch, tokenizer, model_args, data_args):
 
     pad_id = tokenizer.pad_token_id
 
+
     if model_args.hierarchical == True:
         batch['segments'] = []
 
         tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
                                 max_length=data_args.max_segments * data_args.max_seg_length,
                                 add_special_tokens=False)  # prevent it from adding the cls and sep tokens twice
+        
         for ids in tokenized['input_ids']:
             # convert ids to tokens and then back to strings
             id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length) if

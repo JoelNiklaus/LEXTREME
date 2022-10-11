@@ -10,10 +10,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-import datasets
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_segments
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset
 import pandas as pd
-from datasets import load_dataset
+from datasets import load_dataset, utils
 import numpy as np
 import glob
 import shutil
@@ -56,7 +55,7 @@ class DataTrainingArguments:
     """
 
     max_seq_length: Optional[int] = field(
-        default=2048,
+        default=512,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -149,11 +148,11 @@ class ModelArguments:
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default=None,
+        default='./datasets_cache_dir',
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
@@ -210,7 +209,7 @@ def main():
 
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level)
+    utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
@@ -247,14 +246,14 @@ def main():
 
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
         
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
 
     
     # Labels
@@ -268,10 +267,16 @@ def main():
         label2id[l]=n
         id2label[n]=l
 
+
+    # NOTE: This is not optimized for multiclass classification
+    if training_args.do_train:
+        logger.info("Oversampling the minority class")
+        train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset,id2label=id2label,data_args=data_args)
+
     if data_args.running_mode=='experimental':
         data_args.max_train_samples=1000
         data_args.max_eval_samples=200
-        data_args.max_predict_samples=100
+        data_args.max_predict_samples=200
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
@@ -314,69 +319,14 @@ def main():
         else:
             raise NotImplementedError(f"{config.model_type} is no supported yet!")
 
-    # Preprocessing the datasets
-    # Padding strategy
-    if data_args.pad_to_max_length:
-        padding = "max_length"
-    else:
-        # We will pad later, dynamically at batch creation, to the max sequence length in each batch
-        padding = False
 
-    def append_zero_segments(case_encodings, pad_token_id):
-        """appends a list of zero segments to the encodings to make up for missing segments"""
-        return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
-                data_args.max_segments - len(case_encodings))
-
-    def preprocess_function(batch):
-    
-        pad_id = tokenizer.pad_token_id
-
-        if model_args.hierarchical:
-            batch['segments'] = []
-
-            tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
-                                    max_length=data_args.max_segments * data_args.max_seg_length,
-                                    add_special_tokens=False)  # prevent it from adding the cls and sep tokens twice
-            for ids in tokenized['input_ids']:
-                # convert ids to tokens and then back to strings
-                id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length) if
-                                ids[i] != pad_id]  # remove blocks containing only ids
-                id_blocks[-1] = [id for id in id_blocks[-1] if
-                                    id != pad_id]  # remove remaining pad_tokens_ids from the last block
-                token_blocks = [tokenizer.convert_ids_to_tokens(ids) for ids in id_blocks]
-                string_blocks = [tokenizer.convert_tokens_to_string(tokens) for tokens in token_blocks]
-                batch['segments'].append(string_blocks)
-                
-            
-            # Tokenize the text
-            
-            tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
-            for case in batch['segments']:
-                case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
-                                        max_length=data_args.max_seg_length, return_token_type_ids=True)
-                tokenized['input_ids'].append(append_zero_segments(case_encodings['input_ids'], pad_id))
-                tokenized['attention_mask'].append(append_zero_segments(case_encodings['attention_mask'], 0))
-                tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0))
-
-            
-            del batch['segments']
-
-        else:
-            tokenized = tokenizer(
-                batch["input"],
-                padding=padding,
-                max_length=512, #Otherwise it would through an error, since the default value is too high, because per default we use the hierarchical model
-                truncation=True,
-                )
-
-        return tokenized
 
     if training_args.do_train:
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 desc="Running tokenizer on train dataset",
             )
@@ -390,7 +340,7 @@ def main():
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 desc="Running tokenizer on validation dataset",
             )
@@ -400,7 +350,7 @@ def main():
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                preprocess_function,
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 desc="Running tokenizer on prediction dataset",
             )
@@ -415,11 +365,9 @@ def main():
         data_collator = None
 
     # Initialize our Trainer
-    training_args.metric_for_best_model = "mcc"
+    training_args.metric_for_best_model = "eval_loss"
     training_args.evaluation_strategy = IntervalStrategy.EPOCH
     training_args.logging_strategy = IntervalStrategy.EPOCH
-    #training_args.eval_steps = 100
-    #training_args.logging_steps = 100
 
     
     

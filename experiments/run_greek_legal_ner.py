@@ -6,16 +6,12 @@ import logging
 import os
 import random
 import sys
-import re
-
 from dataclasses import dataclass, field
 from typing import Optional
-import pandas as pd
+import re
 
-import datasets
 from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_optimal_max_length
-from datasets import load_dataset
-import numpy as np
+from datasets import load_dataset, utils
 import glob
 import shutil
 
@@ -27,6 +23,7 @@ from transformers import (
     TrainingArguments,
     set_seed,
     EarlyStoppingCallback,
+    IntervalStrategy,
     Trainer
 )
 from transformers.trainer_utils import get_last_checkpoint
@@ -120,6 +117,9 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
 
+    hierarchical: bool = field(
+        default=False, metadata={"help": "Whether to use a hierarchical variant or not"}
+    )
     model_name_or_path: str = field(
         default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -130,11 +130,11 @@ class ModelArguments:
         default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default=None,
+        default='./datasets_cache_dir',
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
-        default=True,
+        default=False,
         metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
@@ -161,6 +161,7 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
 
     config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
 
@@ -190,7 +191,7 @@ def main():
 
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level)
+    utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
@@ -249,7 +250,7 @@ def main():
     if data_args.running_mode=='experimental':
         data_args.max_train_samples=1000
         data_args.max_eval_samples=200
-        data_args.max_predict_samples=100
+        data_args.max_predict_samples=200
 
     model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
@@ -334,12 +335,15 @@ def main():
     else:
         data_collator = None
 
+    # Initialize our Trainer
+    training_args.metric_for_best_model = "eval_loss"
+    training_args.evaluation_strategy = IntervalStrategy.EPOCH
+    training_args.logging_strategy = IntervalStrategy.EPOCH
     
     seqeval = Seqeval(label_list=label_list)
     
     # Initialize our Trainer
     
-    training_args.metric_for_best_model = 'macro-f1'
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -374,7 +378,6 @@ def main():
 
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
-        #save_metrics("train",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
         trainer.save_state()
 
     # Evaluation
@@ -387,7 +390,6 @@ def main():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
-        #save_metrics("eval",metric_results=metrics,output_path=os.path.join(training_args.output_dir,''))
 
     # Prediction
     if training_args.do_predict:
