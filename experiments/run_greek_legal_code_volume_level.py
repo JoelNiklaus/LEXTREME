@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, preprocess_function
 from datasets import load_dataset, utils
 import glob
 import shutil
@@ -264,12 +264,6 @@ def main():
     for n,l in enumerate(label_list):
         label2id[l]=n
         id2label[n]=l
-
-
-    # NOTE: This is not optimized for multiclass classification
-    if training_args.do_train:
-        logger.info("Oversampling the minority class")
-        train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset,id2label=id2label,data_args=data_args)
 
     if data_args.running_mode=='experimental':
         data_args.max_train_samples=1000
