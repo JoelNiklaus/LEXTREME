@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, add_oversampling_to_multiclass_dataset
 from datasets import load_dataset, utils
 import glob
 import shutil
@@ -270,10 +270,6 @@ def main():
     else:
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
-
-    
-    # Choosing the optimal maximal sequence length depending on the dataset
-    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):
         # Tokenize the texts

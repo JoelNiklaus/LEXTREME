@@ -54,8 +54,15 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
         return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
                 data_args.max_segments - len(case_encodings))
 
-
 def add_oversampling_to_multiclass_dataset(train_dataset,id2label,data_args):
+
+    for k in id2label.keys():
+        train_dataset = do_oversampling_to_multiclass_dataset(train_dataset,id2label,data_args)
+    
+    train_dataset.to_csv('dataset_with_oversamling.csv')
+    return train_dataset
+
+def do_oversampling_to_multiclass_dataset(train_dataset,id2label,data_args):
 
     # NOTE: This is not optimized for multiclass classification
     
