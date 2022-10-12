@@ -31,7 +31,7 @@ class HierarchicalBert(nn.Module):
 
     def __init__(self, encoder, max_segments=64, max_segment_length=128):
         super(HierarchicalBert, self).__init__()
-        supported_models = ['bert', 'roberta', 'deberta-v2','xlm-roberta','distilbert']
+        supported_models = ['bert', 'roberta', 'deberta-v2','xlm-roberta','roberta','distilbert','deberta']
         assert encoder.config.model_type in supported_models  # other model types are not supported so far
         # Pre-trained segment (token-wise) encoder, e.g., BERT
         self.encoder = encoder
