@@ -272,8 +272,6 @@ def main():
         padding = False
 
     
-    # Choosing the optimal maximal sequence length depending on the dataset
-    data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):
         # Tokenize the texts

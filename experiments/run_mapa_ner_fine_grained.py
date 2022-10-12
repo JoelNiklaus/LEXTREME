@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import re
 
-from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_optimal_max_length
+from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification
 from datasets import load_dataset, utils
 import glob
 import shutil
@@ -264,8 +264,6 @@ def main():
         padding = False
 
 
-    # Choosing the optimal maximal sequence length depending on the dataset
-    #data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):
         tokenized_inputs = tokenizer.batch_encode_plus(examples["input"],

@@ -615,14 +615,6 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         run_name = data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__time-'+time_now
     wandb.run.name=run_name
 
-def get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset):
-    all_inputs = train_dataset['input'] + eval_dataset['input'] + predict_dataset['input']
-    all_inputs = [len(tokenizer(i)['input_ids']) if type(i)==str else len(i) for i in all_inputs]
-    max_length = max(all_inputs)
-    if max_length <=512:
-        return max_length
-    else:
-        return 512
 
 
 
@@ -812,7 +804,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
                     "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
                     "distilbert": ["distilbert-base-multilingual-cased"],
                     "deberta" : ["microsoft/mdeberta-v3-base"],
-                    "roberta" : ["xlm-roberta-base","xlm-roberta-large"]
+                    "xlm-roberta" : ["xlm-roberta-base","xlm-roberta-large"]
     }
 
     

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import re
 
-from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_optimal_max_length
+from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification
 from datasets import load_dataset, utils
 import glob
 import shutil
@@ -223,15 +223,15 @@ def main():
 
     
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train',download_mode="force_redownload")
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train') #,download_mode="force_redownload"
         train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation',download_mode="force_redownload")
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation') #,download_mode="force_redownload"
         eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test',download_mode="force_redownload")
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test') #,download_mode="force_redownload"
         predict_dataset = predict_dataset.rename_column("label", "labels")
 
     
@@ -263,8 +263,6 @@ def main():
         padding = False
 
 
-    # Choosing the optimal maximal sequence length depending on the dataset
-    #data_args.max_seq_length = get_optimal_max_length(tokenizer, train_dataset, eval_dataset, predict_dataset)
 
     def preprocess_function(examples):
         tokenized_inputs = tokenizer.batch_encode_plus(examples["input"],
