@@ -6,14 +6,11 @@ import logging
 import os
 import random
 import sys
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset
-import pandas as pd
-from datasets import load_dataset, utils
-import numpy as np
+from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, add_oversampling_to_multiclass_dataset, get_data
+from datasets import utils
 import glob
 import shutil
 from models.hierbert import HierarchicalBert
@@ -125,6 +122,12 @@ class DataTrainingArguments:
             "help": "Name of the finetuning task"
         },
     )
+    download_mode:Optional[str] = field(
+        default='reuse_cache_if_exists',
+        metadata={
+            "help": "Name of the finetuning task"
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -135,6 +138,7 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
+
     hierarchical: bool = field(
         default=True, metadata={"help": "Whether to use a hierarchical variant or not"}
     )
@@ -239,22 +243,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    # Downloading and loading eurlex dataset from the hub.
-    
-
-
-    if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir, download_mode="force_redownload")
-        
-
-    if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir, download_mode="force_redownload")
-
-    if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir, download_mode="force_redownload")
-
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
     
     # Labels
     label_list = ["dismissal", "approval"]
@@ -273,10 +262,7 @@ def main():
         logger.info("Oversampling the minority class")
         train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset,id2label=id2label,data_args=data_args)
 
-    if data_args.running_mode=='experimental':
-        data_args.max_train_samples=1000
-        data_args.max_eval_samples=200
-        data_args.max_predict_samples=200
+
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 

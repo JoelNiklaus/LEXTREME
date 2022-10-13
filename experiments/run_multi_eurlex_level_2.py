@@ -6,12 +6,12 @@ import logging
 import os
 import random
 import sys
+
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
-import datasets
-from datasets import load_dataset
-from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, split_into_languages, preprocess_function
+from datasets import utils
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, get_data
 from trainer import MultilabelTrainer
 import glob
 import shutil
@@ -123,6 +123,12 @@ class DataTrainingArguments:
             "help": "Name of the finetuning task"
         },
     )
+    download_mode:Optional[str] = field(
+        default='reuse_cache_if_exists',
+        metadata={
+            "help": "Name of the finetuning task"
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -207,7 +213,7 @@ def main():
 
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
-    datasets.utils.logging.set_verbosity(log_level)
+    utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
@@ -237,30 +243,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # In distributed training, the load_dataset function guarantees that only one local process can concurrently
-    # download the dataset.
-    # Downloading and loading eurlex dataset from the hub.
-
-
-    if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir)
-        if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,100)])
-        train_dataset = split_into_languages(train_dataset)
-
-    if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir)
-        if data_args.running_mode=="experimental":
-            eval_dataset = eval_dataset.select([n for n in range(0,100)])
-        eval_dataset = split_into_languages(eval_dataset)
-
-    if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir)
-        if data_args.running_mode=="experimental":
-            predict_dataset = predict_dataset.select([n for n in range(0,100)])
-        
-        predict_dataset = split_into_languages(predict_dataset)
-
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
 
     # Labels
     label_list = set()

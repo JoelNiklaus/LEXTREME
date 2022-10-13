@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import re
 
-from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification
+from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_data
 from datasets import load_dataset, utils
 import glob
 import shutil
@@ -102,6 +102,12 @@ class DataTrainingArguments:
     )
     finetuning_task:Optional[str] = field(
         default='mapa_fine',
+        metadata={
+            "help": "Name of the finetuning task"
+        },
+    )
+    download_mode:Optional[str] = field(
+        default='reuse_cache_if_exists',
         metadata={
             "help": "Name of the finetuning task"
         },
@@ -221,19 +227,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    
-    if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train',download_mode="force_redownload")
-        train_dataset = train_dataset.rename_column("label", "labels")
-
-    if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation',download_mode="force_redownload")
-        eval_dataset = eval_dataset.rename_column("label", "labels")
-
-    if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test',download_mode="force_redownload")
-        predict_dataset = predict_dataset.rename_column("label", "labels")
-
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
     
     # Labels
     label_list =   ['O', 'B-BUILDING', 'I-BUILDING', 'B-CITY', 'I-CITY', 'B-COUNTRY', 'I-COUNTRY', 'B-PLACE', 'I-PLACE', 'B-TERRITORY', 'I-TERRITORY', 'I-UNIT', 'B-UNIT', 'B-VALUE', 'I-VALUE', 'B-YEAR', 'I-YEAR', 'B-STANDARD ABBREVIATION', 'I-STANDARD ABBREVIATION', 'B-MONTH', 'I-MONTH', 'B-DAY', 'I-DAY', 'B-AGE', 'I-AGE', 'B-ETHNIC CATEGORY', 'I-ETHNIC CATEGORY', 'B-FAMILY NAME', 'I-FAMILY NAME', 'B-INITIAL NAME', 'I-INITIAL NAME', 'B-MARITAL STATUS', 'I-MARITAL STATUS', 'B-PROFESSION', 'I-PROFESSION', 'B-ROLE', 'I-ROLE', 'B-NATIONALITY', 'I-NATIONALITY', 'B-TITLE', 'I-TITLE', 'B-URL', 'I-URL', 'B-TYPE', 'I-TYPE']
@@ -248,10 +242,7 @@ def main():
         label2id[l]=n
         id2label[n]=l
 
-    if data_args.running_mode=='experimental':
-        data_args.max_train_samples=1000
-        data_args.max_eval_samples=200
-        data_args.max_predict_samples=200
+
 
     model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 

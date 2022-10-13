@@ -64,12 +64,12 @@ def generate_command(time_stamp, **data):
         data["gpu_number"]=""
 
         #If no GPU available, we cannot make use of --fp16 --fp16_full_eval
-        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}'
+        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}'
     else:
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE}' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_pred --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
 
     
-    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],GREATER_IS_BETTER=data["greater_is_better"])
+    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],GREATER_IS_BETTER=data["greater_is_better"],DOWNLOAD_MODE=data["download_mode"])
 
     if "hierarchical" in data.keys() and data["hierarchical"] is not None:
         final_command += ' --hierarchical '+data["hierarchical"]
@@ -143,7 +143,7 @@ def run_in_parallel(commands_to_run):
         pool = Pool(processes=len(commands_to_run))
         pool.map(run_script, commands_to_run)
 
-def run_experiment(running_mode,language_model_type, task,list_of_seeds,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number,hierarchical,num_train_epochs=None):
+def run_experiment(running_mode,download_mode,language_model_type, task,list_of_seeds,batch_size,accumulation_steps,lower_case,language,learning_rate,gpu_number,hierarchical,num_train_epochs=None):
 
     if num_train_epochs is None:
         if bool(re.search('multi_eurlex',task))==True:
@@ -220,7 +220,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,batch_si
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better,download_mode=download_mode)
             batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
@@ -252,7 +252,7 @@ def run_experiment(running_mode,language_model_type, task,list_of_seeds,batch_si
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
-            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better)
+            script_new = generate_command(time_stamp=time_stamp,gpu_number=gpu_id,model_name=model_name,lower_case=lower_case,task=task,seed=seed,num_train_epochs=num_train_epochs,batch_size=batch_size,accumulation_steps=accumulation_steps,language=language,running_mode=running_mode,learning_rate=learning_rate,code=task_code_mapping[task],metric_for_best_model=metric_for_best_model,hierarchical=hierarchical,greater_is_better=greater_is_better,download_mode=download_mode)
             batch_size=None #Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
                 command = 'bash '+str(script_new)
@@ -303,6 +303,7 @@ if __name__=='__main__':
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
+    parser.add_argument('-dmo','--download_mode', help='Define whether you want to redownload the dataset or not. See the options in : https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html', default='reuse_cache_if_exists')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
     
 
@@ -323,6 +324,7 @@ if __name__=='__main__':
                     num_train_epochs=args.num_train_epochs,
                     running_mode=args.running_mode,
                     task=args.task,
+                    download_mode = args.download_mode
                     )
 
     

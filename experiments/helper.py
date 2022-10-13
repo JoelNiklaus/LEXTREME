@@ -19,7 +19,7 @@ import numpy as np
 import datetime
 import wandb
 import re
-import sys
+from datasets import load_dataset
 
 
 from transformers import (
@@ -47,6 +47,34 @@ from transformers import (
 
 from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
+
+
+def get_data(training_args,data_args,model_args,download_mode="reuse_cache_if_exists",experimental_samples=500):
+
+    if training_args.do_train:
+        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir,download_mode=download_mode)
+        if data_args.running_mode=="experimental":
+            train_dataset = train_dataset.select([n for n in range(0,experimental_samples)])
+        if bool(re.search('eurlex',data_args.finetuning_task)):
+            train_dataset = split_into_languages(train_dataset)
+
+    if training_args.do_eval:
+        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir,download_mode=download_mode)
+        if data_args.running_mode=="experimental":
+            eval_dataset = eval_dataset.select([n for n in range(0,experimental_samples)])
+        if bool(re.search('eurlex',data_args.finetuning_task)):
+            eval_dataset = split_into_languages(eval_dataset)
+
+    if training_args.do_predict:
+        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir,download_mode=download_mode)
+        if data_args.running_mode=="experimental":
+            predict_dataset = predict_dataset.select([n for n in range(0,experimental_samples)])
+        if bool(re.search('eurlex',data_args.finetuning_task)):
+            predict_dataset = split_into_languages(predict_dataset)
+
+
+    return train_dataset, eval_dataset, predict_dataset
+
 
 
 def append_zero_segments(case_encodings, pad_token_id, data_args):
