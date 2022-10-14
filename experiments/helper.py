@@ -49,7 +49,7 @@ from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 
 
-def get_data(training_args,data_args,model_args,download_mode="reuse_cache_if_exists",experimental_samples=500):
+def get_data(training_args,data_args,model_args,download_mode="reuse_cache_if_exists",experimental_samples=100):
 
     if training_args.do_train:
         train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir,download_mode=download_mode)
