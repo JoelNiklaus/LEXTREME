@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
 from datasets import utils
-from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, get_data
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function
 from trainer import MultilabelTrainer
 import glob
 import shutil
