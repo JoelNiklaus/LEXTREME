@@ -44,14 +44,16 @@ class HierDistilBertForSequenceClassification(DistilBertForSequenceClassificatio
         # Reason why the "hierarchical input" did not work seems to be this block, especially the pre_classfier method which does not exist in the Bert model
         # I commented these out and now it works
         
-        '''hidden_state = distilbert_output[0]  # (bs, seq_len, dim)
-        pooled_output = hidden_state[:, 0]  # (bs, dim)
+        #hidden_state = distilbert_output[0]  # (bs, seq_len, dim)
+        #pooled_output = hidden_state[:, 0]  # (bs, dim)
         #pooled_output = self.pre_classifier(pooled_output)  # (bs, dim)
-        pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
-        pooled_output = self.dropout(pooled_output)  # (bs, dim)
-        logits = self.classifier(pooled_output)  # (bs, num_labels)'''
+        #pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
+        #pooled_output = self.dropout(pooled_output)  # (bs, dim)
+        #logits = self.classifier(pooled_output)  # (bs, num_labels)'''
 
-        pooled_output = self.dropout(distilbert_output[1])
+        pooled_output = distilbert_output[1]
+
+        pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
 
         loss = None

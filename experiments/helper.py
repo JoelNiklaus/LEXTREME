@@ -20,7 +20,9 @@ import datetime
 import wandb
 import re
 from datasets import load_dataset
+import datasets
 
+datasets.set_caching_enabled(False)
 
 from transformers import (
     AutoConfig,
@@ -648,8 +650,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = 'bfh_test_fp16'
-        #project_name = 'bfh_test_hierachical'
+        project_name = 'bfh_test'
         #project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
@@ -688,7 +689,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
 
         tokenizer = DistilBertTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_fast=model_args.use_fast_tokenizer,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -706,6 +706,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
+                ignore_mismatched_sizes=True
             )
 
     
@@ -718,13 +719,12 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
+            use_auth_token=True if model_args.use_auth_token else None
         )
 
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         if model_args.hierarchical==True:
@@ -738,6 +738,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
+                ignore_mismatched_sizes=True
             )
 
     elif model_args.model_name_or_path in model_types['deberta']:
@@ -752,7 +753,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         # DebertaTokenizer is buggy, therefore we use the AutTokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_fast=model_args.use_fast_tokenizer,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -762,12 +762,14 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
+                ignore_mismatched_sizes=True
             )
         elif model_args.hierarchical==False:
             model = DebertaForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
+                ignore_mismatched_sizes=True
             )
 
     
@@ -784,7 +786,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
         tokenizer = XLMRobertaTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_fast=model_args.use_fast_tokenizer,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -793,6 +794,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
         )
     
 
@@ -823,7 +825,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
 
         tokenizer = DistilBertTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -831,6 +832,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
         )
 
     elif model_args.model_name_or_path in model_types["xlm-roberta"]:
@@ -848,7 +850,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             add_prefix_space=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
@@ -856,6 +857,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
         )
 
     elif model_args.model_name_or_path in model_types['deberta']:
@@ -864,21 +866,19 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            
-            
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         # DebertaTokenizer is buggy, therefore we use the AutTokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         model = DebertaForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
         )
     
     elif model_args.model_name_or_path in model_types['MiniLM']:
@@ -888,15 +888,12 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            
-            
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
         tokenizer = XLMRobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            do_lower_case=model_args.do_lower_case,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
@@ -904,6 +901,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
         )
     
 
