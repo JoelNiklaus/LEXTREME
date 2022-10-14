@@ -88,7 +88,7 @@ class DataTrainingArguments:
         },
     )
     language:Optional[str] = field(
-        default='all_languages',
+        default='all',
         metadata={
             "help": "For choosin the language "
             "value if set."

@@ -49,28 +49,43 @@ from models.deberta import HierDebertaForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 
 
-def get_data(training_args,data_args,model_args,download_mode="reuse_cache_if_exists",experimental_samples=100):
+def get_data(training_args,data_args,model_args,download_mode,experimental_samples=False):
+
+    if data_args.running_mode=="experimental":
+        experimental_samples = True
+
+
+    ner_tasks = ['greek_legal_ner','lener_br','legalnero','mapa_coarse','mapa_fine']
 
     if training_args.do_train:
-        train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir=model_args.cache_dir,download_mode=download_mode)
-        if data_args.running_mode=="experimental":
-            train_dataset = train_dataset.select([n for n in range(0,experimental_samples)])
+        if experimental_samples == True:
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:5%]', download_mode=download_mode)
+        elif experimental_samples == False:
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             train_dataset = split_into_languages(train_dataset)
+        if data_args.finetuning_task in ner_tasks:
+            train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir=model_args.cache_dir,download_mode=download_mode)
-        if data_args.running_mode=="experimental":
-            eval_dataset = eval_dataset.select([n for n in range(0,experimental_samples)])
+        if experimental_samples == True:
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:5%]', download_mode=download_mode)
+        elif experimental_samples == False:
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             eval_dataset = split_into_languages(eval_dataset)
+        if data_args.finetuning_task in ner_tasks:
+            eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir=model_args.cache_dir,download_mode=download_mode)
-        if data_args.running_mode=="experimental":
-            predict_dataset = predict_dataset.select([n for n in range(0,experimental_samples)])
+        if experimental_samples == True:
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:5%]', download_mode=download_mode)
+        elif experimental_samples == False:
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             predict_dataset = split_into_languages(predict_dataset)
+        if data_args.finetuning_task in ner_tasks:
+            predict_dataset = predict_dataset.rename_column("label", "labels")
 
 
     return train_dataset, eval_dataset, predict_dataset
@@ -436,7 +451,7 @@ def process_results(preds, labels):
 def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,training_args,list_of_languages=[],name_of_input_field='input'):
     
     language_specific_metrics = list()
-    if data_args.language=='all_languages':
+    if data_args.language=='all':
 
         if list_of_languages==[]:
             list_of_languages = sorted(list(set(predict_dataset['language'])))
@@ -504,7 +519,7 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     language_specific_metrics = list()
     
     if "language" in list(predict_dataset.features.keys()):
-        if data_args.language=='all_languages':
+        if data_args.language=='all':
             if list_of_languages==[]:
                 list_of_languages = sorted(list(set(predict_dataset['language'])))
             
@@ -560,7 +575,7 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
 def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,training_args,list_of_languages=[]):
     
     language_specific_metrics = list()
-    if data_args.language=='all_languages':
+    if data_args.language=='all':
         if list_of_languages==[]:
             list_of_languages = sorted(list(set(predict_dataset['language'])))
         
@@ -633,7 +648,8 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = 'bfh_test_hierachical'
+        project_name = 'bfh_test_fp16'
+        #project_name = 'bfh_test_hierachical'
         #project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
@@ -665,28 +681,22 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
+            
+            
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         tokenizer = DistilBertTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
             use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         if model_args.hierarchical==True:
             model = HierDistilBertForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
         
@@ -694,11 +704,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         if model_args.hierarchical==False:
             model = DistilBertForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
 
@@ -712,8 +718,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -721,29 +725,18 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            #use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         if model_args.hierarchical==True:
             model = XLMRobertaForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
         if model_args.hierarchical==False:
             model = XLMRobertaForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
 
@@ -753,8 +746,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -762,30 +753,20 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
             use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         if model_args.hierarchical==True:
             model = HierDebertaForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
         elif model_args.hierarchical==False:
             model = DebertaForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                ignore_mismatched_sizes=True,
                 use_auth_token=True if model_args.use_auth_token else None,
             )
 
@@ -797,8 +778,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -806,19 +785,13 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         tokenizer = XLMRobertaTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
             use_fast=model_args.use_fast_tokenizer,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
         model = BertForSequenceClassification.from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
     
@@ -845,27 +818,18 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         tokenizer = DistilBertTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            #use_fast=True,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
         model = DistilBertForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -878,8 +842,6 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -887,19 +849,12 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            #use_fast=True,
             add_prefix_space=True,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         model = XLMRobertaForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -909,8 +864,8 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
+            
+            
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -918,18 +873,11 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            #use_fast=True,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         model = DebertaForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
     
@@ -940,8 +888,8 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task= data_args.language+'_'+data_args.finetuning_task,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
+            
+            
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
@@ -949,19 +897,12 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         tokenizer = XLMRobertaTokenizerFast.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             do_lower_case=model_args.do_lower_case,
-            cache_dir=model_args.cache_dir,
-            #use_fast=True,
-            revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
         )
         # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
         model = BertForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            ignore_mismatched_sizes=True,
             use_auth_token=True if model_args.use_auth_token else None,
         )
     
