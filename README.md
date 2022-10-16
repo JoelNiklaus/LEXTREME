@@ -26,8 +26,6 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the ```swiss_judgment_prediction``` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:  
 
 ```
-CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ```run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH}
-
 CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_prediction.py \
   --model_name_or_path  {MODEL_NAME_OR_PATH} \
   --output_dir {OUTPUT_DIR} \
