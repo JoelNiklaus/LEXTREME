@@ -23,21 +23,39 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 
 ### How to run experiments?
 
-The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. In order to do so, you need to provide at least a two arguments: ```output_dir```, i.e. where you want to store the output of the finetuning, and ```model_name_or_path```, i.e. the pretrained language model that you want to use (e.g. ```distilbert-base-multilingual-cased```). Optionally and depending on your hardware, you can specify the GPU number in order to speed up the process by providing ```CUDA_VISIBLE_DEVICES={GPU_NUMBER}```.
-
-For example, if you want to finetune on the swiss_judgment_prediction``` dataset, you type the following command and replace the curly brackets and the content therein with your variables:  
+The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the ```swiss_judgment_prediction``` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:  
 
 ```
 CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ```run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH}
 
+CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_prediction.py \
+  --model_name_or_path  {MODEL_NAME_OR_PATH} \
+  --output_dir {OUTPUT_DIR} \
+  --do_train \
+  --do_eval \
+  --do_pred \
+  --overwrite_output_dir \
+  --load_best_model_at_end \
+  --metric_for_best_model eval_loss \
+  --greater_is_better False \
+  --evaluation_strategy epoch \
+  --save_strategy epoch \
+  --save_total_limit {SAVE_TOTAL_LIMIT} \
+  --num_train_epochs {NUM_TRAIN_EPOCHS} \
+  --learning_rate {LEARNING_RATE} \
+  --per_device_train_batch_size {PER_DEVICE_TRAIN_BATCH_SIZE} \
+  --per_device_eval_batch_size {PER_DEVICE_EVAL_BATCH_SIZE} \
+  --seed {SEED} \
+  --gradient_accumulation_steps {PER_DEVICE_TRAIN_BATCH_SIZE} \
+  --eval_accumulation_steps {EVAL_ACCUMULATION_STEPS} \
+  --running_mode experimental \
+  --download_mode reuse_cache_if_exists \
+  --fp16 \
+  --fp16_full_eval
+
+
 ```
 
-Note that the command will make use of the predefined configurations as described in the paper, i.e. it will train for 50 epochs with an early stopping patience of 5. In order to override these configurations, you can either change the code itself, or you can provide required arguments in the command line. For example, in order to reduce the number of epochs to, let's say, 3, you can do the following:
-
-```
-CUDA_VISIBLE_DEVICES={GPU_NUMBER} python run_swiss_judgment_prediction.py --output_dir {OUTPUT_DIR} --model_name_or_path {MODEL_NAME_OR_PATH} --num_train_epochs 3
-
-```
 
 ### How reproduce the results of the paper?
 
