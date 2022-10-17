@@ -303,7 +303,7 @@ if __name__=='__main__':
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rmo','--running_mode', help='Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.', default='default')
-    parser.add_argument('-dmo','--download_mode', help='Define whether you want to redownload the dataset or not. See the options in : https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html', default='reuse_cache_if_exists')
+    parser.add_argument('-dmo','--download_mode', help='Define whether you want to redownload the dataset or not. See the options in : https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html', default='force_redownload')
     parser.add_argument('-t','--task', help='Choose a task.', default='all',choices=sorted(list(task_code_mapping.keys())))
     
 
