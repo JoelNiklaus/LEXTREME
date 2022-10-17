@@ -22,7 +22,7 @@ import re
 from datasets import load_dataset
 import datasets
 
-datasets.set_caching_enabled(False)
+#datasets.set_caching_enabled(False)
 
 from transformers import (
     AutoConfig,
@@ -650,8 +650,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = 'bfh_test'
-        #project_name = model_args.model_name_or_path
+        project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     try:
