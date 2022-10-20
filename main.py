@@ -295,7 +295,10 @@ def run_experiment(running_mode,download_mode,language_model_type, task,list_of_
 
 if __name__=='__main__':
 
-    
+    # Remove the existing cache directory since everything will be redownloaded anyway
+    # Somehow the cache caused errors
+
+    shutil.rmtree('datasets') 
 
     parser = argparse.ArgumentParser()
 

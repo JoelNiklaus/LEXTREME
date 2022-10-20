@@ -20,9 +20,9 @@ import datetime
 import wandb
 import re
 from datasets import load_dataset
-import datasets
 
-#datasets.set_caching_enabled(False)
+
+
 
 from transformers import (
     AutoConfig,
@@ -61,9 +61,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_train:
         if experimental_samples == True:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:5%]', download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:2%]', cache_dir="datasets", download_mode=download_mode)
         elif experimental_samples == False:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir="datasets", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             train_dataset = split_into_languages(train_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -71,9 +71,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_eval:
         if experimental_samples == True:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:5%]', download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:2%]', cache_dir="datasets", download_mode=download_mode)
         elif experimental_samples == False:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir="datasets", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             eval_dataset = split_into_languages(eval_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -81,9 +81,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_predict:
         if experimental_samples == True:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:5%]', download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:2%]', cache_dir="datasets", download_mode=download_mode)
         elif experimental_samples == False:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir="datasets", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             predict_dataset = split_into_languages(predict_dataset)
         if data_args.finetuning_task in ner_tasks:
