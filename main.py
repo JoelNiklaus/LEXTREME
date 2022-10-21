@@ -320,7 +320,7 @@ if __name__=='__main__':
         if os.path.isdir('dataset_caching'):
             shutil.rmtree('dataset_caching')
         else:
-            os.mkdir('datasets_caching'):
+            os.mkdir('datasets_caching')
     
     
 
