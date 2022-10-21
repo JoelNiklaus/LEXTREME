@@ -61,9 +61,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_train:
         if experimental_samples == True:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:2%]', cache_dir="datasets", download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir="datasets", download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir="dataset_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             train_dataset = split_into_languages(train_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -71,9 +71,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_eval:
         if experimental_samples == True:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:2%]', cache_dir="datasets", download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir="datasets", download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir="dataset_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             eval_dataset = split_into_languages(eval_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -81,9 +81,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_predict:
         if experimental_samples == True:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:2%]', cache_dir="datasets", download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir="datasets", download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir="dataset_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             predict_dataset = split_into_languages(predict_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -507,8 +507,8 @@ def make_predictions_multi_class(trainer,data_args,predict_dataset,id2label,trai
     output['predictions_as_label']=output.predictions.apply(lambda x: id2label[x])
     output['reference_as_label']=output.reference.apply(lambda x: id2label[x])
     
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
@@ -567,8 +567,8 @@ def make_predictions_multi_label(trainer,data_args,predict_dataset,id2label,trai
     output['predictions_as_label']=output.predictions.apply(lambda x: convert_id2label(x,id2label))
     output['reference_as_label']=output.reference.apply(lambda x: convert_id2label(x,id2label))
 
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
@@ -638,8 +638,8 @@ def make_predictions_ner(trainer,tokenizer,data_args,predict_dataset,id2label,tr
     output['predictions_as_label']=output.predictions.apply(lambda l: [id2label[x] for x in l])
     output['references_as_label']=output.references.apply(lambda l: [id2label[x] for x in l])
 
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_clean.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_clean.csv")
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
