@@ -63,9 +63,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_train:
         if experimental_samples == True:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train[:5%]', cache_dir="datasets_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir="dataset_caching", download_mode=download_mode)
+            train_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='train', cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             train_dataset = split_into_languages(train_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -73,9 +73,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_eval:
         if experimental_samples == True:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation[:5%]', cache_dir="datasets_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir="dataset_caching", download_mode=download_mode)
+            eval_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='validation', cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             eval_dataset = split_into_languages(eval_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -83,9 +83,9 @@ def get_data(training_args,data_args,model_args,download_mode,experimental_sampl
 
     if training_args.do_predict:
         if experimental_samples == True:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:5%]', cache_dir="dataset_caching", download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test[:5%]', cache_dir="datasets_caching", download_mode=download_mode)
         elif experimental_samples == False:
-            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir="dataset_caching", download_mode=download_mode)
+            predict_dataset = load_dataset("joelito/lextreme",data_args.finetuning_task,split='test', cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex',data_args.finetuning_task)):
             predict_dataset = split_into_languages(predict_dataset)
         if data_args.finetuning_task in ner_tasks:
@@ -652,7 +652,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = re.sub('/','-',model_args.model_name_or_path)
+        project_name = re.sub('/','-',model_args.model_name_or_path+'_final')
     wandb.init(project=project_name)
     try:
         run_name = data_args.finetuning_task+'_'+model_args.model_name_or_path+'_seed-'+str(training_args.seed)+'__hierarchical_'+str(model_args.hierarchical)+'__time-'+time_now
