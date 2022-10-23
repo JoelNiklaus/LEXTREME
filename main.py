@@ -324,8 +324,8 @@ if __name__=='__main__':
     if args.download_mode=='force_redownload':
         # Remove the existing cache directory since everything will be redownloaded anyway
         # Somehow the cache caused errors
-        if os.path.isdir('dataset_caching'):
-            shutil.rmtree('dataset_caching')
+        if os.path.isdir('datasets_caching'):
+            shutil.rmtree('datasets_caching')
         else:
             os.mkdir('datasets_caching')
     
