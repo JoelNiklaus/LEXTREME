@@ -34,11 +34,13 @@ from transformers import (
     DistilBertTokenizerFast,
     XLMRobertaTokenizer,
     XLMRobertaTokenizerFast,
+    AutoModelForSequenceClassification,
     DebertaForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
     XLMRobertaForSequenceClassification,
     DistilBertForSequenceClassification,
+    AutoModelForTokenClassification,
     BertForTokenClassification,
     DistilBertForTokenClassification,
     XLMRobertaForTokenClassification,
@@ -650,7 +652,6 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = model_args.model_name_or_path
         project_name = re.sub('/','-',project_name)
     wandb.init(project=project_name)
     try:
@@ -796,6 +797,28 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             ignore_mismatched_sizes=True
         )
     
+    else:
+        
+        
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            use_fast=model_args.use_fast_tokenizer,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_args.model_name_or_path,
+            config=config,
+            use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
+        )
 
     return model, tokenizer, config
 
@@ -903,5 +926,25 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             ignore_mismatched_sizes=True
         )
     
+    else:
+
+        config = AutoConfig.from_pretrained(
+            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+            num_labels=num_labels,
+            finetuning_task= data_args.language+'_'+data_args.finetuning_task,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+        
+        model = AutoModelForTokenClassification.from_pretrained(
+            model_args.model_name_or_path,
+            config=config,
+            use_auth_token=True if model_args.use_auth_token else None,
+            ignore_mismatched_sizes=True
+        )
 
     return model, tokenizer

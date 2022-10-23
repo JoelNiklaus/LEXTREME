@@ -106,6 +106,10 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="xlm-roberta-large":
             batch_size= 8
             accumulation_steps=8
+        else:
+            batch_size= 32
+            accumulation_steps=2
+
     
 
     elif str(hierarchical).lower()=="true":
@@ -125,7 +129,10 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="xlm-roberta-large":
             batch_size= 2
             accumulation_steps=32
-    
+        else:
+            batch_size= 8
+            accumulation_steps=8
+
     return batch_size, accumulation_steps
     
     
@@ -303,7 +310,7 @@ if __name__=='__main__':
     parser.add_argument('-hier','--hierarchical', help='Define whether you want to use a hierarchical model or not. Caution: this will not work for every task', default=None)
     parser.add_argument('-lang','--language', help='Define if you want to filter the training dataset by language.', default='all_languages')
     parser.add_argument('-lc','--lower_case', help='Define if lower case or not.', default=False)
-    parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all',choices=models_to_be_used_small+models_to_be_used_base+models_to_be_used_large)
+    parser.add_argument('-lmt','--language_model_type', help='Define which kind of language model you would like to use; you can choose between small, base and large language models or all of them.', default='all')
     parser.add_argument('-los','--list_of_seeds', help='Define the number of training epochs.', default=None)
     parser.add_argument('-lr','--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-nte','--num_train_epochs', help='Define the number of training epochs.')
