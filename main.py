@@ -170,7 +170,10 @@ def run_experiment(running_mode,download_mode,language_model_type, task,list_of_
         if len(gpu_number)==0:
             gpu_number=[None] #In that case we use the CPU
     else:
-        gpu_number = [gpu_number]
+        if type(gpu_number)==str:
+            gpu_number = gpu_number.split(',')
+        elif type(gpu_number)==list:
+            gpu_number = gpu_number
 
     #Tagging my Python scripts
     setproctitle.setproctitle('Veton Matoshi - LEXTREME')
