@@ -36,18 +36,18 @@ models_to_be_used_large = [
 task_code_mapping = {
     'brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
     'brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    'covid19_emergency_event': 'run_covid19_emergency_event.py',
-    'german_argument_mining': 'run_german_argument_mining.py',
+    #'covid19_emergency_event': 'run_covid19_emergency_event.py',
+    #'german_argument_mining': 'run_german_argument_mining.py',
     'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
-    'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    #'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
+    #'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
     'greek_legal_ner': 'run_greek_legal_ner.py',
-    'legalnero': 'run_legalnero.py',
-    'lener_br': 'run_lener_br.py',
-    'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
-    'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
-    'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
-    'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
+    #'legalnero': 'run_legalnero.py',
+    #'lener_br': 'run_lener_br.py',
+    #'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
+    #'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    #'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
+    #'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
     'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
     'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
     'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
@@ -94,16 +94,16 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 64
             accumulation_steps=1
-        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 32
             accumulation_steps=2
-        if language_model=="xlm-roberta-base":
+        elif language_model=="xlm-roberta-base":
             batch_size= 32
             accumulation_steps=2
-        if language_model=="microsoft/mdeberta-v3-base":
+        elif language_model=="microsoft/mdeberta-v3-base":
             batch_size= 16
             accumulation_steps=4
-        if language_model=="xlm-roberta-large":
+        elif language_model=="xlm-roberta-large":
             batch_size= 8
             accumulation_steps=8
         else:
@@ -117,16 +117,16 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 16
             accumulation_steps=4
-        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 8
             accumulation_steps=8
-        if language_model=="xlm-roberta-base":
+        elif language_model=="xlm-roberta-base":
             batch_size= 8
             accumulation_steps=8
-        if language_model=="microsoft/mdeberta-v3-base":
+        elif language_model=="microsoft/mdeberta-v3-base":
             batch_size= 4
             accumulation_steps=16
-        if language_model=="xlm-roberta-large":
+        elif language_model=="xlm-roberta-large":
             batch_size= 2
             accumulation_steps=32
         else:
