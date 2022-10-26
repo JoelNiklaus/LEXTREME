@@ -21,6 +21,7 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 
 ```
 
+
 ### How to run experiments?
 
 The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the ```swiss_judgment_prediction``` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:  
@@ -57,7 +58,7 @@ CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_predic
 
 ### How reproduce the results of the paper?
 
-It is possible to reproduce the results of the paper by running the finetung for each dataset separately. Alternatively, you can run ```main.py``` which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available). 
+It is possible to reproduce the results of the paper by running the finetuning for each dataset separately. Alternatively, you can run [main.py](https://github.com/JoelNiklaus/LEXTREME/tree/main/main.py) which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available). 
 
 The following command will make sure that you run all experiments as described in the paper:
 
@@ -84,16 +85,16 @@ It allows a certain degree of customizability by specifying the following argume
 | -t                    | --task               | Choose a specific task or all of them.                                                                                                 | all                                                                                                                                                                          |
 
 
-For example, if you want to finetune on swiss_judgment_prediction with the seeds [1,2,3], 10 epochs, and all pretrained language models as described in the paper, you can type the following:
+For example, if you want to finetune on ```swiss_judgment_prediction``` with the seeds [1,2,3], 10 epochs, and all pretrained language models as described in the paper, you can type the following:
 
 ```
-python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
+python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list_of_seeds
  1,2,3 --num_train_epochs 10
 ```
 
-Temporary bash files will be created and saved in the folder ```temporary_scripts``` and they will be run immediately. These bash files will be overwritten the next time you run main.py.
+Temporary bash files will be created and saved in the folder [temporary_scripts](https://github.com/JoelNiklaus/LEXTREME/tree/main/temporary_scripts) and they will be run immediately. These bash files will be overwritten the next time you run main.py.
 
-If you want to finetune only on, let's say, ```xlm-roberta-large```.
+If you want to finetune only on, let's say, ```xlm-roberta-large```, you can type the following command.
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large
@@ -104,7 +105,7 @@ If, additionally, you don't want to make use of a hierarchical model (```swiss_j
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
-
+Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting ```-hierarchical``` to TRUE will cause an error.
 
 ## References
 
