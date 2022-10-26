@@ -36,22 +36,22 @@ models_to_be_used_large = [
 task_code_mapping = {
     'brazilian_court_decisions_judgment': 'run_brazilian_court_decisions_judgment.py',
     'brazilian_court_decisions_unanimity': 'run_brazilian_court_decisions_unanimity.py',
-    'covid19_emergency_event': 'run_covid19_emergency_event.py',
     'german_argument_mining': 'run_german_argument_mining.py',
-    'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
-    'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
-    'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'covid19_emergency_event': 'run_covid19_emergency_event.py',
+    'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
+    'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
     'greek_legal_ner': 'run_greek_legal_ner.py',
     'legalnero': 'run_legalnero.py',
     'lener_br': 'run_lener_br.py',
     'mapa_ner_coarse_grained': 'run_mapa_ner_coarse_grained.py',
     'mapa_ner_fine_grained': 'run_mapa_ner_fine_grained.py',
+    'greek_legal_code_chapter_level': 'run_greek_legal_code_chapter_level.py',
+    'greek_legal_code_subject_level': 'run_greek_legal_code_subject_level.py',
+    'greek_legal_code_volume_level': 'run_greek_legal_code_volume_level.py',
+    'swiss_judgment_prediction': 'run_swiss_judgment_prediction.py',
     'multi_eurlex_level_1': 'run_multi_eurlex_level_1.py',
     'multi_eurlex_level_2': 'run_multi_eurlex_level_2.py',
-    'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py',
-    'online_terms_of_service_unfairness_category': 'run_online_terms_of_service_unfairness_category.py',
-    'online_terms_of_service_unfairness_level': 'run_online_terms_of_service_unfairness_level.py',
-    'swiss_judgment_prediction': 'run_swiss_judgment_prediction.py'
+    'multi_eurlex_level_3': 'run_multi_eurlex_level_3.py'
     }
 
 
@@ -64,9 +64,9 @@ def generate_command(time_stamp, **data):
         data["gpu_number"]=""
 
         #If no GPU available, we cannot make use of --fp16 --fp16_full_eval
-        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}'
+        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/final_results/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}'
     else:
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/logs'+time_stamp+'/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE} --fp16' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir results/final_results/'+'{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE} --fp16' #--fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
 
     
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],MODEL_NAME=data["model_name"],LOWER_CASE=data["lower_case"],TASK=data["task"],SEED=data["seed"],NUM_TRAIN_EPOCHS=data["num_train_epochs"],BATCH_SIZE=data["batch_size"],ACCUMULATION_STEPS=data["accumulation_steps"],LANGUAGE=data["language"],RUNNING_MODE=data["running_mode"],LEARNING_RATE=data["learning_rate"],CODE=data["code"],METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],GREATER_IS_BETTER=data["greater_is_better"],DOWNLOAD_MODE=data["download_mode"])
@@ -94,16 +94,16 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 64
             accumulation_steps=1
-        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 32
             accumulation_steps=2
-        if language_model=="xlm-roberta-base":
+        elif language_model=="xlm-roberta-base":
             batch_size= 32
             accumulation_steps=2
-        if language_model=="microsoft/mdeberta-v3-base":
+        elif language_model=="microsoft/mdeberta-v3-base":
             batch_size= 16
             accumulation_steps=4
-        if language_model=="xlm-roberta-large":
+        elif language_model=="xlm-roberta-large":
             batch_size= 8
             accumulation_steps=8
         else:
@@ -117,16 +117,16 @@ def get_optimal_batch_size(language_model:str, hierarchical:bool,task:str):
         if language_model=="distilbert-base-multilingual-cased":
             batch_size= 16
             accumulation_steps=4
-        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+        elif language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             batch_size= 8
             accumulation_steps=8
-        if language_model=="xlm-roberta-base":
+        elif language_model=="xlm-roberta-base":
             batch_size= 8
             accumulation_steps=8
-        if language_model=="microsoft/mdeberta-v3-base":
+        elif language_model=="microsoft/mdeberta-v3-base":
             batch_size= 4
             accumulation_steps=16
-        if language_model=="xlm-roberta-large":
+        elif language_model=="xlm-roberta-large":
             batch_size= 2
             accumulation_steps=32
         else:
