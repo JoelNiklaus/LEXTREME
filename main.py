@@ -322,6 +322,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     if args.download_mode=='force_redownload':
+        
         # Remove the existing cache directory since everything will be redownloaded anyway
         # Somehow the cache caused errors
         if os.path.isdir('datasets_caching'):
