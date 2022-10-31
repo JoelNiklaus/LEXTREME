@@ -37,12 +37,27 @@ models_to_be_used = [
     "xlm-roberta-large"
     ]
 
-lextreme_datasets = ['brazilian_court_decisions_judgment', 'brazilian_court_decisions_unanimity', 
-                     'swiss_judgment_prediction', 'german_argument_mining', 'greek_legal_code_volume', 
-                     'greek_legal_code_chapter', 'greek_legal_code_subject', 
-                     'online_terms_of_service_unfairness_levels', 'online_terms_of_service_clause_topics', 
-                     'covid19_emergency_event', 'lener_br', 'legalnero', 
-                     'greek_legal_ner', 'mapa_coarse', 'mapa_fine'] #'multi_eurlex_level_1'
+lextreme_datasets = ['brazilian_court_decisions_judgment', 
+                    'brazilian_court_decisions_unanimity', 
+                     'swiss_judgment_prediction', 
+                     'german_argument_mining', 
+                     'greek_legal_code_volume', 
+                     'greek_legal_code_chapter', 
+                     'greek_legal_code_subject', 
+                     'online_terms_of_service_unfairness_levels', 
+                     'online_terms_of_service_clause_topics', 
+                     'covid19_emergency_event', 
+                     'lener_br', 
+                     'legalnero', 
+                     'greek_legal_ner', 
+                     'mapa_coarse', 
+                     'mapa_fine'] #'multi_eurlex_level_1'
+
+
+lextreme_datasets = [
+                    'brazilian_court_decisions_judgment', 
+                     'mapa_fine'
+                     ]
 
 
 
@@ -177,12 +192,7 @@ def generate_dataframe_with_tokenization(dataset_name):
     return all_data_as_df
 
 
-
-def generate_histogram(dataset_name):
-
-    '''Generates histogram per dataset and language'''
-    
-    all_data_as_df = generate_dataframe_with_tokenization(dataset_name)
+def draw_histogram(dataframe,dataset_name,language=None):
 
     plt.figure(figsize=(20,10))
 
@@ -190,10 +200,10 @@ def generate_histogram(dataset_name):
 
     max_value = 0
     columns_with_values = defaultdict(dict)
-    for c in all_data_as_df.columns:
+    for c in dataframe.columns:
         for lmt in models_to_be_used:
             if re.search(lmt,c):
-                values = all_data_as_df[c].tolist()
+                values = dataframe[c].tolist()
                 values, outliers = get_percentiles(values)
                 columns_with_values[c]['values']=values
                 columns_with_values[c]['outliers']=outliers
@@ -217,7 +227,7 @@ def generate_histogram(dataset_name):
         all_labels.append(key)
 
             
-    N, bins, patches = plt.hist(all_values, bins=bins, alpha=0.5, edgecolor='black', label=all_labels)
+    N, bins, patches = plt.hist(all_values, bins=bins, alpha=0.7, edgecolor='black', label=all_labels)
     
     for n,p in enumerate(patches):
         # The last bin will contain all outliers
@@ -226,17 +236,39 @@ def generate_histogram(dataset_name):
 
     plt.legend(loc='upper right')
 
-    plt.title('Histogram for dataset '+dataset_name)
+    if language is not None:
+        plt.title('Histogram for dataset '+dataset_name+' for input with language: '+language)
+    else:
+        plt.title('Histogram for dataset '+dataset_name)
     
     output_directory_name = 'histograms/'+dataset_name
     if os.path.isdir(output_directory_name)==False:
         os.makedirs(output_directory_name)
     
-    
-    plt.savefig(output_directory_name+'/'+dataset_name+'.jpg')
+    if language is not None:
+        plt.savefig(output_directory_name+'/'+dataset_name+'_language__'+language+'.jpg')
+    else:
+        plt.savefig(output_directory_name+'/'+dataset_name+'.jpg')
 
+
+
+
+def generate_histograms(dataset_name):
+
+    '''Generates histogram per dataset and language'''
+    
+    df_all = generate_dataframe_with_tokenization(dataset_name)
+    
+    all_languages = df_all.language.unique()
+
+    if len(all_languages)>0:
+        for lang in all_languages:
+            df = df_all[df_all.language==lang]
+            draw_histogram(df, dataset_name, lang)
+
+    draw_histogram(df_all, dataset_name)
 
 
 if __name__=='__main__':
     for dataset_name in lextreme_datasets[:3]:
-        generate_histogram(dataset_name=dataset_name)
+        generate_histograms(dataset_name=dataset_name)
