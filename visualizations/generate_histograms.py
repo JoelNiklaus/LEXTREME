@@ -54,12 +54,6 @@ lextreme_datasets = ['brazilian_court_decisions_judgment',
                      'mapa_fine'] #'multi_eurlex_level_1'
 
 
-lextreme_datasets = [
-                    'brazilian_court_decisions_judgment', 
-                     'mapa_fine'
-                     ]
-
-
 
 
 def get_tokenization_length(tokenizer, text):
