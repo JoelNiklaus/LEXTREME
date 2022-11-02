@@ -4,7 +4,7 @@
 # Multiple histograms in one plot: https://stackoverflow.com/questions/6871201/plot-two-histograms-on-single-chart-with-matplotlib
 
 import pandas as pd
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from matplotlib import pyplot as plt
 import numpy as np
 from ast import literal_eval
@@ -55,9 +55,6 @@ lextreme_datasets = ['brazilian_court_decisions_judgment',
                      'multi_eurlex_level_1']
 
 
-lextreme_datasets = [
-                     'multi_eurlex_level_1']
-
 
 
 
@@ -84,20 +81,27 @@ def get_tokenization_length(tokenizer, text):
 
 
 
-def add_column_with_text_length(dataframe,models_to_be_used, parallelized=False):
+def add_column_with_text_length(dataframe,models_to_be_used):
 
     '''Applies the function get_tokenization_length to the input text in a dataframe'''
+
+    dataframe_as_dataset = Dataset.from_pandas(dataframe)
+    print(dataframe_as_dataset)
+
+    dataframe_processed = list()
     
     for language_model_name in models_to_be_used:
+        dataset = deepcopy(dataframe_as_dataset)
         tokenizer = AutoTokenizer.from_pretrained(language_model_name)
-        if parallelized==True:
-            dataframe[language_model_name]=dataframe.input.parallel_apply(lambda x: get_tokenization_length(tokenizer,x))
-            dataframe[language_model_name]=dataframe.input.parallel_apply(lambda x: get_tokenization_length(tokenizer,x))
-        elif parallelized==False:
-            dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
-            dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
-    
-    return dataframe
+        dataset = dataset.map(lambda examples: tokenizer(examples["input"],add_special_tokens=False, return_length=True), batched=True, batch_size=50000)
+        dataset = dataset.rename_column("length", language_model_name)
+        #dataset = dataset.remove_columns(['label', 'input_ids', 'attention_mask'])
+        dataframe_processed.append(pd.DataFrame(dataset))
+
+    dataframe_processed = pd.concat(dataframe_processed, axis = 1)
+    dataframe_processed = dataframe_processed.loc[:,~dataframe_processed.columns.duplicated()] #Remove duplicate columns
+    print(dataframe_processed.head())
+    return dataframe_processed
 
 
 def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
@@ -108,7 +112,7 @@ def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
     interim_dict = dict()
     
     for language_model_name in models_to_be_used:
-        tokenization_output = dataframe[language_model_name].tolist()
+        tokenization_output = dataframe[language_model_name].values.tolist()
         interim_dict[language_model_name]=tokenization_output
         
     language_model_dict = deepcopy(interim_dict)
@@ -116,7 +120,7 @@ def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
     language_models_that_generate_equal_outputs = set()
     
     for language_model_name in models_to_be_used:
-        tokenization_output = dataframe[language_model_name].tolist()
+        tokenization_output = dataframe[language_model_name].values.tolist()
         for key in interim_dict.keys():
             if key!=language_model_name:
                 if interim_dict[key]==tokenization_output:
@@ -124,6 +128,7 @@ def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
                     language_models_that_generate_equal_outputs.add(language_model_name)
                     
     language_models_that_generate_equal_outputs = list(language_models_that_generate_equal_outputs)
+    print(language_models_that_generate_equal_outputs)
     
     dataframe[' and '.join(sorted(list(language_models_that_generate_equal_outputs)))]=dataframe[language_models_that_generate_equal_outputs[0]]
     
@@ -171,7 +176,7 @@ def split_into_languages(dataset_df):
     return  dataset_new
 
 
-def generate_dataframe_with_tokenization(dataset_name,parallelized=False):
+def generate_dataframe_with_tokenization(dataset_name):
 
     '''This function will fetch the dataset, convert it into a dataframe and apply tokenization'''
 
@@ -188,7 +193,7 @@ def generate_dataframe_with_tokenization(dataset_name,parallelized=False):
         all_data_as_df = split_into_languages(all_data_as_df)
 
 
-    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used,parallelized)
+    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used)
     all_data_as_df = merge_equal_tokenization_outputs(all_data_as_df,models_to_be_used)
     
     return all_data_as_df
@@ -256,11 +261,13 @@ def draw_histogram(dataframe,dataset_name,language=None):
 
 
 
-def generate_histograms(dataset_name,parallelized=False):
+def generate_histograms(dataset_name):
 
     '''Generates histogram per dataset and language'''
     
-    df_all = generate_dataframe_with_tokenization(dataset_name,parallelized)
+    df_all = generate_dataframe_with_tokenization(dataset_name)
+
+    print(df_all.language)
     
     all_languages = df_all.language.unique()
 
@@ -276,5 +283,5 @@ def generate_histograms(dataset_name,parallelized=False):
 if __name__=='__main__':
     for dataset_name in lextreme_datasets:
         print('Processing: ',dataset_name)
-        generate_histograms(dataset_name=dataset_name,parallelized=True)
+        generate_histograms(dataset_name=dataset_name)
         print('\n#####################################################\n')
