@@ -1,0 +1,3 @@
+# Histograms for LEXTREME datasets
+
+This directory contains images with histograms that depict the distribution of document length after applying tokenization with the five pretrained Tranformer-based models from the paper(```distilbert-base-multilingual-cased```,```microsoft/Multilingual-MiniLM-L12-H384```,```microsoft/mdeberta-v3-base```,```xlm-roberta-base```,```xlm-roberta-large```). The last bins, which also have slighter darker colors, show outliers, i.e. the number of documents that fall outside the 99<sup>th</sup> percentile. 
