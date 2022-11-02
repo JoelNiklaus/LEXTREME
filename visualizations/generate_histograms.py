@@ -25,7 +25,7 @@ plt.style.use('ggplot')
 
 from pandarallel import pandarallel
 
-pandarallel.initialize(progress_bar=False)
+pandarallel.initialize(progress_bar=False,nb_workers=15)
 
 
 
@@ -51,7 +51,12 @@ lextreme_datasets = ['brazilian_court_decisions_judgment',
                      'legalnero', 
                      'greek_legal_ner', 
                      'mapa_coarse', 
-                     'mapa_fine'] #'multi_eurlex_level_1'
+                     'mapa_fine',
+                     'multi_eurlex_level_1']
+
+
+lextreme_datasets = [
+                     'multi_eurlex_level_1']
 
 
 
@@ -79,14 +84,18 @@ def get_tokenization_length(tokenizer, text):
 
 
 
-def add_column_with_text_length(dataframe,models_to_be_used):
+def add_column_with_text_length(dataframe,models_to_be_used, parallelized=False):
 
     '''Applies the function get_tokenization_length to the input text in a dataframe'''
     
     for language_model_name in models_to_be_used:
         tokenizer = AutoTokenizer.from_pretrained(language_model_name)
-        dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
-        dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
+        if parallelized==True:
+            dataframe[language_model_name]=dataframe.input.parallel_apply(lambda x: get_tokenization_length(tokenizer,x))
+            dataframe[language_model_name]=dataframe.input.parallel_apply(lambda x: get_tokenization_length(tokenizer,x))
+        elif parallelized==False:
+            dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
+            dataframe[language_model_name]=dataframe.input.apply(lambda x: get_tokenization_length(tokenizer,x))
     
     return dataframe
 
@@ -141,14 +150,12 @@ def get_percentiles(list_with_values:List[int], percentile=99):
     return list_with_values_new, outliers
 
 
-def split_into_languages(dataset):
+def split_into_languages(dataset_df):
 
     '''This function is only used for the multi_eurlex datasets to split the dictionaries into languages'''
 
     dataset_new = list()
-    
-    dataset_df = pd.DataFrame(dataset)
-    
+
     for item in dataset_df.to_dict(orient='records'):
         labels = item['label']
         for language, document in literal_eval(item['input']).items():
@@ -164,7 +171,7 @@ def split_into_languages(dataset):
     return  dataset_new
 
 
-def generate_dataframe_with_tokenization(dataset_name):
+def generate_dataframe_with_tokenization(dataset_name,parallelized=False):
 
     '''This function will fetch the dataset, convert it into a dataframe and apply tokenization'''
 
@@ -177,10 +184,11 @@ def generate_dataframe_with_tokenization(dataset_name):
         all_data_as_df.append(df)
 
     all_data_as_df = pd.concat(all_data_as_df)
-    all_data_as_df = all_data_as_df
+    if 'multi_eurlex' in dataset_name:
+        all_data_as_df = split_into_languages(all_data_as_df)
 
 
-    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used)
+    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used,parallelized)
     all_data_as_df = merge_equal_tokenization_outputs(all_data_as_df,models_to_be_used)
     
     return all_data_as_df
@@ -226,6 +234,7 @@ def draw_histogram(dataframe,dataset_name,language=None):
     for n,p in enumerate(patches):
         # The last bin will contain all outliers
         p[-1].set_height(p[-1].get_height()+len(columns_with_values[columns_with_values_keys[n]]['outliers']))
+        p[-1].set_alpha(1)
 
 
     plt.legend(loc='upper right')
@@ -247,22 +256,25 @@ def draw_histogram(dataframe,dataset_name,language=None):
 
 
 
-def generate_histograms(dataset_name):
+def generate_histograms(dataset_name,parallelized=False):
 
     '''Generates histogram per dataset and language'''
     
-    df_all = generate_dataframe_with_tokenization(dataset_name)
+    df_all = generate_dataframe_with_tokenization(dataset_name,parallelized)
     
     all_languages = df_all.language.unique()
 
-    if len(all_languages)>0:
+    if len(all_languages)>1:
         for lang in all_languages:
             df = df_all[df_all.language==lang]
             draw_histogram(df, dataset_name, lang)
-
-    draw_histogram(df_all, dataset_name)
+        draw_histogram(df_all, dataset_name)
+    else:
+        draw_histogram(df_all, dataset_name)
 
 
 if __name__=='__main__':
-    for dataset_name in lextreme_datasets[:3]:
-        generate_histograms(dataset_name=dataset_name)
+    for dataset_name in lextreme_datasets:
+        print('Processing: ',dataset_name)
+        generate_histograms(dataset_name=dataset_name,parallelized=True)
+        print('\n#####################################################\n')
