@@ -51,14 +51,27 @@ task_code_mapping = {
 
 
 def generate_command(time_now, **data):
+    command_template = 'python ./experiments/{CODE} ' \
+                       '--model_name_or_path {MODEL_NAME} ' \
+                       '--output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
+                       '--do_train --do_eval --do_predict ' \
+                       '--overwrite_output_dir ' \
+                       '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  ¨' \
+                       '--greater_is_better {GREATER_IS_BETTER} ' \
+                       '--evaluation_strategy epoch --save_strategy epoch ' \
+                       '--save_total_limit 5 ' \
+                       '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
+                       '--learning_rate {LEARNING_RATE} ' \
+                       '--per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} ' \
+                       '--seed {SEED} ' \
+                       '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
+                       '--running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}'
     if "gpu_number" not in data.keys() or bool(re.search("\d", str(data["gpu_number"]))) == False:
-
         data["gpu_number"] = ""
-
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
-        command_template = 'python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE}'
     else:
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/{CODE} --model_name_or_path {MODEL_NAME} --output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} --do_train --do_eval --do_predict --overwrite_output_dir --load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  --greater_is_better {GREATER_IS_BETTER} --evaluation_strategy epoch --save_strategy epoch --save_total_limit 5 --num_train_epochs {NUM_TRAIN_EPOCHS} --learning_rate {LEARNING_RATE} --per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} --seed {SEED} --gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} --running_mode {RUNNING_MODE} --download_mode {DOWNLOAD_MODE} --fp16'  # --fp16 --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+        # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"], MODEL_NAME=data["model_name"],
                                             LOWER_CASE=data["lower_case"], TASK=data["task"], SEED=data["seed"],
@@ -282,7 +295,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                                           hierarchical=hierarchical, greater_is_better=greater_is_better,
                                           download_mode=download_mode, output_dir=output_dir)
             if batch_size_to_be_found:
-                batch_size = None  # Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
+                # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
+                batch_size = None
             if script_new is not None:
                 command = 'bash ' + str(script_new)
                 gpu_command_dict[gpu_id].append(command)

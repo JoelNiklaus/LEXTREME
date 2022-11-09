@@ -123,6 +123,10 @@ class DataTrainingArguments:
             "help": "Name of the finetuning task"
         },
     )
+    preprocessing_num_workers: Optional[int] = field(
+        default=8,
+        metadata={"help": "The number of processes to use for the preprocessing."},
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -309,6 +313,7 @@ def main():
             train_dataset = train_dataset.map(
                 lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
+                num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
             )
 
@@ -323,6 +328,7 @@ def main():
             eval_dataset = eval_dataset.map(
                 lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
+                num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
             )
 
@@ -333,6 +339,7 @@ def main():
             predict_dataset = predict_dataset.map(
                 lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
+                num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on prediction dataset",
             )
     
