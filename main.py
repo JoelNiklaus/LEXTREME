@@ -92,7 +92,6 @@ def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str):
             hierarchical = False
 
     if str(hierarchical).lower() == "false":
-
         if language_model == "distilbert-base-multilingual-cased":
             batch_size = 64
             accumulation_steps = 1
@@ -111,11 +110,7 @@ def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str):
         else:
             batch_size = 32
             accumulation_steps = 2
-
-
-
-    elif str(hierarchical).lower() == "true":
-
+    else:
         if language_model == "distilbert-base-multilingual-cased":
             batch_size = 16
             accumulation_steps = 4
@@ -187,7 +182,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     if type(list_of_seeds) == list:
         list_of_seeds = [int(s) for s in list_of_seeds if s]
     elif list_of_seeds is None:
-        list_of_seeds = [1, 2, 3]
+        list_of_seeds = [1, 2, 3]  # run with 3 random seeds by default
     elif type(list_of_seeds) == str:
         list_of_seeds = list_of_seeds.split(',')
         list_of_seeds = [int(s) for s in list_of_seeds if s]
