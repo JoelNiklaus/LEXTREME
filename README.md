@@ -105,7 +105,7 @@ If, additionally, you don't want to make use of a hierarchical model (```swiss_j
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
-Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting ```-hierarchical``` to TRUE will cause an error.
+Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting ```-hierarchical``` to True will cause an error.
 
 ## References
 
