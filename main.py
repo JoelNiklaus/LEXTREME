@@ -183,7 +183,7 @@ def run_experiment(running_mode,download_mode,language_model_type, task,list_of_
     if type(list_of_seeds)==list:
         list_of_seeds = [int(s) for s in list_of_seeds if s]
     elif list_of_seeds is None:
-        list_of_seeds=[1,2,3,4,5]
+        list_of_seeds=[1,2,3]
     elif type(list_of_seeds)==str:
         list_of_seeds = list_of_seeds.split(',')
         list_of_seeds = [int(s) for s in list_of_seeds if s]
