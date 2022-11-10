@@ -641,7 +641,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
     model_types = {
         "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
         "distilbert": ["distilbert-base-multilingual-cased"],
-        "deberta": ["microsoft/mdeberta-v3-base"],
+        "deberta-v2": ["microsoft/mdeberta-v3-base"],
         "xlm-roberta": ["xlm-roberta-base", "xlm-roberta-large"]
     }
 
@@ -711,7 +711,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
                 ignore_mismatched_sizes=True
             )
 
-    elif model_args.model_name_or_path in model_types['deberta']:
+    elif model_args.model_name_or_path in model_types['deberta-v2']:
 
         config = DebertaV2Config.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
