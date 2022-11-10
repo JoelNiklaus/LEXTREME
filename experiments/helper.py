@@ -720,7 +720,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
             use_auth_token=True if model_args.use_auth_token else None,
         )
 
-        # DebertaTokenizer is buggy, therefore we use the AutTokenizer
+        # DebertaTokenizer is buggy, therefore we use the AutoTokenizer
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             use_fast=model_args.use_fast_tokenizer,

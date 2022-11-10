@@ -56,7 +56,7 @@ def generate_command(time_now, **data):
                        '--output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
                        '--do_train --do_eval --do_predict ' \
                        '--overwrite_output_dir ' \
-                       '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL}  ¨' \
+                       '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
                        '--greater_is_better {GREATER_IS_BETTER} ' \
                        '--evaluation_strategy epoch --save_strategy epoch ' \
                        '--save_total_limit 5 ' \
@@ -349,8 +349,8 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-nte', '--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rmo', '--running_mode',
-                        help='Define whether you want to run the finetuning on all available training data '
-                             'or just a small portion for testing purposes.',
+                        help='Define whether you want to run the finetuning on all available training data ("default") '
+                             'or just a small portion for testing purposes ("experimental").',
                         default='default')
     parser.add_argument('-dmo', '--download_mode',
                         help='Define whether you want to redownload the dataset or not. '
