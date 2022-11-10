@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from transformers import DebertaPreTrainedModel, DebertaModel
+from transformers import DebertaV2PreTrainedModel, DebertaV2Model
 from transformers.modeling_outputs import SequenceClassifierOutput, MultipleChoiceModelOutput
 from transformers.activations import ACT2FN
 
@@ -125,14 +125,14 @@ class StableDropout(nn.Module):
             return self.drop_prob
 
 
-class HierDebertaForSequenceClassification(DebertaPreTrainedModel):
+class HierDebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
         num_labels = getattr(config, "num_labels", 2)
         self.num_labels = num_labels
 
-        self.deberta = DebertaModel(config)
+        self.deberta = DebertaV2Model(config)
 
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         drop_out = getattr(config, "cls_dropout", None)
@@ -213,11 +213,11 @@ class HierDebertaForSequenceClassification(DebertaPreTrainedModel):
             )
 
 
-class DebertaForMultipleChoice(DebertaPreTrainedModel):
+class DebertaV2ForMultipleChoice(DebertaV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        self.deberta = DebertaModel(config)
+        self.deberta = DebertaV2Model(config)
         self.pooler = ContextPooler(config)
         output_dim = self.pooler.output_dim
         drop_out = getattr(config, "cls_dropout", None)

@@ -25,14 +25,14 @@ from transformers import (
     AutoConfig,
     DistilBertConfig,
     XLMRobertaConfig,
-    DebertaConfig,
+    DebertaV2Config,
     AutoTokenizer,
     DistilBertTokenizer,
     DistilBertTokenizerFast,
     XLMRobertaTokenizer,
     XLMRobertaTokenizerFast,
     AutoModelForSequenceClassification,
-    DebertaForSequenceClassification,
+    DebertaV2ForSequenceClassification,
     BertForSequenceClassification,
     DistilBertForTokenClassification,
     XLMRobertaForSequenceClassification,
@@ -41,11 +41,11 @@ from transformers import (
     BertForTokenClassification,
     DistilBertForTokenClassification,
     XLMRobertaForTokenClassification,
-    DebertaForTokenClassification
+    DebertaV2ForTokenClassification
 
 )
 
-from models.deberta import HierDebertaForSequenceClassification
+from models.deberta import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 
 
@@ -713,7 +713,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
 
     elif model_args.model_name_or_path in model_types['deberta']:
 
-        config = DebertaConfig.from_pretrained(
+        config = DebertaV2Config.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.language + '_' + data_args.finetuning_task,
@@ -728,14 +728,14 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         )
 
         if model_args.hierarchical == True:
-            model = HierDebertaForSequenceClassification.from_pretrained(
+            model = HierDebertaV2ForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
                 ignore_mismatched_sizes=True
             )
         elif model_args.hierarchical == False:
-            model = DebertaForSequenceClassification.from_pretrained(
+            model = DebertaV2ForSequenceClassification.from_pretrained(
                 model_args.model_name_or_path,
                 config=config,
                 use_auth_token=True if model_args.use_auth_token else None,
@@ -850,7 +850,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
 
     elif model_args.model_name_or_path in model_types['deberta']:
 
-        config = DebertaConfig.from_pretrained(
+        config = DebertaV2Config.from_pretrained(
             model_args.config_name if model_args.config_name else model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.language + '_' + data_args.finetuning_task,
@@ -862,7 +862,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             use_auth_token=True if model_args.use_auth_token else None,
         )
-        model = DebertaForTokenClassification.from_pretrained(
+        model = DebertaV2ForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
