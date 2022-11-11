@@ -1,7 +1,7 @@
 from transformers import XLMRobertaConfig, add_start_docstrings
 from transformers.models.xlm_roberta.modeling_xlm_roberta import XLM_ROBERTA_START_DOCSTRING
 
-from experiments.models.roberta import HierRobertaForSequenceClassification
+from models.roberta import HierRobertaForSequenceClassification
 
 
 @add_start_docstrings(

@@ -6,11 +6,6 @@ import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
 
-from experiments.models.deberta_v2 import HierDebertaV2ForSequenceClassification
-from experiments.models.distilbert import HierDistilBertForSequenceClassification
-from experiments.models.roberta import HierRobertaForSequenceClassification
-from experiments.models.xlm_roberta import HierXLMRobertaForSequenceClassification
-
 
 @dataclass
 class SimpleOutput(ModelOutput):
@@ -135,60 +130,6 @@ class HierarchicalBert(nn.Module):
 
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
-
-def get_tokenizer(model_name_or_path):
-    if model_name_or_path == 'microsoft/Multilingual-MiniLM-L12-H384':
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-        tokenizer_class = XLMRobertaTokenizer
-    else:
-        tokenizer_class = AutoTokenizer
-
-    return tokenizer_class.from_pretrained(model_name_or_path)
-
-
-def get_model_class_for_sequence_classification(model_type):
-    model_type_to_model_class = {
-        "distilbert": HierDistilBertForSequenceClassification,
-        "deberta-v2": HierDebertaV2ForSequenceClassification,
-        "roberta": HierRobertaForSequenceClassification,
-        "xlm-roberta": HierXLMRobertaForSequenceClassification,
-    }
-    if model_type in model_type_to_model_class.keys():
-        return model_type_to_model_class[model_type]
-    else:
-        return AutoModelForSequenceClassification
-
-
-def build_hierarchical_model(model, max_segments, max_segment_length):
-    config = model.config
-    # Hack the classifier encoder to use hierarchical BERT
-    if config.model_type in supported_models:
-        if config.model_type == 'bert':
-            segment_encoder = model.bert
-        elif config.model_type == 'distilbert':
-            segment_encoder = model.distilbert
-        elif config.model_type in ['roberta', 'xlm-roberta']:
-            segment_encoder = model.roberta
-        elif config.model_type == 'deberta-v2':
-            segment_encoder = model.deberta
-        # Replace flat BERT encoder with hierarchical BERT encoder
-        model_encoder = HierarchicalBert(encoder=segment_encoder,
-                                         max_segments=max_segments,
-                                         max_segment_length=max_segment_length)
-        if config.model_type == 'bert':
-            model.bert = model_encoder
-        elif config.model_type == 'distilbert':
-            model.distilbert = model_encoder
-        elif config.model_type in ['roberta', 'xlm-roberta']:
-            model.roberta = model_encoder
-        elif config.model_type == 'deberta-v2':
-            model.deberta = model_encoder
-    elif config.model_type in ['longformer', 'big_bird']:
-        pass
-    else:
-        raise NotImplementedError(f"{config.model_type} is not supported yet!")
-
-    return model
 
 
 if __name__ == "__main__":

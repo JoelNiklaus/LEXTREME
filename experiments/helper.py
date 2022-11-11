@@ -45,8 +45,12 @@ from transformers import (
 
 )
 
-from models.deberta import HierDebertaV2ForSequenceClassification
+
+from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
+from models.roberta import HierRobertaForSequenceClassification
+from models.xlm_roberta import HierXLMRobertaForSequenceClassification
+from models.hierbert import HierarchicalBert, supported_models
 
 
 def get_data(training_args, data_args, model_args, download_mode, experimental_samples=False):
@@ -637,279 +641,111 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     wandb.run.name = run_name
 
 
-def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
-    model_types = {
-        "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
-        "distilbert": ["distilbert-base-multilingual-cased"],
-        "deberta-v2": ["microsoft/mdeberta-v3-base"],
-        "xlm-roberta": ["xlm-roberta-base", "xlm-roberta-large"]
+
+
+def get_tokenizer(model_name_or_path):
+    if model_name_or_path == 'microsoft/Multilingual-MiniLM-L12-H384':
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
+        tokenizer_class = XLMRobertaTokenizer
+    else:
+        tokenizer_class = AutoTokenizer
+
+    return tokenizer_class.from_pretrained(model_name_or_path)
+
+
+def get_model_class_for_sequence_classification(model_type, model_args):
+    model_type_to_model_class = {
+        "distilbert": HierDistilBertForSequenceClassification,
+        "deberta-v2": HierDebertaV2ForSequenceClassification,
+        "roberta": HierRobertaForSequenceClassification,
+        "xlm-roberta": HierXLMRobertaForSequenceClassification,
     }
-
-    if model_args.model_name_or_path in model_types['distilbert']:
-
-        # Load pretrained model and tokenizer
-        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-        # download model & vocab.
-        config = DistilBertConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        tokenizer = DistilBertTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_fast=model_args.use_fast_tokenizer,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        if model_args.hierarchical == True:
-            model = HierDistilBertForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
-            )
-
-        if model_args.hierarchical == False:
-            model = DistilBertForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
-                ignore_mismatched_sizes=True
-            )
+    if model_type in model_type_to_model_class.keys() and model_args.hierarchical==True:
+        return model_type_to_model_class[model_type]
+    else:
+        return AutoModelForSequenceClassification
 
 
-    elif model_args.model_name_or_path in model_types["xlm-roberta"]:
 
-        # Load pretrained model and tokenizer
-        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-        # download model & vocab.
-        config = AutoConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+def build_hierarchical_model(model, max_segments, max_segment_length):
+    config = model.config
+    # Hack the classifier encoder to use hierarchical BERT
+    if config.model_type in supported_models:
+        if config.model_type == 'bert':
+            segment_encoder = model.bert
+        elif config.model_type == 'distilbert':
+            segment_encoder = model.distilbert
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            segment_encoder = model.roberta
+        elif config.model_type == 'deberta-v2':
+            segment_encoder = model.deberta
+        # Replace flat BERT encoder with hierarchical BERT encoder
+        model_encoder = HierarchicalBert(encoder=segment_encoder,
+                                         max_segments=max_segments,
+                                         max_segment_length=max_segment_length)
+        if config.model_type == 'bert':
+            model.bert = model_encoder
+        elif config.model_type == 'distilbert':
+            model.distilbert = model_encoder
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            model.roberta = model_encoder
+        elif config.model_type == 'deberta-v2':
+            model.deberta = model_encoder
+    elif config.model_type in ['longformer', 'big_bird']:
+        pass
+    else:
+        raise NotImplementedError(f"{config.model_type} is not supported yet!")
+
+    return model
+
+
+def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
+
+    config = AutoConfig.from_pretrained(
+            model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.language + '_' + data_args.finetuning_task,
             use_auth_token=True if model_args.use_auth_token else None
-        )
-
-        # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        if model_args.hierarchical == True:
-            model = XLMRobertaForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
             )
-        if model_args.hierarchical == False:
-            model = XLMRobertaForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
-                ignore_mismatched_sizes=True
-            )
-
-    elif model_args.model_name_or_path in model_types['deberta-v2']:
-
-        config = DebertaV2Config.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
+    
+    model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
+    
+    model = model_class.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        use_auth_token=True if model_args.use_auth_token else None
         )
+    
+    tokenizer =  get_tokenizer(model_args.model_name_or_path)
 
-        # DebertaTokenizer is buggy, therefore we use the AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_fast=model_args.use_fast_tokenizer,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+    if model_args.hierarchical == True:
+        model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-        if model_args.hierarchical == True:
-            model = HierDebertaV2ForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
-                ignore_mismatched_sizes=True
-            )
-        elif model_args.hierarchical == False:
-            model = DebertaV2ForSequenceClassification.from_pretrained(
-                model_args.model_name_or_path,
-                config=config,
-                use_auth_token=True if model_args.use_auth_token else None,
-                ignore_mismatched_sizes=True
-            )
-
-
-    elif model_args.model_name_or_path in model_types['MiniLM']:
-
-        config = AutoConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-        tokenizer = XLMRobertaTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_fast=model_args.use_fast_tokenizer,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
-        model = BertForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
-
-    else:
-
-        config = AutoConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_fast=model_args.use_fast_tokenizer,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
 
     return model, tokenizer, config
 
 
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
-    model_types = {
-        "MiniLM": ['microsoft/Multilingual-MiniLM-L12-H384'],
-        "distilbert": ["distilbert-base-multilingual-cased"],
-        "deberta": ["microsoft/mdeberta-v3-base"],
-        "xlm-roberta": ["xlm-roberta-base", "xlm-roberta-large"]
-    }
 
-    if model_args.model_name_or_path in model_types['distilbert']:
-
-        # Load pretrained model and tokenizer
-        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-        # download model & vocab.
-        config = DistilBertConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
+    config = AutoConfig.from_pretrained(
+            model_args.model_name_or_path,
             num_labels=num_labels,
             finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        tokenizer = DistilBertTokenizerFast.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        model = DistilBertForTokenClassification.from_pretrained(
+            use_auth_token=True if model_args.use_auth_token else None
+            )
+    
+    model = AutoModelForTokenClassification.from_pretrained(
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
             ignore_mismatched_sizes=True
         )
 
-    elif model_args.model_name_or_path in model_types["xlm-roberta"]:
+    tokenizer =  get_tokenizer(model_args.model_name_or_path)
 
-        # Load pretrained model and tokenizer
-        # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-        # download model & vocab.
-        config = XLMRobertaConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
+    # Hierarchical not applied for token classification taks
+    #if model_args.hierarchical == True:
+        #model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-        # RobertaTokenizer yielded errors, therefore I used RobertaTokenizerFast
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            add_prefix_space=True,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        model = XLMRobertaForTokenClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
 
-    elif model_args.model_name_or_path in model_types['deberta']:
-
-        config = DebertaV2Config.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        # DebertaTokenizer is buggy, therefore we use the AutTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        model = DebertaV2ForTokenClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
-
-    elif model_args.model_name_or_path in model_types['MiniLM']:
-
-        config = AutoConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-        tokenizer = XLMRobertaTokenizerFast.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They state: Multilingual MiniLM uses the same tokenizer as XLM-R. But the Transformer architecture of our model is the same as BERT.
-        model = BertForTokenClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
-
-    else:
-
-        config = AutoConfig.from_pretrained(
-            model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-
-        model = AutoModelForTokenClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
-        )
-
-    return model, tokenizer
+    return model, tokenizer #, config
