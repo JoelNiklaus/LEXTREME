@@ -93,7 +93,7 @@ def get_tokenization_length(tokenizer, text):
 
 
 
-def add_column_with_text_length(dataframe,models_to_be_used):
+def add_column_with_text_length(dataframe,models_to_be_used,is_split_into_words=False):
 
     '''Applies the function get_tokenization_length to the input text in a dataframe'''
 
@@ -105,7 +105,7 @@ def add_column_with_text_length(dataframe,models_to_be_used):
     for language_model_name in models_to_be_used:
         dataset = deepcopy(dataframe_as_dataset)
         tokenizer = AutoTokenizer.from_pretrained(language_model_name)
-        dataset = dataset.map(lambda examples: tokenizer(examples["input"],add_special_tokens=False, return_length=True), batched=True, batch_size=50000, num_proc=25)
+        dataset = dataset.map(lambda examples: tokenizer(examples["input"],is_split_into_words=is_split_into_words,add_special_tokens=False, return_length=True), batched=True, batch_size=50000, num_proc=25)
         dataset = dataset.rename_column("length", language_model_name)
         #dataset = dataset.remove_columns(['label', 'input_ids', 'attention_mask'])
         dataframe_processed.append(pd.DataFrame(dataset))
@@ -204,8 +204,11 @@ def generate_dataframe_with_tokenization(dataset_name):
     if 'multi_eurlex' in dataset_name:
         all_data_as_df = split_into_languages(all_data_as_df)
 
-
-    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used)
+    if dataset_name in ['lener_br','legalnero','greek_legal_ner','mapa_coarse','mapa_fine']:
+        is_split_into_words=True
+    else:
+        is_split_into_words=False
+    all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used,is_split_into_words)
     all_data_as_df = merge_equal_tokenization_outputs(all_data_as_df,models_to_be_used)
     
     return all_data_as_df
