@@ -3,25 +3,23 @@ import torch
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from typing import Optional, Tuple, Union
-from transformers import DistilBertForSequenceClassification
-
+from transformers import DistilBertForSequenceClassification, PretrainedConfig
 
 
 class HierDistilBertForSequenceClassification(DistilBertForSequenceClassification):
-    def __init__(self, arg):
-        DistilBertForSequenceClassification.__init__(self, arg)
-        
-    
+    def __init__(self, config: PretrainedConfig):
+        super().__init__(config)
+
     def forward(
-        self,
-        input_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        head_mask: Optional[torch.Tensor] = None,
-        inputs_embeds: Optional[torch.Tensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: Optional[torch.Tensor] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[SequenceClassifierOutput, Tuple[torch.Tensor, ...]]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -41,11 +39,9 @@ class HierDistilBertForSequenceClassification(DistilBertForSequenceClassificatio
             return_dict=return_dict,
         )
 
-        # Reason why the "hierarchical input" did not work seems to be this block, especially the pre_classfier method which does not exist in the Bert model
-        # I commented these out and now it works
-        
         hidden_state = distilbert_output[0]  # (bs, seq_len, dim)
-        #pooled_output = hidden_state[:, 0]  # (bs, dim) # I had to comment this out because this throws an error
+        # IMPORTANT: Remove this, because we already do pooling in hierbert
+        # pooled_output = hidden_state[:, 0]  # (bs, dim)
         pooled_output = self.pre_classifier(hidden_state)  # (bs, dim)
         pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
         pooled_output = self.dropout(pooled_output)  # (bs, dim)

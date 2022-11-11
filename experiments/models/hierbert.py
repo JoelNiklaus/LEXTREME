@@ -6,6 +6,11 @@ import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
 
+from experiments.models.deberta_v2 import HierDebertaV2ForSequenceClassification
+from experiments.models.distilbert import HierDistilBertForSequenceClassification
+from experiments.models.roberta import HierRobertaForSequenceClassification
+from experiments.models.xlm_roberta import HierXLMRobertaForSequenceClassification
+
 
 @dataclass
 class SimpleOutput(ModelOutput):
@@ -27,11 +32,14 @@ def sinusoidal_init(num_embeddings: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
+supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2']
+
+
 class HierarchicalBert(nn.Module):
 
     def __init__(self, encoder, max_segments=64, max_segment_length=128):
         super(HierarchicalBert, self).__init__()
-        supported_models = ['bert', 'roberta', 'deberta-v2','xlm-roberta','roberta','distilbert','deberta']
+
         assert encoder.config.model_type in supported_models  # other model types are not supported so far
         # Pre-trained segment (token-wise) encoder, e.g., BERT
         self.encoder = encoder
@@ -39,29 +47,35 @@ class HierarchicalBert(nn.Module):
         self.hidden_size = encoder.config.hidden_size
         self.max_segments = max_segments
         self.max_segment_length = max_segment_length
+
         # Init sinusoidal positional embeddings
         self.seg_pos_embeddings = nn.Embedding(max_segments + 1, encoder.config.hidden_size,
                                                padding_idx=0,
                                                _weight=sinusoidal_init(max_segments + 1, encoder.config.hidden_size))
+
         # Init segment-wise transformer-based encoder
-
-        if encoder.config.model_type =='distilbert':
-            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                          nhead=encoder.config.num_attention_heads,
-                                          batch_first=True, dim_feedforward=encoder.config.hidden_dim, #for some reason, intermediate_size is called differently in DistilBertConfig
-                                          activation=encoder.config.activation, #for some reason, hidden_act is called activation in DistilBertConfig
-                                          dropout=encoder.config.dropout, #for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
-                                          #layer_norm_eps=1e-5,
-                                          num_encoder_layers=2, num_decoder_layers=0).encoder
-
+        if encoder.config.model_type == 'distilbert':
+            # for some reason, intermediate_size is called differently in DistilBertConfig
+            dim_feedforward = encoder.config.hidden_dim
+            # for some reason, hidden_act is called activation in DistilBertConfig
+            activation = encoder.config.activation
+            # for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
+            dropout = encoder.config.dropout
+            layer_norm_eps = 1e-5  # 1e-5 is default
         else:
-            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                            nhead=encoder.config.num_attention_heads,
-                                            batch_first=True, dim_feedforward=encoder.config.intermediate_size,
-                                            activation=encoder.config.hidden_act,
-                                            dropout=encoder.config.hidden_dropout_prob,
-                                            layer_norm_eps=encoder.config.layer_norm_eps,
-                                            num_encoder_layers=2, num_decoder_layers=0).encoder
+            dim_feedforward = encoder.config.intermediate_size
+            activation = encoder.config.hidden_act
+            dropout = encoder.config.hidden_dropout_prob
+            layer_norm_eps = encoder.config.layer_norm_eps
+        self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
+                                          nhead=encoder.config.num_attention_heads,
+                                          batch_first=True,
+                                          dim_feedforward=dim_feedforward,
+                                          activation=activation,
+                                          dropout=dropout,
+                                          layer_norm_eps=layer_norm_eps,
+                                          num_encoder_layers=2,
+                                          num_decoder_layers=0).encoder
 
     def forward(self,
                 input_ids=None,
@@ -89,73 +103,148 @@ class HierarchicalBert(nn.Module):
 
         # Encode segments with BERT --> (256, 128, 768)
 
-        if self.encoder.config.model_type=='distilbert':
+        if self.encoder.config.model_type == 'distilbert':
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
-                                        attention_mask=attention_mask_reshape)[0]
-
+                                           attention_mask=attention_mask_reshape)[0]
         else:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
-                                        attention_mask=attention_mask_reshape,
-                                        token_type_ids=token_type_ids_reshape)[0]
-        
+                                           attention_mask=attention_mask_reshape,
+                                           token_type_ids=token_type_ids_reshape)[0]
 
         # Reshape back to (batch_size, n_segments, max_segment_length, output_size) --> (4, 64, 128, 768)
-        encoder_outputs = encoder_outputs.contiguous().view(input_ids.size(0), self.max_segments,
+        encoder_outputs = encoder_outputs.contiguous().view(input_ids.size(0),
+                                                            self.max_segments,
                                                             self.max_segment_length,
                                                             self.hidden_size)
 
         # Gather CLS outputs per segment --> (4, 64, 768)
         encoder_outputs = encoder_outputs[:, :, 0]
 
-        # Infer real segments, i.e., mask paddings
+        # Infer real segments, i.e., mask paddings (4, 64)
         seg_mask = (torch.sum(input_ids, 2) != 0).to(input_ids.dtype)
-        # Infer and collect segment positional embeddings
+        # Infer and collect segment positional embeddings (4, 64)
         seg_positions = torch.arange(1, self.max_segments + 1).to(input_ids.device) * seg_mask
-        # Add segment positional embeddings to segment inputs
+        # Add segment positional embeddings to segment inputs (4, 64, 768)
         encoder_outputs += self.seg_pos_embeddings(seg_positions)
 
-        # Encode segments with segment-wise transformer
+        # Encode segments with segment-wise transformer (4, 64, 768)
         seg_encoder_outputs = self.seg_encoder(encoder_outputs)
 
-        # Collect document representation
-        outputs, _ = torch.max(seg_encoder_outputs, 1) 
+        # Collect document representation by aggregating segment representations (4, 768)
+        outputs, _ = torch.max(seg_encoder_outputs, 1)
 
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
 
+def get_tokenizer(model_name_or_path):
+    if model_name_or_path == 'microsoft/Multilingual-MiniLM-L12-H384':
+        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
+        tokenizer_class = XLMRobertaTokenizer
+    else:
+        tokenizer_class = AutoTokenizer
+
+    return tokenizer_class.from_pretrained(model_name_or_path)
+
+
+def get_model_class_for_sequence_classification(model_type):
+    model_type_to_model_class = {
+        "distilbert": HierDistilBertForSequenceClassification,
+        "deberta-v2": HierDebertaV2ForSequenceClassification,
+        "roberta": HierRobertaForSequenceClassification,
+        "xlm-roberta": HierXLMRobertaForSequenceClassification,
+    }
+    if model_type in model_type_to_model_class.keys():
+        return model_type_to_model_class[model_type]
+    else:
+        return AutoModelForSequenceClassification
+
+
+def build_hierarchical_model(model, max_segments, max_segment_length):
+    config = model.config
+    # Hack the classifier encoder to use hierarchical BERT
+    if config.model_type in supported_models:
+        if config.model_type == 'bert':
+            segment_encoder = model.bert
+        elif config.model_type == 'distilbert':
+            segment_encoder = model.distilbert
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            segment_encoder = model.roberta
+        elif config.model_type == 'deberta-v2':
+            segment_encoder = model.deberta
+        # Replace flat BERT encoder with hierarchical BERT encoder
+        model_encoder = HierarchicalBert(encoder=segment_encoder,
+                                         max_segments=max_segments,
+                                         max_segment_length=max_segment_length)
+        if config.model_type == 'bert':
+            model.bert = model_encoder
+        elif config.model_type == 'distilbert':
+            model.distilbert = model_encoder
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            model.roberta = model_encoder
+        elif config.model_type == 'deberta-v2':
+            model.deberta = model_encoder
+    elif config.model_type in ['longformer', 'big_bird']:
+        pass
+    else:
+        raise NotImplementedError(f"{config.model_type} is not supported yet!")
+
+    return model
+
+
 if __name__ == "__main__":
-    from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, XLMRobertaTokenizer
 
-    # Use as a stand-alone encoder
-    bert = AutoModel.from_pretrained('bert-base-uncased')
-    model = HierarchicalBert(encoder=bert, max_segments=64, max_segment_length=128)
+    model_names = [
+        "bert-base-uncased",  # standard model
+        "distilbert-base-multilingual-cased",  # special case with different class
+        "microsoft/mdeberta-v3-base",  # special case with different class
+        "roberta-base",  # special case with different class TODO somehow there is still a problem with roberta
+        "xlm-roberta-base",  # special case with different class
+        "microsoft/Multilingual-MiniLM-L12-H384",  # special case with different tokenizer
+    ]
 
-    fake_inputs = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
-    for i in range(4):
-        # Tokenize segment
-        temp_inputs = tokenizer(['dog ' * 126] * 64)
-        fake_inputs['input_ids'].append(temp_inputs['input_ids'])
-        fake_inputs['attention_mask'].append(temp_inputs['attention_mask'])
-        fake_inputs['token_type_ids'].append(temp_inputs['token_type_ids'])
+    for model_name in model_names:
+        print("Testing model", model_name)
+        tokenizer = get_tokenizer(model_name)
 
-    fake_inputs['input_ids'] = torch.as_tensor(fake_inputs['input_ids'])
-    fake_inputs['attention_mask'] = torch.as_tensor(fake_inputs['attention_mask'])
-    fake_inputs['token_type_ids'] = torch.as_tensor(fake_inputs['token_type_ids'])
+        # Use as a stand-alone encoder
+        encoder = AutoModel.from_pretrained(model_name)
+        num_examples = 4  # batch size
+        max_segments = 8  # smaller for faster debugging
+        max_segment_length = 32  # smaller for faster debugging
+        model = HierarchicalBert(encoder=encoder, max_segments=max_segments, max_segment_length=max_segment_length)
 
-    output = model(fake_inputs['input_ids'], fake_inputs['attention_mask'], fake_inputs['token_type_ids'])
+        fake_inputs = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
+        model_type = encoder.config.model_type
+        for i in range(num_examples):
+            # Tokenize segment
+            temp_inputs = tokenizer(['dog ' * (max_segment_length - 2)] * max_segments, return_token_type_ids=True)
+            fake_inputs['input_ids'].append(temp_inputs['input_ids'])
+            fake_inputs['attention_mask'].append(temp_inputs['attention_mask'])
+            if model_type != 'distilbert':  # distilbert has no token_type_ids
+                fake_inputs['token_type_ids'].append(temp_inputs['token_type_ids'])
 
-    # 4 document representations of 768 features are expected
-    assert output[0].shape == torch.Size([4, 768])
+        fake_inputs['input_ids'] = torch.as_tensor(fake_inputs['input_ids'])
+        fake_inputs['attention_mask'] = torch.as_tensor(fake_inputs['attention_mask'])
+        if model_type != 'distilbert':
+            fake_inputs['token_type_ids'] = torch.as_tensor(fake_inputs['token_type_ids'])
+        else:
+            fake_inputs['token_type_ids'] = None
 
-    # Use with HuggingFace AutoModelForSequenceClassification and Trainer API
+        output = model(fake_inputs['input_ids'], fake_inputs['attention_mask'], fake_inputs['token_type_ids'])
 
-    # Init Classifier
-    model = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=10)
-    # Replace flat BERT encoder with hierarchical BERT encoder
-    model.bert = HierarchicalBert(encoder=model.bert, max_segments=64, max_segment_length=128)
-    output = model(fake_inputs['input_ids'], fake_inputs['attention_mask'], fake_inputs['token_type_ids'])
+        # 4 document representations of 768 or 384 features (hidden size) are expected
+        assert output[0].shape == torch.Size([num_examples, 768]) or output[0].shape == torch.Size([num_examples, 384])
 
-    # 4 document outputs with 10 (num_labels) logits are expected
-    assert output.logits.shape == torch.Size([4, 10])
+        # Use with HuggingFace AutoModelForSequenceClassification and Trainer API
 
+        # Init Classifier
+        num_labels = 10
+        model_class = get_model_class_for_sequence_classification(model_type)
+        model = model_class.from_pretrained(model_name, num_labels=num_labels)
+        model = build_hierarchical_model(model, max_segments, max_segment_length)
+
+        output = model(fake_inputs['input_ids'], fake_inputs['attention_mask'], fake_inputs['token_type_ids'])
+
+        # 4 document outputs with 10 (num_labels) logits are expected
+        assert output.logits.shape == torch.Size([num_examples, num_labels])
