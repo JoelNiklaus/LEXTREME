@@ -8,7 +8,7 @@ from datasets import load_dataset, Dataset
 from matplotlib import pyplot as plt
 import numpy as np
 from ast import literal_eval
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, XLMRobertaTokenizer
 import os
 import shutil
 from pathlib import Path
@@ -23,9 +23,9 @@ from typing import List
 plt.style.use('ggplot')
 
 
-from pandarallel import pandarallel
+#from pandarallel import pandarallel
 
-pandarallel.initialize(progress_bar=False,nb_workers=15)
+#pandarallel.initialize(progress_bar=False,nb_workers=15)
 
 
 
@@ -57,6 +57,18 @@ lextreme_datasets = ['brazilian_court_decisions_judgment',
 
 
 
+
+def get_tokenizers(list_of_models):
+    tokenizer_dict = dict()
+    
+    for language_model in list_of_models:
+        if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
+            tokenizer_dict[language_model]=XLMRobertaTokenizer.from_pretrained(language_model)
+        else:
+            tokenizer_dict[language_model]=AutoTokenizer.from_pretrained(language_model)
+
+    
+    return tokenizer_dict
 
 def get_tokenization_length(tokenizer, text):
 
@@ -93,7 +105,7 @@ def add_column_with_text_length(dataframe,models_to_be_used):
     for language_model_name in models_to_be_used:
         dataset = deepcopy(dataframe_as_dataset)
         tokenizer = AutoTokenizer.from_pretrained(language_model_name)
-        dataset = dataset.map(lambda examples: tokenizer(examples["input"],add_special_tokens=False, return_length=True), batched=True, batch_size=50000)
+        dataset = dataset.map(lambda examples: tokenizer(examples["input"],add_special_tokens=False, return_length=True), batched=True, batch_size=50000, num_proc=25)
         dataset = dataset.rename_column("length", language_model_name)
         #dataset = dataset.remove_columns(['label', 'input_ids', 'attention_mask'])
         dataframe_processed.append(pd.DataFrame(dataset))
@@ -198,6 +210,53 @@ def generate_dataframe_with_tokenization(dataset_name):
     
     return all_data_as_df
 
+def processing_function_multi_eurlex(item, tokenizer_dict):
+
+    dataset_new = list()
+
+
+    for language, document in literal_eval(str(item['input'])).items():
+        if document is not None:
+            item_new = dict()
+            item_new['language']=language
+            item_new['input']=str(document)
+            for language_model_name, tokenizer in tokenizer_dict.items():
+                length = tokenizer(str(document),add_special_tokens=False, return_length=True)['length']
+                if type(length)==int:
+                    item_new[language_model_name]=length
+                elif type(length)==list:
+                    item_new[language_model_name]=length[0]
+    
+            dataset_new.append(item_new)
+
+    return  dataset_new
+
+
+def generate_dataframe_with_tokenization_for_multi_eurlex(dataset_name):
+
+    '''This is used only for multi_eurlex_level_1, multi_eurlex_level_2, multi_eurlex_level_3'''
+
+    if dataset_name.startswith("multi_eurlex_level"):
+
+        tokenizer_dict = get_tokenizers(models_to_be_used)
+
+        results_collected = list()
+
+
+        for split in ["train","validation","test"]:
+            
+            dataset = load_dataset("joelito/lextreme", dataset_name, split=split) #streaming=True 
+            dataset = dataset.select([n for n in range(0,100)])
+            
+            for example in dataset:
+                example = processing_function_multi_eurlex(example, tokenizer_dict)
+                for e in example:
+                    results_collected.append(e)
+        
+        results_collected_df = pd.DataFrame(results_collected)
+        
+        return pd.DataFrame(results_collected_df)
+
 
 def draw_histogram(dataframe,dataset_name,language=None):
 
@@ -261,13 +320,16 @@ def draw_histogram(dataframe,dataset_name,language=None):
 
 
 
-def generate_histograms(dataset_name):
+def generate_histograms(dataset_name, less_resources=True):
 
     '''Generates histogram per dataset and language'''
     
-    df_all = generate_dataframe_with_tokenization(dataset_name)
+    if dataset_name.startswith("multi_eurlex_level") and less_resources==True:
+        df_all = generate_dataframe_with_tokenization_for_multi_eurlex(dataset_name)
+    else:
+        df_all = generate_dataframe_with_tokenization(dataset_name)
 
-    print(df_all.language)
+    print(df_all.head())
     
     all_languages = df_all.language.unique()
 
