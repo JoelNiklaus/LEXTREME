@@ -254,46 +254,6 @@ def main():
   
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
 
-    if model_args.hierarchical:
-        # Hack the classifier encoder to use hierarchical BERT
-        if config.model_type in ['bert','deberta-v2','distilbert']:
-            if config.model_type == 'bert':
-                segment_encoder = model.bert
-            elif config.model_type =='distilbert':
-                segment_encoder = model.distilbert
-            elif config.model_type =='deberta-v2':
-                segment_encoder = model.deberta
-            model_encoder = HierarchicalBert(encoder=segment_encoder,
-                                             max_segments=data_args.max_segments,
-                                             max_segment_length=data_args.max_seg_length)
-            if config.model_type == 'bert':
-                model.bert = model_encoder
-            elif config.model_type == 'distilbert':
-                model.distilbert = model_encoder
-            elif config.model_type == 'deberta-v2':
-                model.deberta = model_encoder
-            else:
-                raise NotImplementedError(f"{config.model_type} is no supported yet!")
-
-        elif config.model_type in ['roberta','xlm-roberta']:
-            model_encoder = HierarchicalBert(encoder=model.roberta, 
-                                            max_segments=data_args.max_segments,
-                                            max_segment_length=data_args.max_seg_length)
-            model.roberta = model_encoder
-            # Build a new classification layer, as well
-            dense = nn.Linear(config.hidden_size, config.hidden_size)
-            dense.load_state_dict(model.classifier.dense.state_dict())  # load weights
-            dropout = nn.Dropout(config.hidden_dropout_prob).to(model.device)
-            out_proj = nn.Linear(config.hidden_size, config.num_labels).to(model.device)
-            out_proj.load_state_dict(model.classifier.out_proj.state_dict())  # load weights
-            model.classifier = nn.Sequential(dense, dropout, out_proj).to(model.device)
-
-        elif config.model_type in ['longformer', 'big_bird']:
-            pass
-        else:
-            raise NotImplementedError(f"{config.model_type} is no supported yet!")
-
-
 
     if training_args.do_train:
         if data_args.max_train_samples is not None:
