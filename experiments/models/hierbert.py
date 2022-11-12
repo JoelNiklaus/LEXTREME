@@ -6,6 +6,8 @@ import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
 
+from experiments.helper import build_hierarchical_model, get_model_class_for_sequence_classification, get_tokenizer
+
 
 @dataclass
 class SimpleOutput(ModelOutput):
@@ -131,9 +133,8 @@ class HierarchicalBert(nn.Module):
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
 
-
 if __name__ == "__main__":
-    from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, XLMRobertaTokenizer
+    from transformers import AutoModel
 
     model_names = [
         "bert-base-uncased",  # standard model
