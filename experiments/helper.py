@@ -44,7 +44,7 @@ def make_split(data_args, split_name):
     return dataset
 
 
-def get_data(data_args, split_name):
+def get_data(training_args, data_args):
     
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
