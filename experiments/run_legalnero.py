@@ -255,7 +255,7 @@ def main():
 
     
     def preprocess_function(examples):
-        tokenized_inputs = tokenizer.batch_encode_plus(examples["input"],
+        tokenized_inputs = tokenizer(examples["input"],
             is_split_into_words=True,
             padding=padding,
             max_length=data_args.max_seq_length,
