@@ -26,43 +26,59 @@ from models.hierbert import (build_hierarchical_model,
                              get_tokenizer)
 
 
-def get_data(training_args, data_args, download_mode, experimental_samples=False):
-    if data_args.running_mode == "experimental":
-        experimental_samples = True
+def make_split(data_args, split_name):
 
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
+    if data_args.running_mode == "experimental":
+            dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name+'[:5%]',
+                                         cache_dir="datasets_caching", download_mode=data_args.download_mode)
+    else:
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                                        cache_dir="datasets_caching", download_mode=data_args.download_mode)
+    if bool(re.search('eurlex', data_args.finetuning_task)):
+        dataset = split_into_languages(dataset)
+    if data_args.finetuning_task in ner_tasks:
+        dataset = dataset.rename_column("label", "labels")
+    
+    return dataset
+
+
+def get_data(data_args, split_name):
+    
+    ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
+
     if training_args.do_train:
-        if experimental_samples:
+        if data_args.running_mode == "experimental":
             train_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='train[:5%]',
-                                         cache_dir="datasets_caching", download_mode=download_mode)
-        elif not experimental_samples:
+                                         cache_dir="datasets_caching", download_mode=data_args.download_mode)
+        else:
             train_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='train',
-                                         cache_dir="datasets_caching", download_mode=download_mode)
+                                         cache_dir="datasets_caching", download_mode=data_args.download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
             train_dataset = split_into_languages(train_dataset)
         if data_args.finetuning_task in ner_tasks:
             train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        if experimental_samples:
+        if data_args.running_mode == "experimental":
             eval_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='validation[:5%]',
-                                        cache_dir="datasets_caching", download_mode=download_mode)
-        elif not experimental_samples:
+                                        cache_dir="datasets_caching", download_mode=data_args.download_mode)
+        else:
             eval_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='validation',
-                                        cache_dir="datasets_caching", download_mode=download_mode)
+                                        cache_dir="datasets_caching", download_mode=data_args.download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
             eval_dataset = split_into_languages(eval_dataset)
         if data_args.finetuning_task in ner_tasks:
             eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        if experimental_samples:
+        if data_args.running_mode == "experimental":
             predict_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='test[:5%]',
-                                           cache_dir="datasets_caching", download_mode=download_mode)
-        elif not experimental_samples:
+                                           cache_dir="datasets_caching", download_mode=data_args.download_mode)
+        else:
             predict_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='test',
-                                           cache_dir="datasets_caching", download_mode=download_mode)
+                                           cache_dir="datasets_caching", download_mode=data_args.download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
             predict_dataset = split_into_languages(predict_dataset)
         if data_args.finetuning_task in ner_tasks:

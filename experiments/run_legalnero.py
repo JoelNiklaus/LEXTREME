@@ -226,7 +226,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args)
     
     # Labels
     label_list = ['O', 'B-TIME', 'I-TIME', 'B-LEGAL', 'I-LEGAL', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC', 'B-PER', 'I-PER']

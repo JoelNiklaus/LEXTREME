@@ -225,7 +225,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args)
 
     # Labels
     label_list = ["potentially_unfair", "clearly_unfair", "clearly_fair"]

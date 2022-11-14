@@ -226,7 +226,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args)
     
     # Labels
     label_list =   ['O', 'B-BUILDING', 'I-BUILDING', 'B-CITY', 'I-CITY', 'B-COUNTRY', 'I-COUNTRY', 'B-PLACE', 'I-PLACE', 'B-TERRITORY', 'I-TERRITORY', 'I-UNIT', 'B-UNIT', 'B-VALUE', 'I-VALUE', 'B-YEAR', 'I-YEAR', 'B-STANDARD ABBREVIATION', 'I-STANDARD ABBREVIATION', 'B-MONTH', 'I-MONTH', 'B-DAY', 'I-DAY', 'B-AGE', 'I-AGE', 'B-ETHNIC CATEGORY', 'I-ETHNIC CATEGORY', 'B-FAMILY NAME', 'I-FAMILY NAME', 'B-INITIAL NAME', 'I-INITIAL NAME', 'B-MARITAL STATUS', 'I-MARITAL STATUS', 'B-PROFESSION', 'I-PROFESSION', 'B-ROLE', 'I-ROLE', 'B-NATIONALITY', 'I-NATIONALITY', 'B-TITLE', 'I-TITLE', 'B-URL', 'I-URL', 'B-TYPE', 'I-TYPE']

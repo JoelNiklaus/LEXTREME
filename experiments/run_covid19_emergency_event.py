@@ -226,7 +226,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args,model_args,data_args.download_mode)
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args)
 
     # Labels
     label_list = ["event1", "event2", "event3", "event4", "event5", "event6", "event7", "event8"]
