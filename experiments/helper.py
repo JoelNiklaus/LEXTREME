@@ -1,6 +1,5 @@
 from datasets import Dataset
 import pandas as pd
-from typing import List
 import os
 from pathlib import Path
 import json as js
@@ -21,36 +20,9 @@ import wandb
 import re
 from datasets import load_dataset
 
-from transformers import (
-    AutoConfig,
-    DistilBertConfig,
-    XLMRobertaConfig,
-    DebertaV2Config,
-    AutoTokenizer,
-    DistilBertTokenizer,
-    DistilBertTokenizerFast,
-    XLMRobertaTokenizer,
-    XLMRobertaTokenizerFast,
-    AutoModelForSequenceClassification,
-    DebertaV2ForSequenceClassification,
-    BertForSequenceClassification,
-    DistilBertForTokenClassification,
-    XLMRobertaForSequenceClassification,
-    DistilBertForSequenceClassification,
-    AutoModelForTokenClassification,
-    BertForTokenClassification,
-    DistilBertForTokenClassification,
-    XLMRobertaForTokenClassification,
-    DebertaV2ForTokenClassification
+from transformers import AutoConfig, AutoModelForTokenClassification
 
-)
-
-
-from models.deberta_v2 import HierDebertaV2ForSequenceClassification
-from models.distilbert import HierDistilBertForSequenceClassification
-from models.roberta import HierRobertaForSequenceClassification
-from models.xlm_roberta import HierXLMRobertaForSequenceClassification
-from models.hierbert import HierarchicalBert, supported_models
+from models.hierbert import build_hierarchical_model, get_tokenizer, get_model_class_for_sequence_classification
 
 
 def get_data(training_args, data_args, model_args, download_mode, experimental_samples=False):
@@ -630,7 +602,6 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
         project_name = 'final_results'
-        # project_name = re.sub('/','-',model_args.model_name_or_path+'_final')
     wandb.init(project=project_name)
     try:
         run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
@@ -639,64 +610,6 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
             training_args.seed) + '__time-' + time_now
     wandb.run.name = run_name
-
-
-
-
-def get_tokenizer(model_name_or_path):
-    if model_name_or_path == 'microsoft/Multilingual-MiniLM-L12-H384':
-        # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
-        tokenizer_class = XLMRobertaTokenizer
-    else:
-        tokenizer_class = AutoTokenizer
-
-    return tokenizer_class.from_pretrained(model_name_or_path)
-
-
-def get_model_class_for_sequence_classification(model_type, model_args):
-    model_type_to_model_class = {
-        "distilbert": HierDistilBertForSequenceClassification,
-        "deberta-v2": HierDebertaV2ForSequenceClassification,
-        "roberta": HierRobertaForSequenceClassification,
-        "xlm-roberta": HierXLMRobertaForSequenceClassification,
-    }
-    if model_type in model_type_to_model_class.keys() and model_args.hierarchical==True:
-        return model_type_to_model_class[model_type]
-    else:
-        return AutoModelForSequenceClassification
-
-
-
-def build_hierarchical_model(model, max_segments, max_segment_length):
-    config = model.config
-    # Hack the classifier encoder to use hierarchical BERT
-    if config.model_type in supported_models:
-        if config.model_type == 'bert':
-            segment_encoder = model.bert
-        elif config.model_type == 'distilbert':
-            segment_encoder = model.distilbert
-        elif config.model_type in ['roberta', 'xlm-roberta']:
-            segment_encoder = model.roberta
-        elif config.model_type == 'deberta-v2':
-            segment_encoder = model.deberta
-        # Replace flat BERT encoder with hierarchical BERT encoder
-        model_encoder = HierarchicalBert(encoder=segment_encoder,
-                                         max_segments=max_segments,
-                                         max_segment_length=max_segment_length)
-        if config.model_type == 'bert':
-            model.bert = model_encoder
-        elif config.model_type == 'distilbert':
-            model.distilbert = model_encoder
-        elif config.model_type in ['roberta', 'xlm-roberta']:
-            model.roberta = model_encoder
-        elif config.model_type == 'deberta-v2':
-            model.deberta = model_encoder
-    elif config.model_type in ['longformer', 'big_bird']:
-        pass
-    else:
-        raise NotImplementedError(f"{config.model_type} is not supported yet!")
-
-    return model
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
@@ -738,7 +651,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
             model_args.model_name_or_path,
             config=config,
             use_auth_token=True if model_args.use_auth_token else None,
-            ignore_mismatched_sizes=True
+            force_download=True
         )
 
     tokenizer =  get_tokenizer(model_args.model_name_or_path)

@@ -5,8 +5,11 @@ import torch
 import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
-
-from experiments.helper import build_hierarchical_model, get_model_class_for_sequence_classification, get_tokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from models.deberta_v2 import HierDebertaV2ForSequenceClassification
+from models.distilbert import HierDistilBertForSequenceClassification
+from models.roberta import HierRobertaForSequenceClassification
+from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 
 
 @dataclass
@@ -133,6 +136,63 @@ class HierarchicalBert(nn.Module):
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
 
+
+def build_hierarchical_model(model, max_segments, max_segment_length, HierarchicalBert):
+    config = model.config
+    # Hack the classifier encoder to use hierarchical BERT
+    if config.model_type in supported_models:
+        if config.model_type == 'bert':
+            segment_encoder = model.bert
+        elif config.model_type == 'distilbert':
+            segment_encoder = model.distilbert
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            segment_encoder = model.roberta
+        elif config.model_type == 'deberta-v2':
+            segment_encoder = model.deberta
+        # Replace flat BERT encoder with hierarchical BERT encoder
+        model_encoder = HierarchicalBert(encoder=segment_encoder,
+                                         max_segments=max_segments,
+                                         max_segment_length=max_segment_length)
+        if config.model_type == 'bert':
+            model.bert = model_encoder
+        elif config.model_type == 'distilbert':
+            model.distilbert = model_encoder
+        elif config.model_type in ['roberta', 'xlm-roberta']:
+            model.roberta = model_encoder
+        elif config.model_type == 'deberta-v2':
+            model.deberta = model_encoder
+    elif config.model_type in ['longformer', 'big_bird']:
+        pass
+    else:
+        raise NotImplementedError(f"{config.model_type} is not supported yet!")
+
+    return model
+
+def get_tokenizer(model_name_or_path):
+    # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".   
+    # However, after refactoring, using XLMRobertaTokenizer causes some errors: ValueError: word_ids() is not available when using non-fast tokenizers (e.g. instance of a `XxxTokenizerFast` class).
+    # AutoTokenizer works anyway
+    # AutTokenizer gives the following infos: This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. 
+    tokenizer_class = AutoTokenizer
+    return tokenizer_class.from_pretrained(model_name_or_path)
+
+
+def get_model_class_for_sequence_classification(model_type, model_args=None):
+    model_type_to_model_class = {
+        "distilbert": HierDistilBertForSequenceClassification,
+        "deberta-v2": HierDebertaV2ForSequenceClassification,
+        "roberta": HierRobertaForSequenceClassification,
+        "xlm-roberta": HierXLMRobertaForSequenceClassification,
+    }
+    if model_args is not None:
+        if model_type in model_type_to_model_class.keys() and model_args.hierarchical==True:
+            return model_type_to_model_class[model_type]
+        else:
+            return AutoModelForSequenceClassification
+    else:
+        return AutoModelForSequenceClassification
+
+
 if __name__ == "__main__":
     from transformers import AutoModel
 
@@ -184,7 +244,7 @@ if __name__ == "__main__":
         num_labels = 10
         model_class = get_model_class_for_sequence_classification(model_type)
         model = model_class.from_pretrained(model_name, num_labels=num_labels)
-        model = build_hierarchical_model(model, max_segments, max_segment_length)
+        model = build_hierarchical_model(model, max_segments, max_segment_length, HierarchicalBert)
 
         output = model(fake_inputs['input_ids'], fake_inputs['attention_mask'], fake_inputs['token_type_ids'])
 
