@@ -137,7 +137,7 @@ class HierarchicalBert(nn.Module):
 
 
 
-def build_hierarchical_model(model, max_segments, max_segment_length, HierarchicalBert):
+def build_hierarchical_model(model, max_segments, max_segment_length):
     config = model.config
     # Hack the classifier encoder to use hierarchical BERT
     if config.model_type in supported_models:
