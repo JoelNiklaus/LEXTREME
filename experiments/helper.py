@@ -26,17 +26,17 @@ from models.hierbert import (build_hierarchical_model,
                              get_tokenizer)
 
 
-def get_data(training_args, data_args, model_args, download_mode, experimental_samples=False):
+def get_data(training_args, data_args, download_mode, experimental_samples=False):
     if data_args.running_mode == "experimental":
         experimental_samples = True
 
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     if training_args.do_train:
-        if experimental_samples == True:
+        if experimental_samples:
             train_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='train[:5%]',
                                          cache_dir="datasets_caching", download_mode=download_mode)
-        elif experimental_samples == False:
+        elif not experimental_samples:
             train_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='train',
                                          cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
@@ -45,10 +45,10 @@ def get_data(training_args, data_args, model_args, download_mode, experimental_s
             train_dataset = train_dataset.rename_column("label", "labels")
 
     if training_args.do_eval:
-        if experimental_samples == True:
+        if experimental_samples:
             eval_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='validation[:5%]',
                                         cache_dir="datasets_caching", download_mode=download_mode)
-        elif experimental_samples == False:
+        elif not experimental_samples:
             eval_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='validation',
                                         cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
@@ -57,10 +57,10 @@ def get_data(training_args, data_args, model_args, download_mode, experimental_s
             eval_dataset = eval_dataset.rename_column("label", "labels")
 
     if training_args.do_predict:
-        if experimental_samples == True:
+        if experimental_samples:
             predict_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='test[:5%]',
                                            cache_dir="datasets_caching", download_mode=download_mode)
-        elif experimental_samples == False:
+        elif not experimental_samples:
             predict_dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split='test',
                                            cache_dir="datasets_caching", download_mode=download_mode)
         if bool(re.search('eurlex', data_args.finetuning_task)):
@@ -81,7 +81,6 @@ def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     for k in id2label.keys():
         train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
 
-    train_dataset.to_csv('dataset_with_oversamling.csv')
     return train_dataset
 
 
@@ -114,7 +113,7 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
 
 
 def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
-    '''Can be used with any task that requires hierarchical models'''
+    """Can be used with any task that requires hierarchical models"""
 
     if type(id2label) == dict:
         batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in
@@ -131,7 +130,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
     pad_id = tokenizer.pad_token_id
 
-    if model_args.hierarchical == True:
+    if model_args.hierarchical:
         batch['segments'] = []
 
         tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
@@ -207,11 +206,11 @@ def get_label_dict(main_path: str, label_column: str = 'label') -> dict:
         p = Path(main_path) / p
         df = pd.read_json(p, lines=True)
 
-        for l in df[label_column].unique():
-            all_labels.add(l)
+        for label in df[label_column].unique():
+            all_labels.add(label)
 
-    for n, l in enumerate(list(all_labels)):
-        label_dict[l] = n
+    for n, label in enumerate(list(all_labels)):
+        label_dict[label] = n
 
     return label_dict
 
@@ -228,13 +227,13 @@ def merge_dicts(dict_args):
 
 
 def create_dataset(path: str, label_dict: dict, text_column: str = 'text', label_column: str = 'label'):
-    '''
+    """
     This function reads the train, validation and test dataset
     from the Brazilian court decision task dataset from the jsonl format.
     We can use this script for the time being, since we haven't uploaded
-    the task dataset to huggingface yet. 
-    
-    '''
+    the task dataset to huggingface yet.
+
+    """
 
     all_data = pd.read_json(path, lines=True)
 
@@ -275,7 +274,6 @@ def compute_metrics_multi_label(p: EvalPrediction):
     recall_score_macro = recall_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
     recall_score_micro = recall_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
     recall_score_weighted = recall_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    # mcc = matthews_corrcoef(y_true=p.label_ids, y_pred=preds)
 
     return {'macro-f1': macro_f1,
             'micro-f1': micro_f1,
@@ -323,10 +321,7 @@ def compute_metrics_multi_class(p: EvalPrediction):
             }
 
 
-# You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
-# predictions and label_ids field) and has to return a dictionary string to float.
-
-class Seqeval():
+class Seqeval:
 
     def __init__(self, label_list):
         self.metric = load_metric('seqeval')
@@ -336,9 +331,10 @@ class Seqeval():
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
 
-        # Remove ignored index (special tokens)
-        # Adding the prefix I- because the seqeval cuts the first letter because it, presumably, assumes that one of these tagging schemes has been used: ["IOB1", "IOB2", "IOE1", "IOE2", "IOBES", "BILOU"]
-        # By adding the prefix I- we make sure that the labels returned are the original labels
+        # Remove ignored index (special tokens) Adding the prefix I- because the seqeval cuts the first letter
+        # because it, presumably, assumes that one of these tagging schemes has been used: ["IOB1", "IOB2", "IOE1",
+        # "IOE2", "IOBES", "BILOU"] By adding the prefix I- we make sure that the labels returned are the original
+        # labels
         true_predictions = [
             [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
@@ -387,7 +383,7 @@ class Seqeval():
             'accuracy_normalized': accuracy_normalized
         }
         for k in results.keys():
-            if k.startswith("overall") == False:
+            if not k.startswith("overall"):
                 flattened_results[k + "_f1"] = results[k]["f1"]
                 flattened_results[k + "_precision"] = results[k]["precision"]
                 flattened_results[k + "_recall"] = results[k]["recall"]
@@ -404,7 +400,7 @@ def convert_id2label(label_output: list, id2label: dict) -> list:
         if lp == 1:
             label_output_indices_of_positive_values.append(n)
 
-    label_output_as_labels = [id2label[l] for l in label_output_indices_of_positive_values]
+    label_output_as_labels = [id2label[label_id] for label_id in label_output_indices_of_positive_values]
 
     return label_output_as_labels
 
@@ -421,15 +417,15 @@ def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, 
     language_specific_metrics = list()
     if data_args.language == 'all':
 
-        if list_of_languages == []:
+        if not list_of_languages:
             list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-        for l in list_of_languages:
+        for language in list_of_languages:
 
-            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
+            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == language)
 
             if len(predict_dataset_filtered['language']) > 0:
-                metric_prefix = l + "_predict/"
+                metric_prefix = language + "_predict/"
                 predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
                                                                metric_key_prefix=metric_prefix)
                 wandb.log(metrics)
@@ -484,7 +480,7 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 
     if "language" in list(predict_dataset.features.keys()):
         if data_args.language == 'all':
-            if list_of_languages == []:
+            if not list_of_languages:
                 list_of_languages = sorted(list(set(predict_dataset['language'])))
 
             for l in list_of_languages:
@@ -535,15 +531,15 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2label, training_args, list_of_languages=[]):
     language_specific_metrics = list()
     if data_args.language == 'all':
-        if list_of_languages == []:
+        if not list_of_languages:
             list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-        for l in list_of_languages:
+        for language in list_of_languages:
 
-            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
+            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == language)
 
             if len(predict_dataset_filtered['language']) > 0:
-                metric_prefix = l + "_predict/"
+                metric_prefix = language + "_predict/"
                 predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
                                                                metric_key_prefix=metric_prefix)
                 wandb.log(metrics)
@@ -589,8 +585,8 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
     output = list(zip(words, references, preds_final, predictions))
     output = pd.DataFrame(output, columns=['words', 'references', 'predictions', 'logits'])
 
-    output['predictions_as_label'] = output.predictions.apply(lambda l: [id2label[x] for x in l])
-    output['references_as_label'] = output.references.apply(lambda l: [id2label[x] for x in l])
+    output['predictions_as_label'] = output.predictions.apply(lambda label_ids: [id2label[_id] for _id in label_ids])
+    output['references_as_label'] = output.references.apply(lambda label_ids: [id2label[_id] for _id in label_ids])
 
     output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
     output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
@@ -614,52 +610,48 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
-
     config = AutoConfig.from_pretrained(
-            model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None
-            )
-    
+        model_args.model_name_or_path,
+        num_labels=num_labels,
+        finetuning_task=data_args.language + '_' + data_args.finetuning_task,
+        use_auth_token=True if model_args.use_auth_token else None
+    )
+
     model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
-    
+
     model = model_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=True if model_args.use_auth_token else None
-        )
-    
-    tokenizer =  get_tokenizer(model_args.model_name_or_path)
+    )
 
-    if model_args.hierarchical == True:
+    tokenizer = get_tokenizer(model_args.model_name_or_path)
+
+    if model_args.hierarchical:
         model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
-
 
     return model, tokenizer, config
 
 
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
-
     config = AutoConfig.from_pretrained(
-            model_args.model_name_or_path,
-            num_labels=num_labels,
-            finetuning_task=data_args.language + '_' + data_args.finetuning_task,
-            use_auth_token=True if model_args.use_auth_token else None
-            )
-    
-    model = AutoModelForTokenClassification.from_pretrained(
-            model_args.model_name_or_path,
-            config=config,
-            use_auth_token=True if model_args.use_auth_token else None,
-            force_download=True
-        )
+        model_args.model_name_or_path,
+        num_labels=num_labels,
+        finetuning_task=data_args.language + '_' + data_args.finetuning_task,
+        use_auth_token=True if model_args.use_auth_token else None
+    )
 
-    tokenizer =  get_tokenizer(model_args.model_name_or_path)
+    model = AutoModelForTokenClassification.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        use_auth_token=True if model_args.use_auth_token else None,
+        force_download=True
+    )
+
+    tokenizer = get_tokenizer(model_args.model_name_or_path)
 
     # Hierarchical not applied for token classification taks
-    #if model_args.hierarchical == True:
-        #model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
+    # if model_args.hierarchical == True:
+    # model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-
-    return model, tokenizer #, config
+    return model, tokenizer  # , config
