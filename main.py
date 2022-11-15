@@ -1,14 +1,15 @@
-from collections import defaultdict
-from itertools import cycle
-from multiprocessing import Pool
 import argparse
 import datetime
 import itertools
 import json as js
 import os
 import re
-import setproctitle
 import shutil
+from collections import defaultdict
+from itertools import cycle
+from multiprocessing import Pool
+
+import setproctitle
 import torch
 
 # Empty folder with temporary scripts
