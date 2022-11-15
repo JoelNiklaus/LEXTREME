@@ -66,8 +66,8 @@ def generate_command(time_now, **data):
                        '--seed {SEED} ' \
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--running_mode {RUNNING_MODE} ' \
-                        '--download_mode {DOWNLOAD_MODE} ' \
-                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS}'
+                       '--download_mode {DOWNLOAD_MODE} ' \
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS}'
     if "gpu_number" not in data.keys() or bool(re.search("\d", str(data["gpu_number"]))) == False:
         data["gpu_number"] = ""
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
@@ -75,20 +75,20 @@ def generate_command(time_now, **data):
         # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
 
-    final_command = command_template.format(GPU_NUMBER=data["gpu_number"], 
+    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
-                                            LOWER_CASE=data["lower_case"], 
+                                            LOWER_CASE=data["lower_case"],
                                             TASK=data["task"], SEED=data["seed"],
-                                            NUM_TRAIN_EPOCHS=data["num_train_epochs"], 
+                                            NUM_TRAIN_EPOCHS=data["num_train_epochs"],
                                             BATCH_SIZE=data["batch_size"],
-                                            ACCUMULATION_STEPS=data["accumulation_steps"], 
+                                            ACCUMULATION_STEPS=data["accumulation_steps"],
                                             LANGUAGE=data["language"],
-                                            RUNNING_MODE=data["running_mode"], 
+                                            RUNNING_MODE=data["running_mode"],
                                             LEARNING_RATE=data["learning_rate"],
-                                            CODE=data["code"], 
+                                            CODE=data["code"],
                                             METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
                                             GREATER_IS_BETTER=data["greater_is_better"],
-                                            DOWNLOAD_MODE=data["download_mode"], 
+                                            DOWNLOAD_MODE=data["download_mode"],
                                             OUTPUT_DIR=data["output_dir"],
                                             PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"]
                                             )
@@ -105,7 +105,7 @@ def generate_command(time_now, **data):
     return file_name
 
 
-def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str):
+def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, gpu_memory: int, total_batch_size=64):
     if hierarchical is None:
         if task in ['brazilian_court_decisions_judgment', 'brazilian_court_decisions_unanimity',
                     'greek_legal_code_chapter_level', 'greek_legal_code_subject_level', 'greek_legal_code_volume_level',
@@ -115,44 +115,25 @@ def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str):
         else:
             hierarchical = False
 
-    if str(hierarchical).lower() == "false":
-        if language_model == "distilbert-base-multilingual-cased":
-            batch_size = 64
-            accumulation_steps = 1
-        elif language_model == "microsoft/Multilingual-MiniLM-L12-H384":
-            batch_size = 32
-            accumulation_steps = 2
-        elif language_model == "xlm-roberta-base":
-            batch_size = 32
-            accumulation_steps = 2
-        elif language_model == "microsoft/mdeberta-v3-base":
-            batch_size = 16
-            accumulation_steps = 4
-        elif language_model == "xlm-roberta-large":
-            batch_size = 8
-            accumulation_steps = 8
-        else:
-            batch_size = 32
-            accumulation_steps = 2
-    else:
-        if language_model == "distilbert-base-multilingual-cased":
-            batch_size = 16
-            accumulation_steps = 4
-        elif language_model == "microsoft/Multilingual-MiniLM-L12-H384":
-            batch_size = 8
-            accumulation_steps = 8
-        elif language_model == "xlm-roberta-base":
-            batch_size = 8
-            accumulation_steps = 8
-        elif language_model == "microsoft/mdeberta-v3-base":
-            batch_size = 4
-            accumulation_steps = 16
-        elif language_model == "xlm-roberta-large":
-            batch_size = 2
-            accumulation_steps = 32
-        else:
-            batch_size = 8
-            accumulation_steps = 8
+    # TODO here the sequence length also matters!
+    # gpu_memory = 80  # in GB
+
+    # the minimum is 4, so that we can run the hierarchical model, otherwise the minimum is 1
+    optimal_batch_sizes = {
+        32: {
+            'distilbert-base-multilingual-cased': 64,
+            'microsoft/Multilingual-MiniLM-L12-H384': 32,
+            'xlm-roberta-base': 32,
+            'microsoft/mdeberta-v3-base': 16,
+            'xlm-roberta-large': 8,
+        },
+        # TODO test this for other GPUs (16, 24, 40, 48, 80) GB
+    }
+
+    batch_size = optimal_batch_sizes[gpu_memory][language_model]
+    if hierarchical:
+        batch_size = batch_size // 4
+    accumulation_steps = total_batch_size // batch_size
 
     return batch_size, accumulation_steps
 
@@ -171,7 +152,8 @@ def run_in_parallel(commands_to_run):
 
 
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
-                   accumulation_steps, lower_case, language, learning_rate, gpu_number, hierarchical, preprocessing_num_workers,
+                   accumulation_steps, lower_case, language, learning_rate, gpu_number, hierarchical,
+                   preprocessing_num_workers,
                    num_train_epochs=None, output_dir=None):
     time_stamp = datetime.datetime.now().isoformat()
 
@@ -266,7 +248,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                                           running_mode=running_mode, learning_rate=learning_rate,
                                           code=task_code_mapping[task], metric_for_best_model=metric_for_best_model,
                                           hierarchical=hierarchical, greater_is_better=greater_is_better,
-                                          download_mode=download_mode, output_dir=output_dir,preprocessing_num_workers=preprocessing_num_workers)
+                                          download_mode=download_mode, output_dir=output_dir,
+                                          preprocessing_num_workers=preprocessing_num_workers)
             if batch_size_to_be_found:
                 batch_size = None  # Have to set batch_size back to None, otherwise it wil continue to asssign too high batch sizes which will cause errors
             if script_new is not None:
@@ -306,7 +289,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                                           running_mode=running_mode, learning_rate=learning_rate,
                                           code=task_code_mapping[task], metric_for_best_model=metric_for_best_model,
                                           hierarchical=hierarchical, greater_is_better=greater_is_better,
-                                          download_mode=download_mode, output_dir=output_dir,preprocessing_num_workers=preprocessing_num_workers)
+                                          download_mode=download_mode, output_dir=output_dir,
+                                          preprocessing_num_workers=preprocessing_num_workers)
             if batch_size_to_be_found:
                 # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
                 batch_size = None
@@ -372,7 +356,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
                         choices=sorted(list(task_code_mapping.keys())))
     parser.add_argument('-od', '--output_dir', help='Choose an output directory.', default=None)
-    parser.add_argument('-nw','--preprocessing_num_workers', help="The number of processes to use for the preprocessing.", default=8)
+    parser.add_argument('-nw', '--preprocessing_num_workers',
+                        help="The number of processes to use for the preprocessing.", default=8)
 
     args = parser.parse_args()
 
