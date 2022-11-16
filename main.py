@@ -51,7 +51,7 @@ task_code_mapping = {
 
 
 def generate_command(time_now, **data):
-    command_template = 'python ./experiments/{CODE} ' \
+    command_template = 'python3 ./experiments/{CODE} ' \
                        '--model_name_or_path {MODEL_NAME} ' \
                        '--output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
                        '--do_train --do_eval --do_predict ' \
@@ -105,7 +105,8 @@ def generate_command(time_now, **data):
     return file_name
 
 
-def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, gpu_memory: int, total_batch_size=64):
+def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, gpu_memory: int = 32,
+                           total_batch_size=64):
     if hierarchical is None:
         if task in ['brazilian_court_decisions_judgment', 'brazilian_court_decisions_unanimity',
                     'greek_legal_code_chapter_level', 'greek_legal_code_subject_level', 'greek_legal_code_volume_level',
@@ -118,6 +119,28 @@ def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, g
     # TODO here the sequence length also matters!
     # gpu_memory = 80  # in GB
 
+    max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
+        'brazilian_court_decisions_judgment': 8 * 128,  # 1024
+        'brazilian_court_decisions_unanimity': 8 * 128,  # 1024
+        'covid19_emergency_event': 256,
+        'german_argument_mining': 256,
+        'greek_legal_code_chapter_level': 32 * 128,  # 4096
+        'greek_legal_code_subject_level': 32 * 128,  # 4096
+        'greek_legal_code_volume_level': 32 * 128,  # 4096
+        'greek_legal_ner': 512,
+        'legalnero': 512,
+        'lener_br': 512,
+        'mapa_ner_fine_grained': 512,
+        'mapa_ner_coarse_grained': 512,
+        'multi_eurlex_level_1': 32 * 128,  # 4096
+        'multi_eurlex_level_2': 32 * 128,  # 4096
+        'multi_eurlex_level_3': 32 * 128,  # 4096
+        'online_terms_of_service_unfairness_category': 256,
+        'online_terms_of_service_unfairness_level': 256,
+        'swiss_judgment_prediction': 16 * 128,  # 2048
+    }
+    max_seq_len = max_sequence_lengths[task]
+
     # the minimum is 4, so that we can run the hierarchical model, otherwise the minimum is 1
     optimal_batch_sizes = {
         32: {
@@ -127,6 +150,7 @@ def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, g
             'microsoft/mdeberta-v3-base': 16,
             'xlm-roberta-large': 8,
         },
+        # TODO test this for different sequence lengths
         # TODO test this for other GPUs (16, 24, 40, 48, 80) GB
     }
 
