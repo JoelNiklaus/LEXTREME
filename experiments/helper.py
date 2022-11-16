@@ -27,33 +27,31 @@ from models.hierbert import (build_hierarchical_model,
 
 
 def make_split(data_args, split_name):
-
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     if data_args.running_mode == "experimental":
-            dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name+'[:5%]',
-                                         cache_dir="datasets_caching", download_mode=data_args.download_mode)
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name + '[:5%]',
+                               cache_dir="datasets_caching", download_mode=data_args.download_mode)
     else:
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                                        cache_dir="datasets_caching", download_mode=data_args.download_mode)
+                               cache_dir="datasets_caching", download_mode=data_args.download_mode)
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
     if data_args.finetuning_task in ner_tasks:
         dataset = dataset.rename_column("label", "labels")
-    
+
     return dataset
 
 
 def get_data(training_args, data_args):
-    
     if training_args.do_train:
-        train_dataset = make_split(data_args=data_args,split_name="train")
-        
+        train_dataset = make_split(data_args=data_args, split_name="train")
+
     if training_args.do_eval:
-        eval_dataset = make_split(data_args=data_args,split_name="validation")
+        eval_dataset = make_split(data_args=data_args, split_name="validation")
 
     if training_args.do_predict:
-        predict_dataset = make_split(data_args=data_args,split_name="test")
+        predict_dataset = make_split(data_args=data_args, split_name="test")
 
     return train_dataset, eval_dataset, predict_dataset
 
