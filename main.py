@@ -12,6 +12,7 @@ from multiprocessing import Pool
 import setproctitle
 import torch
 
+
 # Empty folder with temporary scripts
 shutil.rmtree('./temporary_scripts', ignore_errors=True)
 os.mkdir('./temporary_scripts')
@@ -240,10 +241,6 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     print(models_to_be_used)
 
     gpu_command_dict = defaultdict(list)
-    commands_already_satisfied = list()
-    all_commands_to_run = list()
-    number_of_parallel_commands = len(gpu_number) - 1
-    commands_to_run = list()
 
     metric_for_best_model = "eval_loss"
     greater_is_better = False
@@ -281,15 +278,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 command = 'bash ' + str(script_new)
                 gpu_command_dict[gpu_id].append(command)
                 print(command)
-                if command not in commands_to_run:
-                    if len(commands_to_run) <= number_of_parallel_commands:
-                        commands_to_run.append(command)
-                        commands_already_satisfied.append((model_name, task, seed))
-                    else:
-                        all_commands_to_run.append(commands_to_run)
-                        commands_to_run = list()
-                        commands_to_run.append(command)
-                        commands_already_satisfied.append((model_name, task, seed))
+
     else:
         all_variables = [[task], models_to_be_used, list_of_seeds]
         all_variables_perturbations = list(itertools.product(*all_variables))
@@ -323,27 +312,22 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 command = 'bash ' + str(script_new)
                 gpu_command_dict[gpu_id].append(command)
                 print(command)
-                if command not in commands_to_run:
-                    if len(commands_to_run) <= number_of_parallel_commands:
-                        commands_to_run.append(command)
-                        commands_already_satisfied.append((model_name, task, seed))
-                    else:
-                        all_commands_to_run.append(commands_to_run)
-                        commands_to_run = list()
-                        commands_to_run.append(command)
-                        commands_already_satisfied.append((model_name, task, seed))
-
-    if len(all_commands_to_run) == 0:
-        all_commands_to_run.append(commands_to_run)
-
-    command_dict = dict()
-    for n, c in enumerate(all_commands_to_run):
-        command_dict[n] = c
 
     with open('command_dict.json', 'w') as f:
-        js.dump(command_dict, f, ensure_ascii=False, indent=2)
+        js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
 
-    commands_to_run = ['; sleep 10; '.join(commands) for gpu_id, commands in gpu_command_dict.items()]
+    commands_to_run = ['; sleep 10; '.join(commands) for _, commands in gpu_command_dict.items()]
+
+    with open('temporary_scripts/final_commands_run_inparallel.txt', 'w') as f:
+        for gpu_id, commands in gpu_command_dict.items():
+            print('On GPU ',gpu_id, 'this system command is applied:', file=f, end='\n')
+            print('\t','; sleep 10; '.join(commands), file=f, end='\n')
+            print('On GPU ',gpu_id, 'the following commands are run sequentially.', file=f, end='\n')
+            for c in commands:
+                print('\t',c, file=f)
+            print("\n########################################\n", file=f)
+
+            
     run_in_parallel(commands_to_run=commands_to_run)
 
 
