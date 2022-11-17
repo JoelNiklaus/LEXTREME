@@ -73,9 +73,16 @@ def generate_command(time_now, **data):
     if "gpu_number" not in data.keys() or bool(re.search("\d", str(data["gpu_number"]))) == False:
         data["gpu_number"] = ""
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
+
+    elif str(data["task"]) in ['greek_legal_ner', 'legalnero', 'lener_br', 'mapa_ner_coarse_grained', 'mapa_ner_fine_grained'] and data["model_name"]=="microsoft/mdeberta-v3-base":
+        # For some reason microsoft/mdeberta-v3-base sequence classification returns eval_loss == NaN when using fp16
+        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template 
+
     else:
         # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
+
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
