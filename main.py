@@ -367,14 +367,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # TODO replace this with variable from argparse
     if args.download_mode == 'force_redownload':
         # Remove the existing cache directory since everything will be redownloaded anyway
         # Somehow the cache caused errors
-        if os.path.isdir('datasets_caching'):
-            shutil.rmtree('datasets_caching')
-        else:
-            os.mkdir('datasets_caching')
+        if args.dataset_cache_dir is not None:
+            if os.path.isdir(args.dataset_cache_dir):
+                shutil.rmtree(args.dataset_cache_dir)
+            else:
+                os.mkdir(args.dataset_cache_dir)
 
     run_experiment(
         accumulation_steps=args.accumulation_steps,
