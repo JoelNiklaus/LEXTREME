@@ -170,24 +170,10 @@ def generate_command(time_now, **data):
     return file_name
 
 
-def get_optimal_batch_size(language_model: str, hierarchical: bool, task: str, gpu_memory: int = 32,
-                           total_batch_size=64):
-    if hierarchical is None:
-        if task in ['brazilian_court_decisions_judgment', 'brazilian_court_decisions_unanimity',
-                    'greek_legal_code_chapter_level', 'greek_legal_code_subject_level', 'greek_legal_code_volume_level',
-                    'multi_eurlex_level_1', 'multi_eurlex_level_2', 'multi_eurlex_level_3',
-                    'swiss_judgment_prediction']:
-            hierarchical = True
-        else:
-            hierarchical = False
-
-    # TODO here the sequence length also matters!
-    # gpu_memory = 80  # in GB
-    gpu_memory = 24
-
+def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
     max_seq_len = max_sequence_lengths[task]
 
-    batch_size_dict = optimal_batch_sizes[gpu_memory][language_model]
+    batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
     batch_size = None
     while batch_size is None:
         try:
@@ -213,7 +199,7 @@ def run_in_parallel(commands_to_run):
 
 
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
-                   accumulation_steps, lower_case, language, learning_rate, gpu_number, hierarchical,
+                   accumulation_steps, lower_case, language, learning_rate, gpu_number, gpu_memory, hierarchical,
                    preprocessing_num_workers,
                    num_train_epochs=None, output_dir=None):
     time_stamp = datetime.datetime.now().isoformat()
@@ -288,7 +274,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             gpu_id = int(gpu_id)
         seed = int(seed)
         if batch_size is None:
-            batch_size, accumulation_steps = get_optimal_batch_size(model_name, hierarchical, task)
+            batch_size, accumulation_steps = get_optimal_batch_size(model_name, task, gpu_memory)
         else:
             if accumulation_steps is None:
                 accumulation_steps = 1
@@ -333,7 +319,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
-    parser.add_argument('-gn', '--gpu_number', help='Define which gpu you would like to use.', default=None)
+    parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
+    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=None)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
@@ -362,7 +349,8 @@ if __name__ == '__main__':
                         choices=sorted(list(task_code_mapping.keys())))
     parser.add_argument('-od', '--output_dir', help='Choose an output directory.', default=None)
     parser.add_argument('-nw', '--preprocessing_num_workers',
-                        help="The number of processes to use for the preprocessing.", default=8)
+                        help="The number of processes to use for the preprocessing. "
+                             "If it deadlocks, try setting this to 1.", default=8)
 
     args = parser.parse_args()
 
@@ -378,6 +366,7 @@ if __name__ == '__main__':
         accumulation_steps=args.accumulation_steps,
         batch_size=args.batch_size,
         gpu_number=args.gpu_number,
+        gpu_memory=args.gpu_memory,
         hierarchical=args.hierarchical,
         language=args.language,
         language_model_type=args.language_model_type,
