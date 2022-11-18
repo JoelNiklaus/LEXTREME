@@ -28,11 +28,10 @@ from models.hierbert import (build_hierarchical_model,
 
 
 def make_split(data_args, split_name):
-
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
-
-
+    if data_args.running_mode == "debug":
+        split_name = split_name + '[:100]'
     if data_args.running_mode == "experimental":
         split_name = split_name + '[:5%]'
     
