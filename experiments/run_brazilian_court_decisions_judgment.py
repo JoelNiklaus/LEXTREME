@@ -127,10 +127,15 @@ class DataTrainingArguments:
         default=8,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
+    dataset_cache_dir: str = field(
+        default=None,
+        metadata={
+            "help": "Specify the directory you want to cache your datasets."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-
 
 @dataclass
 class ModelArguments:
@@ -170,8 +175,9 @@ class ModelArguments:
         metadata={
             "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
             "with private models)."
-        },
+        }
     )
+   
 
 
 def main():

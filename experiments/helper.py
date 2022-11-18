@@ -26,16 +26,30 @@ from models.hierbert import (build_hierarchical_model,
                              get_tokenizer)
 
 
+
 def make_split(data_args, split_name):
+
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
-    cache_dir = "datasets_caching"
+
+
     if data_args.running_mode == "experimental":
         split_name = split_name + '[:5%]'
-    dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                           cache_dir=cache_dir, download_mode=data_args.download_mode)
+    
+    if data_args.dataset_cache_dir is None:
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name, 
+            download_mode=data_args.download_mode)
+
+    else:
+        if not os.path.exists(data_args.dataset_cache_dir):
+            os.mkdir(data_args.dataset_cache_dir)
+
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                           cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
+    
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
+    
     if data_args.finetuning_task in ner_tasks:
         dataset = dataset.rename_column("label", "labels")
 

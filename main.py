@@ -128,7 +128,11 @@ def generate_command(time_now, **data):
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS}'
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} '
+
+    if data["dataset_cache_dir"] is not None:
+        command_template = command_template + '--dataset_cache_dir {DATASET_CACHE_DIR}'
+
     if "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"]))):
         data["gpu_number"] = ""
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
@@ -139,6 +143,8 @@ def generate_command(time_now, **data):
     else:
         # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
+
+    
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -155,7 +161,8 @@ def generate_command(time_now, **data):
                                             GREATER_IS_BETTER=data["greater_is_better"],
                                             DOWNLOAD_MODE=data["download_mode"],
                                             OUTPUT_DIR=data["output_dir"],
-                                            PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"]
+                                            PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
+                                            DATASET_CACHE_DIR=data["dataset_cache_dir"]
                                             )
 
     if "hierarchical" in data.keys() and data["hierarchical"] is not None:
@@ -201,7 +208,7 @@ def run_in_parallel(commands_to_run):
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
                    accumulation_steps, lower_case, language, learning_rate, gpu_number, gpu_memory, hierarchical,
                    preprocessing_num_workers,
-                   num_train_epochs=None, output_dir=None):
+                   dataset_cache_dir, num_train_epochs=None, output_dir=None):
     time_stamp = datetime.datetime.now().isoformat()
 
     preprocessing_num_workers = int(preprocessing_num_workers)
@@ -286,7 +293,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                                       code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
                                       hierarchical=hierarchical, greater_is_better=greater_is_better,
                                       download_mode=download_mode, output_dir=output_dir,
-                                      preprocessing_num_workers=preprocessing_num_workers)
+                                      preprocessing_num_workers=preprocessing_num_workers, dataset_cache_dir=dataset_cache_dir)
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None
@@ -351,6 +358,9 @@ if __name__ == '__main__':
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
                              "If it deadlocks, try setting this to 1.", default=8)
+    parser.add_argument('-cad', '--dataset_cache_dir',
+                        help="Specify the directory you want to cache your datasets.",
+                        default=None)
 
     args = parser.parse_args()
 
@@ -365,8 +375,10 @@ if __name__ == '__main__':
     run_experiment(
         accumulation_steps=args.accumulation_steps,
         batch_size=args.batch_size,
-        gpu_number=args.gpu_number,
+        dataset_cache_dir=args.dataset_cache_dir,
+        download_mode=args.download_mode,
         gpu_memory=args.gpu_memory,
+        gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
         language=args.language,
         language_model_type=args.language_model_type,
@@ -374,9 +386,8 @@ if __name__ == '__main__':
         list_of_seeds=args.list_of_seeds,
         lower_case=args.lower_case,
         num_train_epochs=args.num_train_epochs,
-        running_mode=args.running_mode,
-        task=args.task,
-        download_mode=args.download_mode,
         output_dir=args.output_dir,
-        preprocessing_num_workers=args.preprocessing_num_workers
+        preprocessing_num_workers=args.preprocessing_num_workers,
+        running_mode=args.running_mode,
+        task=args.task
     )
