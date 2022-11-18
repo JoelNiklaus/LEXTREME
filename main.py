@@ -13,6 +13,7 @@ import setproctitle
 import torch
 
 # Empty folder with temporary scripts
+# TODO remove temporary scripts that are older than one day to clean up (keep most recent ones so that
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
 os.makedirs('./temporary_scripts', exist_ok=True)
 
@@ -22,7 +23,7 @@ multilingual_models = {
         "microsoft/Multilingual-MiniLM-L12-H384"
     ],
     "base": [
-        "microsoft/mdeberta-v3-base",
+        "microsoft/mdeberta-v3-base",  # TODO test batch sizes for this model again because we removed fp16
         # "xlm-roberta-base"
     ],
     "large": [
@@ -137,14 +138,14 @@ def generate_command(time_now, **data):
         data["gpu_number"] = ""
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
-    elif task_code_mapping[str(data["task"])] == 'NER' and data["model_name"] == "microsoft/mdeberta-v3-base":
+    elif data["model_name"] == "microsoft/mdeberta-v3-base":
+        # mdeberta does not work with fp16 because it was trained with bf16
+        # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
         # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
     else:
         # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
         command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
-
-    
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -293,7 +294,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                                       code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
                                       hierarchical=hierarchical, greater_is_better=greater_is_better,
                                       download_mode=download_mode, output_dir=output_dir,
-                                      preprocessing_num_workers=preprocessing_num_workers, dataset_cache_dir=dataset_cache_dir)
+                                      preprocessing_num_workers=preprocessing_num_workers,
+                                      dataset_cache_dir=dataset_cache_dir)
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None
@@ -357,13 +359,14 @@ if __name__ == '__main__':
     parser.add_argument('-od', '--output_dir', help='Choose an output directory.', default=None)
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
-                             "If it deadlocks, try setting this to 1.", default=8)
+                             "If it deadlocks, try setting this to 1.", default=1)
     parser.add_argument('-cad', '--dataset_cache_dir',
                         help="Specify the directory you want to cache your datasets.",
                         default=None)
 
     args = parser.parse_args()
 
+    # TODO replace this with variable from argparse
     if args.download_mode == 'force_redownload':
         # Remove the existing cache directory since everything will be redownloaded anyway
         # Somehow the cache caused errors
