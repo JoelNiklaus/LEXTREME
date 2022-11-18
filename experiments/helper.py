@@ -29,12 +29,11 @@ from models.hierbert import (build_hierarchical_model,
 def make_split(data_args, split_name):
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
+    cache_dir = "datasets_caching"
     if data_args.running_mode == "experimental":
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name + '[:5%]',
-                               cache_dir="datasets_caching", download_mode=data_args.download_mode)
-    else:
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                               cache_dir="datasets_caching", download_mode=data_args.download_mode)
+        split_name = split_name + '[:5%]'
+    dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                           cache_dir=cache_dir, download_mode=data_args.download_mode)
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
     if data_args.finetuning_task in ner_tasks:
