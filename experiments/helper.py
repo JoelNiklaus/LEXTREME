@@ -596,7 +596,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
     time_now = datetime.datetime.now().isoformat()
     if project_name is None:
-        project_name = 'final_results'
+        project_name = training_args.output_dir.split('/')[0]
     wandb.init(project=project_name)
     try:
         run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
