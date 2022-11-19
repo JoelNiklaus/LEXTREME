@@ -23,8 +23,8 @@ multilingual_models = {
         "microsoft/Multilingual-MiniLM-L12-H384"
     ],
     "base": [
-        "microsoft/mdeberta-v3-base",  # TODO test batch sizes for this model again because we removed fp16
-        # "xlm-roberta-base"
+        "microsoft/mdeberta-v3-base",
+        "xlm-roberta-base"
     ],
     "large": [
         "xlm-roberta-large"
@@ -37,16 +37,18 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        # lower batch sizes because not possible with fp16, TODO test for 512
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
     # e.g. V100
-    # TODO test if you can fit larger batch sizes for sequence lengths in [256, 1024, 2048]
+    # TODO test if you can fit larger batch sizes for sequence lengths in [256, 1024, 2048] on this GPU
     32: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        # lower batch sizes because not possible with fp16, TODO test for 512
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
     # e.g. A100
@@ -55,10 +57,10 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        # lower batch sizes because not possible with fp16, TODO test for 512
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
-    # TODO test this for different sequence lengths
 }
 
 # TODO get this directly from the LEXTREME huggingface dataset loader
@@ -134,18 +136,18 @@ def generate_command(time_now, **data):
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + '--dataset_cache_dir {DATASET_CACHE_DIR}'
 
-    if "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"]))):
-        data["gpu_number"] = ""
+    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
+    run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
+    if run_on_cpu:
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
-    elif data["model_name"] == "microsoft/mdeberta-v3-base":
-        # mdeberta does not work with fp16 because it was trained with bf16
-        # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
-        # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
-    else:
-        # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
-        command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template + ' --fp16'
+        data["gpu_number"] = ""
+    else:  # only when we have a GPU, we can run fp16 training
+        if data["model_name"] != "microsoft/mdeberta-v3-base":
+            # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+            command_template += ' --fp16'
+            # mdeberta does not work with fp16 because it was trained with bf16
+            # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
+            # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -376,6 +378,7 @@ if __name__ == '__main__':
             else:
                 os.mkdir(args.dataset_cache_dir)
 
+    # TODO set sequence length, segment length and segments from here instead of relying on default values
     run_experiment(
         accumulation_steps=args.accumulation_steps,
         batch_size=args.batch_size,
