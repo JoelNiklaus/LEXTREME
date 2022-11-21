@@ -641,8 +641,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     model = AutoModelForTokenClassification.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-        use_auth_token=True if model_args.use_auth_token else None,
-        force_download=True
+        use_auth_token=True if model_args.use_auth_token else None
     )
 
     tokenizer = get_tokenizer(model_args.model_name_or_path)
