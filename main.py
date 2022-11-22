@@ -17,6 +17,7 @@ import torch
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
 os.makedirs('./temporary_scripts', exist_ok=True)
 
+# TODO add option to run only one model
 multilingual_models = {
     "small": [
         "distilbert-base-multilingual-cased",
@@ -29,6 +30,33 @@ multilingual_models = {
     "large": [
         "xlm-roberta-large"
     ]
+}
+
+monolingual_models = {
+    "bg": "iarfmoose/roberta-base-bulgarian",
+    "cs": None,
+    "da": "Maltehb/danish-bert-botxo",
+    "de": "dbmdz/bert-base-german-cased",  # deepset/gbert-base
+    "el": "nlpaueb/bert-base-greek-uncased-v1",
+    "en": "roberta-base",  # etc.
+    "es": "bertin-project/bertin-roberta-base-spanish",  # PlanTL-GOB-ES/roberta-base-bne
+    "et": None,
+    "fi": "TurkuNLP/bert-base-finnish-cased-v1",
+    "fr": "camembert-base",  # dbmdz/bert-base-french-europeana-cased
+    "ga": "DCU-NLP/bert-base-irish-cased-v1",
+    "hr": None,
+    "hu": None,
+    "it": "Musixmatch/umberto-commoncrawl-cased-v1",  # dbmdz/bert-base-italian-xxl-cased
+    "lt": None,
+    "lv": None,
+    "mt": None,
+    "nl": "bert-base-dutch-cased",
+    "pl": "dkleczek/bert-base-polish-uncased-v1",
+    "pt": "neuralmind/bert-base-portuguese-cased",
+    "ro": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "sk": "gerulata/slovakbert",
+    "sl": None,
+    "sv": "KB/bert-base-swedish-cased",
 }
 
 optimal_batch_sizes = {
@@ -107,6 +135,8 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'online_terms_of_service_unfairness_level': 256,
     'swiss_judgment_prediction': 16 * 128,  # 2048
 }
+
+
 
 
 def get_python_file_for_task(task):
