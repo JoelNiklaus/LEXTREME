@@ -175,6 +175,8 @@ def generate_command(time_now, **data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
+        if int(data['gpu_memory']) in [32, 80]:  # RTX3090 and A100 support bf16
+            command_template = command_template + ' --bf16'
         if data["model_name"] != "microsoft/mdeberta-v3-base":
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             command_template += ' --fp16'
@@ -245,6 +247,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                    accumulation_steps, lower_case, language, learning_rate, gpu_number, gpu_memory, hierarchical,
                    preprocessing_num_workers,
                    dataset_cache_dir, num_train_epochs=None, output_dir=None):
+    # TODO I think it would be easier to just pass the whole data dictionary to the function
+    #  so that we only have one parameter and do the same for the generate_command function
     time_stamp = datetime.datetime.now().isoformat()
 
     preprocessing_num_workers = int(preprocessing_num_workers)
@@ -321,16 +325,19 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
         else:
             if accumulation_steps is None:
                 accumulation_steps = 1
-        script_new = generate_command(time_now=time_stamp, gpu_number=gpu_id, model_name=model_name,
-                                      lower_case=lower_case, task=task, seed=seed,
-                                      num_train_epochs=num_train_epochs, batch_size=batch_size,
-                                      accumulation_steps=accumulation_steps, language=language,
-                                      running_mode=running_mode, learning_rate=learning_rate,
-                                      code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
-                                      hierarchical=hierarchical, greater_is_better=greater_is_better,
-                                      download_mode=download_mode, output_dir=output_dir,
-                                      preprocessing_num_workers=preprocessing_num_workers,
-                                      dataset_cache_dir=dataset_cache_dir)
+        script_new = generate_command(
+            time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
+            model_name=model_name,
+            lower_case=lower_case, task=task, seed=seed,
+            num_train_epochs=num_train_epochs, batch_size=batch_size,
+            accumulation_steps=accumulation_steps, language=language,
+            running_mode=running_mode, learning_rate=learning_rate,
+            code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
+            hierarchical=hierarchical, greater_is_better=greater_is_better,
+            download_mode=download_mode, output_dir=output_dir,
+            preprocessing_num_workers=preprocessing_num_workers,
+            dataset_cache_dir=dataset_cache_dir
+        )
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None
