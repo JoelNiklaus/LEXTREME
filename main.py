@@ -369,8 +369,8 @@ if __name__ == '__main__':
                         default='all_languages')
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
-                        help='Define which kind of language model you would like to use; '
-                             'you can choose between small, base and large language models or all of them.',
+                        help='Define which kind of language model you would like to use (e.g. xlm-roberta-base); '
+                             'additionally, you can choose between small, base and large language models or all of them.',
                         default='all')
     parser.add_argument('-los', '--list_of_seeds',
                         help='Define the random seeds for which you want to run the experiments.',
