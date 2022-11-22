@@ -64,6 +64,7 @@ optimal_batch_sizes = {
     24: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         # lower batch sizes because not possible with fp16, TODO test for 512
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
@@ -74,6 +75,7 @@ optimal_batch_sizes = {
     32: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         # lower batch sizes because not possible with fp16, TODO test for 512
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
@@ -83,6 +85,7 @@ optimal_batch_sizes = {
     80: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         # lower batch sizes because not possible with fp16, TODO test for 512
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
