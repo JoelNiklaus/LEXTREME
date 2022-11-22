@@ -17,46 +17,170 @@ import torch
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
 os.makedirs('./temporary_scripts', exist_ok=True)
 
-# TODO add option to run only one model
-multilingual_models = {
-    "small": [
-        "distilbert-base-multilingual-cased",
-        "microsoft/Multilingual-MiniLM-L12-H384"
-    ],
-    "base": [
-        "microsoft/mdeberta-v3-base",
-        "xlm-roberta-base"
-    ],
-    "large": [
-        "xlm-roberta-large"
-    ]
-}
+_TYPES = ['general', 'legal']
+_LANGUAGES = ['bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'ga', 'hr',
+              'hu', 'it', 'lt', 'lv', 'mt', 'nl', 'pl', 'pt', 'ro', 'sk', 'sl', 'sv']
+_SIZES = ['small', 'base', 'large']
 
-monolingual_models = {
-    "bg": "iarfmoose/roberta-base-bulgarian",
-    "cs": None,
-    "da": "Maltehb/danish-bert-botxo",
-    "de": "dbmdz/bert-base-german-cased",  # deepset/gbert-base
-    "el": "nlpaueb/bert-base-greek-uncased-v1",
-    "en": "roberta-base",  # etc.
-    "es": "bertin-project/bertin-roberta-base-spanish",  # PlanTL-GOB-ES/roberta-base-bne
-    "et": None,
-    "fi": "TurkuNLP/bert-base-finnish-cased-v1",
-    "fr": "camembert-base",  # dbmdz/bert-base-french-europeana-cased
-    "ga": "DCU-NLP/bert-base-irish-cased-v1",
-    "hr": None,
-    "hu": None,
-    "it": "Musixmatch/umberto-commoncrawl-cased-v1",  # dbmdz/bert-base-italian-xxl-cased
-    "lt": None,
-    "lv": None,
-    "mt": None,
-    "nl": "bert-base-dutch-cased",
-    "pl": "dkleczek/bert-base-polish-uncased-v1",
-    "pt": "neuralmind/bert-base-portuguese-cased",
-    "ro": "dumitrescustefan/bert-base-romanian-uncased-v1",
-    "sk": "gerulata/slovakbert",
-    "sl": None,
-    "sv": "KB/bert-base-swedish-cased",
+# TODO look if there are other models available that we want to run: e.g. small or large ones
+language_models = {
+    "general": {
+        "bg": {
+            "small": [],
+            "base": ["iarfmoose/roberta-base-bulgarian"],
+            "large": []
+        },
+        "cs": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "da": {
+            "small": [],
+            "base": ["Maltehb/danish-bert-botxo"],
+            "large": []
+        },
+        "de": {
+            "small": [],
+            "base": ["dbmdz/bert-base-german-cased", "deepset/gbert-base"],
+            "large": []
+        },
+        "el": {
+            "small": [],
+            "base": ["nlpaueb/bert-base-greek-uncased-v1"],
+            "large": []
+        },
+        "en": {
+            "small": [],
+            "base": ["roberta-base"],  # TODO maybe test more etc.
+            "large": []
+        },
+        "es": {
+            "small": [],
+            "base": ["bertin-project/bertin-roberta-base-spanish", "PlanTL-GOB-ES/roberta-base-bne"],
+            "large": []
+        },
+        "et": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "fi": {
+            "small": [],
+            "base": ["TurkuNLP/bert-base-finnish-cased-v1"],
+            "large": []
+        },
+        "fr": {
+            "small": [],
+            "base": ["camembert-base", "dbmdz/bert-base-french-europeana-cased"],
+            "large": []
+        },
+        "ga": {
+            "small": [],
+            "base": ["DCU-NLP/bert-base-irish-cased-v1"],
+            "large": []
+        },
+        "hr": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "hu": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "it": {
+            "small": [],
+            "base": ["Musixmatch/umberto-commoncrawl-cased-v1", "dbmdz/bert-base-italian-cased"],
+            "large": []
+        },
+        "lt": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "lv": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "mt": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "nl": {
+            "small": [],
+            "base": ["bert-base-dutch-cased"],
+            "large": []
+        },
+        "pl": {
+            "small": [],
+            "base": ["dkleczek/bert-base-polish-uncased-v1"],
+            "large": []
+        },
+        "pt": {
+            "small": [],
+            "base": ["neuralmind/bert-base-portuguese-cased"],
+            "large": []
+        },
+        "ro": {
+            "small": [],
+            "base": ["dumitrescustefan/bert-base-romanian-uncased-v1"],
+            "large": []
+        },
+        "sk": {
+            "small": [],
+            "base": ["gerulata/slovakbert"],
+            "large": []
+        },
+        "sl": {
+            "small": [],
+            "base": [],
+            "large": []
+        },
+        "sv": {
+            "small": [],
+            "base": ["KB/bert-base-swedish-cased"],
+            "large": []
+        },
+        "multilingual": {
+            "small": [
+                "distilbert-base-multilingual-cased",
+                "microsoft/Multilingual-MiniLM-L12-H384"
+            ],
+            "base": [
+                "microsoft/mdeberta-v3-base",
+                "xlm-roberta-base"
+            ],
+            "large": [
+                "xlm-roberta-large"
+            ]
+        },
+    },
+    "legal": {
+        "it": {
+            "small": [],
+            "base": ["dlicari/Italian-Legal-BERT"],
+            "large": []
+        },
+        "ro": {
+            "small": [],
+            "base": ["readerbench/jurBERT-base"],
+            "large": []
+        },
+        "en": {
+            "small": [],
+            "base": ["zlucia/custom-legalbert", "nlpaueb/legal-bert-base-uncased"],
+            "large": []
+        },
+        "es": {
+            "small": [],
+            "base": ["PlanTL-GOB-ES/RoBERTalex"],
+            "large": []
+        },
+    }  # TODO add more legal models maybe from nllpw: https://nllpw.org/workshop/program/
 }
 
 optimal_batch_sizes = {
@@ -67,7 +191,7 @@ optimal_batch_sizes = {
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        # lower batch sizes because not possible with fp16, TODO test for 512
+        # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
@@ -79,20 +203,24 @@ optimal_batch_sizes = {
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        # lower batch sizes because not possible with fp16, TODO test for 512
+        # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
     # e.g. A100
     80: {
+        # 'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64}, # fp16
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64},
+        # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32}, # fp16
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
-        # lower batch sizes because not possible with fp16, TODO test for 512
+        # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
+        # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
+        # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8}, # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4},
     },
 }
 
@@ -175,14 +303,16 @@ def generate_command(time_now, **data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
-        if int(data['gpu_memory']) in [32, 80]:  # RTX3090 and A100 support bf16
-            command_template = command_template + ' --bf16'
-        if data["model_name"] != "microsoft/mdeberta-v3-base":
-            # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
-            command_template += ' --fp16'
-            # mdeberta does not work with fp16 because it was trained with bf16
-            # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
-            # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
+        if int(data['gpu_memory']) in [80]:  # A100 supports bf16
+            # command_template = command_template + ' --bf16'
+            pass  # both fp16 and bf16 somehow don't work on A100
+        else:  # otherwise train with fp16 if possible
+            if data["model_name"] != "microsoft/mdeberta-v3-base":
+                # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+                command_template += ' --fp16'
+                # mdeberta does not work with fp16 because it was trained with bf16
+                # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
+                # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -291,12 +421,24 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
 
     print(list_of_seeds)
 
-    # TODO add monolingual models
-    if language_model_type == 'all':
-        models_to_be_used = multilingual_models['small'] + multilingual_models['base'] + multilingual_models['large']
-    else:
-        models_to_be_used = multilingual_models[language_model_type]
-
+    # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
+    language_model_info = language_model_type.split('_')
+    if len(language_model_info) != 3:  # we got a direct language model just use it
+        models_to_be_used = [language_model_type]
+    else:  # find out what models we want to run
+        types, languages, sizes = [language_model_info[0]], [language_model_info[1]], [language_model_info[2]]
+        if 'all' in types:
+            types = _TYPES
+        if 'all' in languages:
+            languages = _LANGUAGES
+        if 'all' in sizes:
+            sizes = _SIZES
+        models_to_be_used = []
+        for t in types:
+            for l in languages:
+                for s in sizes:
+                    if l in language_models[t]:
+                        models_to_be_used.extend(language_models[t][l][s])  # add all models we want to run
     models_to_be_used = sorted(list(set(models_to_be_used)))
     print(models_to_be_used)
 
@@ -381,7 +523,10 @@ if __name__ == '__main__':
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
                         help='Define which kind of language model you would like to use (e.g. xlm-roberta-base); '
-                             'additionally, you can choose between small, base and large language models or all of them.',
+                             'alternatively, you can format it in the following way:'
+                             '{type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}. '
+                             'If you specify "all" for any of the three parameters, '
+                             'all models of that type/language/size will be used.',
                         default='all')
     parser.add_argument('-los', '--list_of_seeds',
                         help='Define the random seeds for which you want to run the experiments.',
