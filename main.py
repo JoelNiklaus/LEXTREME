@@ -151,8 +151,8 @@ language_models = {
                 "microsoft/Multilingual-MiniLM-L12-H384"
             ],
             "base": [
-                "microsoft/mdeberta-v3-base",
                 "xlm-roberta-base"
+                "microsoft/mdeberta-v3-base",
             ],
             "large": [
                 "xlm-roberta-large"
