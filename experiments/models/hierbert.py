@@ -136,7 +136,6 @@ class HierarchicalBert(nn.Module):
         return SimpleOutput(last_hidden_state=outputs, hidden_states=outputs)
 
 
-
 def build_hierarchical_model(model, max_segments, max_segment_length):
     config = model.config
     # Hack the classifier encoder to use hierarchical BERT
@@ -168,6 +167,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 
     return model
 
+
 def get_tokenizer(model_name_or_path):
     # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".   
     # However, after refactoring, using XLMRobertaTokenizer causes some errors: ValueError: word_ids() is not available when using non-fast tokenizers (e.g. instance of a `XxxTokenizerFast` class).
@@ -185,7 +185,7 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
     }
     if model_args is not None:
-        if model_type in model_type_to_model_class.keys() and model_args.hierarchical==True:
+        if model_type in model_type_to_model_class.keys() and model_args.hierarchical == True:
             return model_type_to_model_class[model_type]
         else:
             return AutoModelForSequenceClassification

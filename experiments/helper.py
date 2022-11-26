@@ -593,7 +593,6 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
 
 def config_wandb(training_args, model_args, data_args, project_name=None):
     time_now = datetime.datetime.now().isoformat()
-    time_now = datetime.datetime.now().isoformat()
     if project_name is None:
         project_name = training_args.output_dir.split('/')[0]
     wandb.init(project=project_name)

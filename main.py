@@ -209,18 +209,18 @@ optimal_batch_sizes = {
     },
     # e.g. A100
     80: {
-        # 'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64}, # fp16
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 32},
-        # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32}, # fp16
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
+        # 'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
+        # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
-        # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
+        # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
-        # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8}, # fp16
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4},
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+        # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
 
@@ -303,9 +303,8 @@ def generate_command(time_now, **data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
-        if int(data['gpu_memory']) in [80]:  # A100 supports bf16
-            # command_template = command_template + ' --bf16'
-            pass  # both fp16 and bf16 somehow don't work on A100
+        if int(data['gpu_memory']) in [80]:  # A100 also supports bf16
+            pass  # we could enable bf16 here
         else:  # otherwise train with fp16 if possible
             if data["model_name"] != "microsoft/mdeberta-v3-base":
                 # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
@@ -313,6 +312,9 @@ def generate_command(time_now, **data):
                 # mdeberta does not work with fp16 because it was trained with bf16
                 # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
                 # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
+            else:
+                # if the environment is set up correctly, also fp16_full_eval should work
+                command_template = command_template + ' --fp16 --fp16_full_eval'
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
