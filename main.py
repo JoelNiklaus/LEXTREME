@@ -278,7 +278,8 @@ def get_python_file_for_task(task):
 def generate_command(time_now, **data):
     command_template = 'python3 ./experiments/{CODE} ' \
                        '--model_name_or_path {MODEL_NAME} ' \
-                       '--output_dir {OUTPUT_DIR}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
+                       '--output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
+                       '--log_directory {LOG_DIRECTORY} ' \
                        '--do_train --do_eval --do_predict ' \
                        '--overwrite_output_dir ' \
                        '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
@@ -330,7 +331,7 @@ def generate_command(time_now, **data):
                                             METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
                                             GREATER_IS_BETTER=data["greater_is_better"],
                                             DOWNLOAD_MODE=data["download_mode"],
-                                            OUTPUT_DIR=data["output_dir"],
+                                            LOG_DIRECTORY=data["log_directory"],
                                             PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
                                             DATASET_CACHE_DIR=data["dataset_cache_dir"]
                                             )
@@ -378,7 +379,7 @@ def run_in_parallel(commands_to_run):
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
                    accumulation_steps, lower_case, language, learning_rate, gpu_number, gpu_memory, hierarchical,
                    preprocessing_num_workers,
-                   dataset_cache_dir, num_train_epochs=None, output_dir=None):
+                   dataset_cache_dir, num_train_epochs=None, log_directory=None):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
     time_stamp = datetime.datetime.now().isoformat()
@@ -395,8 +396,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             num_train_epochs = 1  # this dataset is so large, one epoch is enough to save compute
         else:
             num_train_epochs = 50
-    if output_dir is None:
-        output_dir = 'results/logs_' + str(time_stamp)
+    if log_directory is None:
+        log_directory = 'results/logs_' + str(time_stamp)
 
     if gpu_number is None:
         gpu_number = [n for n in range(0, torch.cuda.device_count())]
@@ -478,7 +479,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             running_mode=running_mode, learning_rate=learning_rate,
             code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
             hierarchical=hierarchical, greater_is_better=greater_is_better,
-            download_mode=download_mode, output_dir=output_dir,
+            download_mode=download_mode, log_directory=log_directory,
             preprocessing_num_workers=preprocessing_num_workers,
             dataset_cache_dir=dataset_cache_dir
         )
@@ -546,7 +547,7 @@ if __name__ == '__main__':
                         default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
                         choices=sorted(list(task_code_mapping.keys())))
-    parser.add_argument('-od', '--output_dir', help='Choose an output directory.', default=None)
+    parser.add_argument('-ld', '--log_directory', help='Specify the directory where you want to save your logs.', default=None)
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
                              "If it deadlocks, try setting this to 1.", default=1)
@@ -580,7 +581,7 @@ if __name__ == '__main__':
         list_of_seeds=args.list_of_seeds,
         lower_case=args.lower_case,
         num_train_epochs=args.num_train_epochs,
-        output_dir=args.output_dir,
+        log_directory=args.log_directory,
         preprocessing_num_workers=args.preprocessing_num_workers,
         running_mode=args.running_mode,
         task=args.task

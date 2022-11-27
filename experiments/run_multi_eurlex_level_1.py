@@ -132,6 +132,12 @@ class DataTrainingArguments:
             "help": "Specify the directory you want to cache your datasets."
         },
     )
+    log_directory: str = field(
+        default=None,
+        metadata={
+            "help": "Specify the directory where you want to save your logs."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
