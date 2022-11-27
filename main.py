@@ -218,7 +218,8 @@ optimal_batch_sizes = {
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
         'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
@@ -304,18 +305,16 @@ def generate_command(time_now, **data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
-        if int(data['gpu_memory']) in [80]:  # A100 also supports bf16
-            pass  # we could enable bf16 here
-        else:  # otherwise train with fp16 if possible
-            if data["model_name"] != "microsoft/mdeberta-v3-base":
-                # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
-                command_template += ' --fp16'
-                # mdeberta does not work with fp16 because it was trained with bf16
-                # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
-                # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
-            else:
-                # if the environment is set up correctly, also fp16_full_eval should work
-                command_template = command_template + ' --fp16 --fp16_full_eval'
+        if data["model_name"] == "microsoft/mdeberta-v3-base":
+            if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
+                command_template += ' --bf16 --bf16_full_eval'
+        else:
+            # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+            # BUT, if the environment is set up correctly, also fp16_full_eval should work
+            command_template += ' --fp16 --fp16_full_eval'
+            # mdeberta does not work with fp16 because it was trained with bf16
+            # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
+            # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -547,7 +546,10 @@ if __name__ == '__main__':
                         default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
                         choices=sorted(list(task_code_mapping.keys())))
-    parser.add_argument('-ld', '--log_directory', help='Specify the directory where you want to save your logs.', default=None)
+    parser.add_argument('-ld', '--log_directory',
+                        help='Specify the directory where you want to save your logs. '
+                             'The directory at the end of the tree is used as the project name for wandb.',
+                        default=None)
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
                              "If it deadlocks, try setting this to 1.", default=1)
