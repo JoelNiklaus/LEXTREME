@@ -148,14 +148,14 @@ language_models = {
         "multilingual": {
             "small": [
                 "distilbert-base-multilingual-cased",
-                "microsoft/Multilingual-MiniLM-L12-H384"
+                "microsoft/Multilingual-MiniLM-L12-H384",
             ],
             "base": [
-                "xlm-roberta-base"
+                "xlm-roberta-base",
                 "microsoft/mdeberta-v3-base",
             ],
             "large": [
-                "xlm-roberta-large"
+                "xlm-roberta-large",
             ]
         },
     },
