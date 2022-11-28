@@ -80,10 +80,10 @@ class ResultAggregator:
         results_filtered = self.results[(self.results.finetuning_task==finetuning_task) & (self.results._name_or_path==_name_or_path)][["seed",score]]
 
         if len(results_filtered.seed.unique())<5:
-            logging.info("Attention. For task "+ finetuning_task+"with model name "+_name_or_path+" you have "+str(len(results_filtered.seed.unique()))+" instead of 5 seeds! The mean will be calculated anway.")
+            logging.warning("Attention. For task "+ finetuning_task+"with model name "+_name_or_path+" you have "+str(len(results_filtered.seed.unique()))+" instead of 5 seeds! The mean will be calculated anway.")
         
         if len(results_filtered.seed.unique()) != len(results_filtered.seed.tolist()):
-            logging.info('Attention! It seems you have duplicate seeds for task '+finetuning_task+' with the model '+_name_or_path)
+            logging.warning('Attention! It seems you have duplicate seeds for task '+finetuning_task+' with the model '+_name_or_path)
             logging.info('Duplicate values will be removed based on the seed number.')
             
             results_filtered.drop_duplicates('seed', inplace=True)
@@ -117,7 +117,7 @@ class ResultAggregator:
 
 
         if self.overview_template.isnull().values.any():
-            logging.info('Attention! For some cases we do not have an aggregated score! These cases will be converted to zero.')
+            logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to zero.')
             self.overview_template.fillna(0.0, inplace=True)
 
 
@@ -134,7 +134,7 @@ class ResultAggregator:
             all_mean_macro_f1_scores =  self.overview_template.loc[_name_or_path].tolist()
             all_mean_macro_f1_scores_cleaned = [x for x in all_mean_macro_f1_scores if type(x)!=str]
             if all_mean_macro_f1_scores_cleaned!=all_mean_macro_f1_scores:
-                logging.info('Attention! There are string values for your score!')
+                logging.warning('Attention! There are string values for your score!')
                 
             all_mean_macro_f1_scores_mean = mean(all_mean_macro_f1_scores_cleaned)
             self.overview_template.at[_name_or_path,'dataset_aggregate_score']=all_mean_macro_f1_scores_mean
