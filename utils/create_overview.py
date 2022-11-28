@@ -1,11 +1,15 @@
+from datetime import datetime
 from pathlib import Path
-import json as js
-import pandas as pd
 from statistics import mean
 import argparse
-import sys
-from datetime import datetime
+import json as js
 import logging
+import os
+import pandas as pd
+import re
+import sys
+import wandb_summarizer.download
+
 
 
 
@@ -13,7 +17,7 @@ import logging
 class ResultAggregator:
 
 
-    def __init__(self, path_to_csv_export):
+    def __init__(self, path_to_csv_export=None):
         
 
         name_of_log_file = 'logs/loggings_'+datetime.now().isoformat()+'.txt'
@@ -21,9 +25,18 @@ class ResultAggregator:
         logging.basicConfig(level=logging.DEBUG, filename=name_of_log_file, filemode="a+",format="%(asctime)-15s %(levelname)-8s %(message)s")
 
         self._path = name_of_log_file
-        results = pd.read_csv(Path(path_to_csv_export))
+        if path_to_csv_export is None:
+            results = self.get_wandb_overview()
+        else:
+            results = pd.read_csv(Path(path_to_csv_export))
         results = results[results.finetuning_task.isnull()==False]
-        self.results = results[results.State=="finished"]
+
+        # When fetching the data from the wandb api it it return state instead of State as column name
+        # I could make every column name lowercase, but I am afraid this might cause some problems
+        if 'State' in results.columns:
+            self.results = results[results.State=="finished"]
+        elif 'state' in results.columns:
+            self.results = results[results.state=="finished"]
 
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
@@ -38,9 +51,36 @@ class ResultAggregator:
         logging.info(self.results.finetuning_task.unique())
 
 
+    def get_wandb_overview(self, project_name:str=None):
+        if project_name is None:
+            project_name="lextreme/paper_results"
+        results = wandb_summarizer.download.get_results(project_name=project_name)
+        results = pd.DataFrame(results)
+        results = self.edit_column_names_in_df(results)
+        return results
+
+    def edit_column_name(self, column_name):
+        if column_name.startswith('config_'):
+            column_name = re.sub('^config_','', column_name)
+        if column_name.startswith('end'):
+            column_name = re.sub('^end_','', column_name)
+        return column_name
+
+    def edit_column_names_in_df(self, dataframe):
+        columns = dataframe.columns.tolist()
+        
+        for col in columns:
+            col_new = self.edit_column_name(col)
+            dataframe = dataframe.rename(columns={col:col_new})
+        
+        return dataframe
+
     def get_average_score(self, finetuning_task:str, _name_or_path:str, score:str='predict/_macro-f1') -> float:
     
         results_filtered = self.results[(self.results.finetuning_task==finetuning_task) & (self.results._name_or_path==_name_or_path)][["seed",score]]
+
+        if len(results_filtered.seed.unique())<5:
+            logging.info("Attention. For task "+ finetuning_task+"with model name "+_name_or_path+" you have "+str(len(results_filtered.seed.unique()))+" instead of 5 seeds! The mean will be calculated anway.")
         
         if len(results_filtered.seed.unique()) != len(results_filtered.seed.tolist()):
             logging.info('Attention! It seems you have duplicate seeds for task '+finetuning_task+' with the model '+_name_or_path)
@@ -105,15 +145,6 @@ class ResultAggregator:
         self.overview_template.to_csv('dataset_aggregated_scores.csv')
 
 
-    
-
-
-        
-
-
-        
-        
-
 
 
 
@@ -123,11 +154,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb')
+    parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb', default=None)
+    parser.add_argument('-wak', '--wandb_api_key', help='To be able to fetch the right results, you can insert the wand api key. Alternatively, set the WANDB_API_KEY environment variable to your API key.', default=None)
 
     args = parser.parse_args()
 
-    ra = ResultAggregator(args.path_to_csv_export)
+    if args.wandb_api_key is not None:
+        os.environ["WANDB_API_KEY"] = args.wandb_api_key
+
+    ra = ResultAggregator()
 
     ra.get_info()
 
