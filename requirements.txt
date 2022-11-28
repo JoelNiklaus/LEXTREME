@@ -12,3 +12,4 @@ torch==1.10.0
 wandb==0.13.2
 sentencepiece==0.1.96
 matplotlib==3.6.2
+wandb-summarizer==0.1.2
