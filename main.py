@@ -8,14 +8,15 @@ import shutil
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
+from utils.utilities import remove_old_files
 
 import setproctitle
 import torch
 
 # Empty folder with temporary scripts
-# TODO remove temporary scripts that are older than one day to clean up (keep most recent ones so that
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
 os.makedirs('./temporary_scripts', exist_ok=True)
+remove_old_files('./temporary_scripts')
 
 _TYPES = ['general', 'legal']
 _LANGUAGES = ['bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'ga', 'hr',
