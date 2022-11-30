@@ -247,8 +247,8 @@ task_code_mapping = {
     'greek_legal_ner': 'NER',
     'legalnero': 'NER',
     'lener_br': 'NER',
-    'mapa_ner_coarse_grained': 'NER',
-    'mapa_ner_fine_grained': 'NER',
+    'mapa_coarse': 'NER',
+    'mapa_fine': 'NER',
 }
 
 max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
@@ -262,8 +262,8 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'greek_legal_ner': 512,
     'legalnero': 512,
     'lener_br': 512,
-    'mapa_ner_fine_grained': 512,
-    'mapa_ner_coarse_grained': 512,
+    'mapa_fine': 512,
+    'mapa_coarse': 512,
     'multi_eurlex_level_1': 32 * 128,  # 4096
     'multi_eurlex_level_2': 32 * 128,  # 4096
     'multi_eurlex_level_3': 32 * 128,  # 4096
@@ -295,7 +295,8 @@ def generate_command(time_now, **data):
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} '
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                        '--language {LANGUAGE}'
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + '--dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -350,8 +351,11 @@ def generate_command(time_now, **data):
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
     max_seq_len = max_sequence_lengths[task]
-
-    batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
+    if language_model in optimal_batch_sizes.keys():
+        batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
+    else:
+        print("The language model ", language_model, "will be considered a monolingual model. Therefore, we revert to the default batch size.")
+        batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
     batch_size = None
     while batch_size is None:
         try:
@@ -522,7 +526,7 @@ if __name__ == '__main__':
                              'Caution: this will not work for every task',
                         default=None)
     parser.add_argument('-lang', '--language', help='Define if you want to filter the training dataset by language.',
-                        default='all_languages')
+                        default='all')
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
                         help='Define which kind of language model you would like to use (e.g. xlm-roberta-base); '
@@ -550,7 +554,7 @@ if __name__ == '__main__':
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',
-                        default=None)
+                        default='results')
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
                              "If it deadlocks, try setting this to 1.", default=1)

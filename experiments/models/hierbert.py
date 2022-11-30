@@ -167,6 +167,14 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 
     return model
 
+# Some model tokenizers are based on roberta (https://huggingface.co/docs/transformers/model_doc/roberta)
+# a RoBERTa tokenizer, derived from the GPT-2 tokenizer, uses byte-level Byte-Pair-Encoding.
+# This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
+# be encoded differently whether it is at the beginning of the sentence (without space) or not
+# You need to pass add_prefix_space=True to make it work, otherwise an error will occur
+
+models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian"]
+
 
 def get_tokenizer(model_name_or_path):
     # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".   
@@ -174,7 +182,10 @@ def get_tokenizer(model_name_or_path):
     # AutoTokenizer works anyway
     # AutTokenizer gives the following infos: This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. 
     tokenizer_class = AutoTokenizer
-    return tokenizer_class.from_pretrained(model_name_or_path)
+    if model_name_or_path in models_that_require_add_prefix_space:
+        return tokenizer_class.from_pretrained(model_name_or_path, add_prefix_space=True)
+    else:
+        return tokenizer_class.from_pretrained(model_name_or_path)
 
 
 def get_model_class_for_sequence_classification(model_type, model_args=None):

@@ -27,11 +27,19 @@ from models.hierbert import (build_hierarchical_model,
 
 
 
-def make_split(data_args, split_name):
-    ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
+def filter_dataset_by_language(dataset, language):
 
+    if language not in ["all", "multilingual"]:
+        dataset = dataset.filter(lambda x : x["language"]==language)
+    
+    return dataset
+
+
+def make_efficient_split(data_args, split_name, ner_tasks):
+
+    
     if data_args.running_mode == "debug":
-        split_name = split_name + '[:100]'
+            split_name = split_name + '[:100]'
     if data_args.running_mode == "experimental":
         split_name = split_name + '[:5%]'
     
@@ -44,13 +52,79 @@ def make_split(data_args, split_name):
             os.mkdir(data_args.dataset_cache_dir)
 
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                           cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
+                        cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
     
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
     
     if data_args.finetuning_task in ner_tasks:
         dataset = dataset.rename_column("label", "labels")
+
+    dataset = filter_dataset_by_language(dataset, data_args.language)
+
+
+    return dataset
+
+
+def make_split_with_postfiltering(data_args, split_name, ner_tasks):
+
+    
+    if data_args.dataset_cache_dir is None:
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name, 
+            download_mode=data_args.download_mode)
+
+    else:
+        if not os.path.exists(data_args.dataset_cache_dir):
+            os.mkdir(data_args.dataset_cache_dir)
+
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                        cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
+    
+    if bool(re.search('eurlex', data_args.finetuning_task)):
+        dataset = split_into_languages(dataset)
+    
+    if data_args.finetuning_task in ner_tasks:
+        dataset = dataset.rename_column("label", "labels")
+
+    
+    dataset = filter_dataset_by_language(dataset, data_args.language)
+
+
+    if data_args.running_mode == "debug":
+        dataset = dataset.select([n for n in range(0,100)])
+    if data_args.running_mode == "experimental":
+        num_rows_10_percent = int(round(dataset.num_rows*0.1,0))
+        dataset = dataset.select([n for n in range(0,num_rows_10_percent)])
+
+    print(pd.DataFrame(dataset))
+
+    return dataset
+
+
+def make_split(data_args, split_name):
+
+    ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
+
+    multilingual_datasets = ['swiss_judgment_prediction',
+                            'online_terms_of_service_unfairness_level',
+                            'online_terms_of_service_unfairness_category',
+                            'covid19_emergency_event',
+                            'multi_eurlex_level_1',
+                            'multi_eurlex_level_2',
+                            'multi_eurlex_level_3',
+                            'mapa_coarse',
+                            'mapa_fine'
+                            ]
+    
+    
+    if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all", "multilingual"]:
+
+        dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
+
+    else:
+
+        dataset = make_efficient_split(data_args, split_name, ner_tasks)
+
 
     return dataset
 
