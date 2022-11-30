@@ -17,12 +17,18 @@ import wandb_summarizer.download
 class ResultAggregator:
 
 
-    def __init__(self, path_to_csv_export=None):
+    def __init__(self, wandb_api_key=None, path_to_csv_export=None):
         
 
         name_of_log_file = 'logs/loggings_'+datetime.now().isoformat()+'.txt'
+        name_of_log_file = os.path.join(os.path.dirname(__file__), name_of_log_file)
 
         logging.basicConfig(level=logging.DEBUG, filename=name_of_log_file, filemode="a+",format="%(asctime)-15s %(levelname)-8s %(message)s")
+
+        self.wandb_api_key = wandb_api_key
+        
+        if type(wandb_api_key)==str and bool(re.search('\d',wandb_api_key)):
+            os.environ["WANDB_API_KEY"] = self.wandb_api_key
 
         self._path = name_of_log_file
         if path_to_csv_export is None:
@@ -159,10 +165,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.wandb_api_key is not None:
-        os.environ["WANDB_API_KEY"] = args.wandb_api_key
-
-    ra = ResultAggregator()
+    ra = ResultAggregator(wandb_api_key=args.wandb_api_key)
 
     ra.get_info()
 
