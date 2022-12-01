@@ -351,9 +351,9 @@ def generate_command(time_now, **data):
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
     max_seq_len = max_sequence_lengths[task]
-    if language_model in optimal_batch_sizes.keys():
+    try:
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
-    else:
+    except:
         print("The language model ", language_model, "will be considered a monolingual model. Therefore, we revert to the default batch size.")
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
     batch_size = None
