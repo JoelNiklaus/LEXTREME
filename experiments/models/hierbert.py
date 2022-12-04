@@ -10,6 +10,7 @@ from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
 from models.xlm_roberta import HierXLMRobertaForSequenceClassification
+from models.camembert import HierCamembertForSequenceClassification
 
 
 @dataclass
@@ -32,7 +33,7 @@ def sinusoidal_init(num_embeddings: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2']
+supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert']
 
 
 class HierarchicalBert(nn.Module):
@@ -148,6 +149,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             segment_encoder = model.roberta
         elif config.model_type == 'deberta-v2':
             segment_encoder = model.deberta
+        elif config.model_type == 'camembert':
+            segment_encoder = model.roberta
         # Replace flat BERT encoder with hierarchical BERT encoder
         model_encoder = HierarchicalBert(encoder=segment_encoder,
                                          max_segments=max_segments,
@@ -160,6 +163,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             model.roberta = model_encoder
         elif config.model_type == 'deberta-v2':
             model.deberta = model_encoder
+        elif config.model_type == "camembert":
+            model.roberta = model_encoder
     elif config.model_type in ['longformer', 'big_bird']:
         pass
     else:
@@ -194,6 +199,7 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "deberta-v2": HierDebertaV2ForSequenceClassification,
         "roberta": HierRobertaForSequenceClassification,
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
+        "camembert": HierCamembertForSequenceClassification
     }
     if model_args is not None:
         if model_type in model_type_to_model_class.keys() and model_args.hierarchical == True:

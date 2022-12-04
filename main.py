@@ -113,7 +113,7 @@ language_models = {
         },
         "nl": {
             "small": [],
-            "base": ["bert-base-dutch-cased"],
+            "base": ["GroNLP/bert-base-dutch-cased"],
             "large": []
         },
         "pl": {
@@ -486,7 +486,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             if accumulation_steps is None:
                 accumulation_steps = 1
         if language is None:
-            language = model_language_lookup_table[model_name]
+            if model_name in model_language_lookup_table.keys():
+                language = model_language_lookup_table[model_name]
         script_new = generate_command(
             time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
             model_name=model_name,
