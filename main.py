@@ -233,12 +233,12 @@ task_code_mapping = {
     'brazilian_court_decisions_judgment': 'SLTC',
     'brazilian_court_decisions_unanimity': 'SLTC',
     'german_argument_mining': 'SLTC',
-    'greek_legal_code_chapter_level': 'SLTC',
-    'greek_legal_code_subject_level': 'SLTC',
-    'greek_legal_code_volume_level': 'SLTC',
+    'greek_legal_code_chapter': 'SLTC',
+    'greek_legal_code_subject': 'SLTC',
+    'greek_legal_code_volume': 'SLTC',
     'swiss_judgment_prediction': 'SLTC',
     'online_terms_of_service_unfairness_level': 'SLTC',
-    'online_terms_of_service_unfairness_category': 'MLTC',
+    'online_terms_of_service_clause_topics': 'MLTC',
     'covid19_emergency_event': 'MLTC',
     'multi_eurlex_level_1': 'MLTC',
     'multi_eurlex_level_2': 'MLTC',
@@ -255,9 +255,9 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'brazilian_court_decisions_unanimity': 8 * 128,  # 1024
     'covid19_emergency_event': 256,
     'german_argument_mining': 256,
-    'greek_legal_code_chapter_level': 32 * 128,  # 4096
-    'greek_legal_code_subject_level': 32 * 128,  # 4096
-    'greek_legal_code_volume_level': 32 * 128,  # 4096
+    'greek_legal_code_chapter': 32 * 128,  # 4096
+    'greek_legal_code_subject': 32 * 128,  # 4096
+    'greek_legal_code_volume': 32 * 128,  # 4096
     'greek_legal_ner': 512,
     'legalnero': 512,
     'lener_br': 512,
@@ -266,7 +266,7 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'multi_eurlex_level_1': 32 * 128,  # 4096
     'multi_eurlex_level_2': 32 * 128,  # 4096
     'multi_eurlex_level_3': 32 * 128,  # 4096
-    'online_terms_of_service_unfairness_category': 256,
+    'online_terms_of_service_clause_topics': 256,
     'online_terms_of_service_unfairness_level': 256,
     'swiss_judgment_prediction': 16 * 128,  # 2048
 }
