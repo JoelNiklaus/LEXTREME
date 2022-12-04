@@ -149,8 +149,9 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
 
 
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
-    for k in id2label.keys():
-        train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
+    if data_args.running_mode == "default": #Otherwise there might be some errors when filtering by language because of the class imbalance
+        for k in id2label.keys():
+            train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
 
     return train_dataset
 
@@ -171,6 +172,7 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
             majority_id = label_id
 
     datasets = [train_dataset]
+
     num_full_minority_sets = int(majority_len / minority_len)
     for i in range(num_full_minority_sets - 1):  # -1 because one is already included in the training dataset
         datasets.append(label_datasets[minority_id])
