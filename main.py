@@ -197,16 +197,15 @@ optimal_batch_sizes = {
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
     },
     # e.g. V100
-    # TODO test if you can fit larger batch sizes for sequence lengths in [256, 1024, 2048] on this GPU
     32: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 32},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 16},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 16, 2048: 8, 4096: 8},
     },
     # e.g. A100
     80: {
