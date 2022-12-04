@@ -184,6 +184,18 @@ language_models = {
     }  # TODO add more legal models maybe from nllpw: https://nllpw.org/workshop/program/
 }
 
+# Creating a dictionary to look up the language for each language model 
+model_language_lookup_table=dict()
+for k, v in language_models.items():
+    if type(v)==dict:
+        for language, info in v.items():
+            if language == "multilingual":
+                language = "all"
+            for size, models in info.items():
+                for m in models:
+                    model_language_lookup_table[m]=language
+
+
 optimal_batch_sizes = {
     # e.g. RTX 3090
     24: {
@@ -237,7 +249,7 @@ task_code_mapping = {
     'greek_legal_code_subject': 'SLTC',
     'greek_legal_code_volume': 'SLTC',
     'swiss_judgment_prediction': 'SLTC',
-    'online_terms_of_service_unfairness_level': 'SLTC',
+    'online_terms_of_service_unfairness_levels': 'SLTC',
     'online_terms_of_service_clause_topics': 'MLTC',
     'covid19_emergency_event': 'MLTC',
     'multi_eurlex_level_1': 'MLTC',
@@ -267,7 +279,7 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'multi_eurlex_level_2': 32 * 128,  # 4096
     'multi_eurlex_level_3': 32 * 128,  # 4096
     'online_terms_of_service_clause_topics': 256,
-    'online_terms_of_service_unfairness_level': 256,
+    'online_terms_of_service_unfairness_levels': 256,
     'swiss_judgment_prediction': 16 * 128,  # 2048
 }
 
@@ -295,7 +307,7 @@ def generate_command(time_now, **data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
-                        '--language {LANGUAGE}'
+                       '--language {LANGUAGE}'
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + '--dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -473,6 +485,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
         else:
             if accumulation_steps is None:
                 accumulation_steps = 1
+        if language is None:
+            language = model_language_lookup_table[model_name]
         script_new = generate_command(
             time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
             model_name=model_name,
@@ -525,7 +539,7 @@ if __name__ == '__main__':
                              'Caution: this will not work for every task',
                         default=None)
     parser.add_argument('-lang', '--language', help='Define if you want to filter the training dataset by language.',
-                        default='all')
+                        default=None)
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
                         help='Define which kind of language model you would like to use (e.g. xlm-roberta-base); '
