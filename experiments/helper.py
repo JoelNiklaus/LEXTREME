@@ -29,7 +29,7 @@ from models.hierbert import (build_hierarchical_model,
 
 def filter_dataset_by_language(dataset, language):
 
-    if language not in ["all", "multilingual"]:
+    if language not in ["all"]:
         dataset = dataset.filter(lambda x : x["language"]==language)
     
     return dataset
@@ -117,7 +117,7 @@ def make_split(data_args, split_name):
                             ]
     
     
-    if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all", "multilingual"]:
+    if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
 
