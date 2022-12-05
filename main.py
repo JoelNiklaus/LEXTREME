@@ -310,7 +310,7 @@ def generate_command(time_now, **data):
                        '--language {LANGUAGE}'
 
     if data["dataset_cache_dir"] is not None:
-        command_template = command_template + '--dataset_cache_dir {DATASET_CACHE_DIR}'
+        command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
     run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
@@ -411,8 +411,12 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             num_train_epochs = 1  # this dataset is so large, one epoch is enough to save compute
         else:
             num_train_epochs = 50
+            
     if log_directory is None:
         log_directory = 'results/logs_' + str(time_stamp)
+    else:
+        if os.path.isdir(log_directory) == False:
+            os.mkdir(log_directory)
 
     if gpu_number is None:
         gpu_number = [n for n in range(0, torch.cuda.device_count())]
