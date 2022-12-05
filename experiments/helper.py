@@ -89,14 +89,19 @@ def make_split_with_postfiltering(data_args, split_name, ner_tasks):
     
     dataset = filter_dataset_by_language(dataset, data_args.language)
 
+    # When filtering for languages, the amount of data is very small. In those cases, the distinction between debug and experimental may not make sense or
+    # can lead to errors, if, for example, the amount of data is smaller than 100
+    if len(dataset["input"])>1000:
+        if data_args.running_mode == "debug":
+            dataset = dataset.select([n for n in range(0,100)])
+        if data_args.running_mode == "experimental":
+            num_rows_10_percent = int(round(dataset.num_rows*0.1,0))
+            dataset = dataset.select([n for n in range(0,num_rows_10_percent)])
+    
+    elif len(dataset["input"])>100:
+        if data_args.running_mode in ["debug", "experimental"]:
+            dataset = dataset.select([n for n in range(0,100)])
 
-    if data_args.running_mode == "debug":
-        dataset = dataset.select([n for n in range(0,100)])
-    if data_args.running_mode == "experimental":
-        num_rows_10_percent = int(round(dataset.num_rows*0.1,0))
-        dataset = dataset.select([n for n in range(0,num_rows_10_percent)])
-
-    print(pd.DataFrame(dataset))
 
     return dataset
 
@@ -151,7 +156,10 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     if len(id2label.keys())>1: #Otherwise there might be some errors when filtering by language because of the class imbalance
         for k in id2label.keys():
-            train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
+            try:
+                train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
+            except:
+                pass
 
     return train_dataset
 
@@ -725,4 +733,4 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     # if model_args.hierarchical == True:
     # model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-    return model, tokenizer  # , config
+    return model, tokenizer
