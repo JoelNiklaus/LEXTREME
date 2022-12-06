@@ -219,6 +219,7 @@ optimal_batch_sizes = {
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 16, 2048: 8, 4096: 8},
     },
+    # TODO distilbert OOMs for greek_legal_code_subject ==> maybe decrease batch size
     # e.g. A100
     80: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
