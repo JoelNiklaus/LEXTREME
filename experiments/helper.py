@@ -3,6 +3,7 @@ import json as js
 import os
 import re
 from ast import literal_eval
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +26,43 @@ from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
                              get_tokenizer)
 
+
+
+def get_meta_infos():
+    absolute_path = os.path.dirname(__file__)
+    relative_path = '../meta_infos.json'
+    full_path = os.path.join(absolute_path, relative_path)
+    with open(full_path, 'r') as f:
+        meta_infos = js.load(f)
+
+    code_task_mapping = defaultdict(list)
+
+    for k,v in meta_infos["task_code_mapping"].items():
+        code_task_mapping[v].append(k)
+
+    code_task_mapping = dict(code_task_mapping)
+
+    meta_infos["code_task_mapping"]=code_task_mapping
+
+    return meta_infos
+
+
+meta_infos = get_meta_infos()
+
+def return_language_prefix(language, finetuning_task):
+
+    '''
+        In wandb we log the name of the task with a prefix to distinguish the filtered languages.
+        Due to some changes in the code, we use the prefix all_.
+        But in combination with monolingual datasets, we should only use the language-specific abbreviation.
+    '''
+
+    if len(meta_infos["task_language_mapping"][finetuning_task])>1:
+        return language
+    else:
+        return meta_infos["task_language_mapping"][finetuning_task][0]
+
+        
 
 
 def filter_dataset_by_language(dataset, language):
@@ -693,7 +731,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=data_args.language + '_' + data_args.finetuning_task,
+        finetuning_task=return_language_prefix(data_args.language, data_args.finetuning_task) + '_' + data_args.finetuning_task,
         use_auth_token=True if model_args.use_auth_token else None
     )
 
@@ -717,7 +755,7 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=data_args.language + '_' + data_args.finetuning_task,
+        finetuning_task=return_language_prefix(data_args.language, data_args.finetuning_task) + '_' + data_args.finetuning_task,
         use_auth_token=True if model_args.use_auth_token else None
     )
 

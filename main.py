@@ -10,6 +10,7 @@ from itertools import cycle
 from multiprocessing import Pool
 from utils.utilities import remove_old_files
 
+
 import setproctitle
 import torch
 
@@ -436,7 +437,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     if type(list_of_seeds) == list:
         list_of_seeds = [int(s) for s in list_of_seeds if s]
     elif list_of_seeds is None:
-        list_of_seeds = [1, 2, 3, 4, 5]  # run with 3 random seeds by default
+        list_of_seeds = [1, 2, 3]  # run with 3 random seeds by default
     elif type(list_of_seeds) == str:
         list_of_seeds = list_of_seeds.split(',')
         list_of_seeds = [int(s) for s in list_of_seeds if s]
@@ -491,7 +492,9 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 accumulation_steps = 1
         if language is None:
             if model_name in model_language_lookup_table.keys():
-                language = model_language_lookup_table[model_name]
+                if model_language_lookup_table[model_name] != 'all': # all means just the entire dataset, so that we take the default value
+                    language = model_language_lookup_table[model_name]
+
         script_new = generate_command(
             time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
             model_name=model_name,
