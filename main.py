@@ -308,11 +308,14 @@ def generate_command(time_now, **data):
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
-                       '--language {LANGUAGE}'
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} '
+                       
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+
+    if data["language"] is not None:
+        command_template = command_template +' --language {LANGUAGE} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
     run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
