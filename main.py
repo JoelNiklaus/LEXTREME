@@ -211,7 +211,7 @@ optimal_batch_sizes = {
     },
     # e.g. V100
     32: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 32},
+        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
