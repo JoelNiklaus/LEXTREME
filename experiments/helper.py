@@ -734,6 +734,13 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     
     wandb.log(data_args_as_dict)
 
+    # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+    model_args_as_dict = dict()
+    for x in dataclasses.fields(model_args):
+        model_args_as_dict[x.name]=x.default #We will log the finetuning task later with the language_prefix
+    
+    wandb.log(model_args_as_dict)
+
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
     config = AutoConfig.from_pretrained(
