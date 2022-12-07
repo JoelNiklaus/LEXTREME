@@ -1,0 +1,42 @@
+{
+    "task_code_mapping" : {
+        "brazilian_court_decisions_judgment": "SLTC",
+        "brazilian_court_decisions_unanimity": "SLTC",
+        "german_argument_mining": "SLTC",
+        "greek_legal_code_chapter": "SLTC",
+        "greek_legal_code_subject": "SLTC",
+        "greek_legal_code_volume": "SLTC",
+        "swiss_judgment_prediction": "SLTC",
+        "online_terms_of_service_unfairness_levels": "SLTC",
+        "online_terms_of_service_clause_topics": "MLTC",
+        "covid19_emergency_event": "MLTC",
+        "multi_eurlex_level_1": "MLTC",
+        "multi_eurlex_level_2": "MLTC",
+        "multi_eurlex_level_3": "MLTC",
+        "greek_legal_ner": "NER",
+        "legalnero": "NER",
+        "lener_br": "NER",
+        "mapa_coarse": "NER",
+        "mapa_fine": "NER"
+    },
+    "task_language_mapping" : {
+        "brazilian_court_decisions_judgment": ["pt"],
+        "brazilian_court_decisions_unanimity": ["pt"],
+        "german_argument_mining": ["de"],
+        "greek_legal_code_chapter": ["el"],
+        "greek_legal_code_subject": ["el"],
+        "greek_legal_code_volume": ["el"],
+        "swiss_judgment_prediction": ["de", "fr", "it"],
+        "online_terms_of_service_unfairness_levels": ["de", "en", "it", "pl"],
+        "online_terms_of_service_clause_topics": ["de", "en", "it", "pl"],
+        "covid19_emergency_event": ["hu", "it", "pl", "nl", "en", "fr", "nb"],
+        "multi_eurlex_level_1": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
+        "multi_eurlex_level_2": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
+        "multi_eurlex_level_3": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
+        "greek_legal_ner": ["el"],
+        "legalnero": ["ro"],
+        "lener_br": ["pt"],
+        "mapa_coarse": ["it", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "lt", "ga", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"], 
+        "mapa_fine": ["it", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "lt", "ga", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"]
+    }
+}
