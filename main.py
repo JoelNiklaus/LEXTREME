@@ -10,7 +10,6 @@ from itertools import cycle
 from multiprocessing import Pool
 from utils.utilities import remove_old_files
 
-
 import setproctitle
 import torch
 
@@ -186,46 +185,45 @@ language_models = {
 }
 
 # Creating a dictionary to look up the language for each language model 
-model_language_lookup_table=dict()
+model_language_lookup_table = dict()
 for k, v in language_models.items():
-    if type(v)==dict:
+    if type(v) == dict:
         for language, info in v.items():
             if language == "multilingual":
                 language = "all"
             for size, models in info.items():
                 for m in models:
-                    model_language_lookup_table[m]=language
-
+                    model_language_lookup_table[m] = language
 
 # TODO move these completely to meta_infos.json
 optimal_batch_sizes = {
     # e.g. RTX 2080 Ti or GTX 1080 Ti
     # TODO test sizes here
     11: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 1},  # untested
     },
     # TODO test sizes here
     # e.g. P100
     16: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
+        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
     },
     # e.g. RTX 3090
     24: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
@@ -236,7 +234,7 @@ optimal_batch_sizes = {
     },
     # e.g. V100
     32: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
@@ -245,11 +243,23 @@ optimal_batch_sizes = {
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 16, 2048: 8, 4096: 8},
     },
-    # TODO distilbert OOMs for greek_legal_code_subject ==> maybe decrease batch size
+    # TODO test sizes here
+    # e.g. A6000
+    48: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+    },
     # e.g. A100
     80: {
-        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
-        # 'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
+        # 'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
@@ -334,13 +344,12 @@ def generate_command(time_now, **data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} '
-                       
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data["language"] is not None:
-        command_template = command_template +' --language {LANGUAGE} '
+        command_template = command_template + ' --language {LANGUAGE} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
     run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
@@ -395,7 +404,8 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
     try:
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
     except:
-        print("The language model ", language_model, "will be considered a monolingual model. Therefore, we revert to the default batch size.")
+        print("The language model ", language_model, " will be considered a monolingual model. "
+                                                     "Therefore, we revert to the default batch size.")
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
     batch_size = None
     while batch_size is None:
@@ -441,7 +451,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             num_train_epochs = 1  # this dataset is so large, one epoch is enough to save compute
         else:
             num_train_epochs = 50
-            
+
     if log_directory is None:
         log_directory = 'results/logs_' + str(time_stamp)
     else:
@@ -527,7 +537,8 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 accumulation_steps = 1
         if language is None:
             if model_name in model_language_lookup_table.keys():
-                if model_language_lookup_table[model_name] != 'all': # all means just the entire dataset, so that we take the default value
+                # all means just the entire dataset, so that we take the default value
+                if model_language_lookup_table[model_name] != 'all':
                     language = model_language_lookup_table[model_name]
 
         script_new = generate_command(

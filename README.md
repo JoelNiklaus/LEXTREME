@@ -1,5 +1,20 @@
 # LEXTREME: A Multlingual Benchmark Dataset for Legal Language Understanding 
 
+## Setup
+It works best with python 3.9 and torch==1.10.0+cu113. Otherwise we experienced problems with fp16 training and evaluation.
+
+```bash
+# install torch like this to avoid fp16 problems
+pip install torch==1.10.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html 
+pip install -r requirements.txt
+```
+
+In case you get the error `AttributeError: module 'distutils' has no attribute 'version'` (https://github.com/pytorch/pytorch/issues/69894)
+Run 
+```bash
+pip install setuptools==59.5.0
+```
+
 ## Dataset Summary
 [comming soon]
 ## Supported Tasks
@@ -11,7 +26,7 @@
 ### Where are the datasets?
 We provide access to LEXTREME at https://huggingface.co/datasets/joelito/lextreme.  
 
-For example, to load the swiss_judgment_prediction ([Niklaus, Chalkidis, and Stürmer 2021](https://aclanthology.org/2021.nllp-1.3/)) dataset, you first simply install the datasets python library and then make the following call:
+For example, to load the swiss_judgment_prediction ([Niklaus et al. 2021](https://aclanthology.org/2021.nllp-1.3/)) dataset, you first simply install the datasets python library and then make the following call:
 
 ```python
 
