@@ -197,6 +197,7 @@ for k, v in language_models.items():
                     model_language_lookup_table[m]=language
 
 
+# TODO move these completely to meta_infos.json
 optimal_batch_sizes = {
     # e.g. RTX 3090
     24: {
@@ -215,7 +216,7 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 16},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 16, 2048: 8, 4096: 8},
