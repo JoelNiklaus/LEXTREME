@@ -199,6 +199,30 @@ for k, v in language_models.items():
 
 # TODO move these completely to meta_infos.json
 optimal_batch_sizes = {
+    # e.g. RTX 2080 Ti or GTX 1080 Ti
+    # TODO test sizes here
+    11: {
+        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+    },
+    # TODO test sizes here
+    # e.g. P100
+    16: {
+        'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+    },
     # e.g. RTX 3090
     24: {
         'distilbert-base-multilingual-cased': {512: 64, 1024: 64, 2048: 32, 4096: 16},
@@ -454,13 +478,19 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     if len(language_model_info) != 3:  # we got a direct language model just use it
         models_to_be_used = [language_model_type]
     else:  # find out what models we want to run
-        types, languages, sizes = [language_model_info[0]], [language_model_info[1]], [language_model_info[2]]
+        types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
         if 'all' in types:
             types = _TYPES
         if 'all' in languages:
             languages = _LANGUAGES
         if 'all' in sizes:
             sizes = _SIZES
+
+        # expand comma-separated lists
+        types = types.split(',') if ',' in types else [types]
+        languages = languages.split(',') if ',' in languages else [languages]
+        sizes = sizes.split(',') if ',' in sizes else [sizes]
+
         models_to_be_used = []
         for t in types:
             for l in languages:
