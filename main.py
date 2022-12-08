@@ -489,17 +489,19 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
         models_to_be_used = [language_model_type]
     else:  # find out what models we want to run
         types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
+
+        # expand comma-separated lists
+        types = types.split(',') if ',' in types else [types]
+        languages = languages.split(',') if ',' in languages else [languages]
+        sizes = sizes.split(',') if ',' in sizes else [sizes]
+
+        # expand 'all' keywords
         if 'all' in types:
             types = _TYPES
         if 'all' in languages:
             languages = _LANGUAGES
         if 'all' in sizes:
             sizes = _SIZES
-
-        # expand comma-separated lists
-        types = types.split(',') if ',' in types else [types]
-        languages = languages.split(',') if ',' in languages else [languages]
-        sizes = sizes.split(',') if ',' in sizes else [sizes]
 
         models_to_be_used = []
         for t in types:
