@@ -10,7 +10,7 @@ import re
 import sys
 import wandb_summarizer.download
 import numpy as np
-from ast import literal_eval
+from collections import defaultdict
 
 
 
@@ -18,8 +18,12 @@ with open(os.path.abspath("../meta_infos.json"), "r") as f:
     meta_infos = js.load(f)
 
 
+# TODO: Add a function for error analysis, i.e. which looks if there are enough seeds for each task + model
 
 class ResultAggregator:
+
+
+    meta_infos = meta_infos
 
 
     def __init__(self, wandb_api_key=None, path_to_csv_export=None):
@@ -40,6 +44,7 @@ class ResultAggregator:
             results = self.get_wandb_overview()
         else:
             results = pd.read_csv(Path(path_to_csv_export))
+            results = self.edit_result_dataframe(results)
         results = results[results.finetuning_task.isnull()==False]
 
         # When fetching the data from the wandb api it it return state instead of State as column name
@@ -67,13 +72,8 @@ class ResultAggregator:
             project_name="lextreme/paper_results"
         results = wandb_summarizer.download.get_results(project_name=project_name)
         results = pd.DataFrame(results)
-        results = self.edit_column_names_in_df(results)
-        results['language']=results.finetuning_task.apply(lambda x: str(x).split('_')[0])
-        results['finetuning_task']=results.finetuning_task.apply(lambda x: '_'.join(str(x).split('_')[1:]))
-        results['hierarchical']=results.name.apply(self.insert_hierarchical)
-        # Remove all cases where language == nan
-        results = results[results.language!="nan"]
-        results['seed'] = results.seed.apply(lambda x: int(x))
+        results.to_csv("current_wandb_results_unprocessed.csv", index=False)
+        results = self.edit_result_dataframe(results)
         return results
 
     def edit_column_name(self, column_name):
@@ -101,8 +101,43 @@ class ResultAggregator:
         
         return dataframe
 
+    def update_language_specifc_predict_columns(self, dataframe, score = None):
+    
+        """ For monolingual datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score """
+        
+        if score is None:
+            score = 'predict/_macro-f1'
+            
+        all_available_languages_for_training_set = list(dataframe['language'].unique())
+        all_available_languages_for_training_set = [l for l in all_available_languages_for_training_set if l!="all"]
+        
+        for language in all_available_languages_for_training_set:
+            column_name = language + '_'+score
+            indices = dataframe[dataframe.language==language].index.tolist()
+            for i in indices:
+                dataframe.at[i,column_name]=dataframe.at[i, score]
+        
+    
+        return dataframe
+
+    def edit_result_dataframe(self, results):
+        results = self.edit_column_names_in_df(results)
+        all_finetuning_tasks = results.finetuning_task 
+        results['language']= all_finetuning_tasks.apply(lambda x: str(x).split('_')[0])
+        results['finetuning_task']= all_finetuning_tasks.apply(lambda x: '_'.join(str(x).split('_')[1:]))
+        results['hierarchical']=results.name.apply(self.insert_hierarchical)
+        # Remove all cases where language == nan
+        results = results[results.language!="nan"]
+        results['seed'] = results.seed.apply(lambda x: int(x))
+        results = self.update_language_specifc_predict_columns(results)
+
+        return results
+        
+
     def convert_numpy_float_to_python_float(self, value):
-        if isinstance(value, np.floating):
+        if value == np.nan:
+            return ""
+        elif isinstance(value, np.floating):
             return value.item()
         else:
             return value
@@ -110,7 +145,7 @@ class ResultAggregator:
     def get_mean_from_list_of_values(self, list_of_values):
         list_of_values = [x for x in list_of_values if type(x)!=str]
         if len(list_of_values)>0:
-            return mean(list_of_values)
+            return self.convert_numpy_float_to_python_float(mean(list_of_values))
         else:
             return ""
     
@@ -162,6 +197,26 @@ class ResultAggregator:
         return overview_template
 
 
+    def insert_aggregated_score_over_language_models(self, dataframe, column_name="aggregated_score"):
+        
+        dataframe[column_name]=""
+
+        for _name_or_path in dataframe.index.tolist():
+            all_mean_macro_f1_scores =  dataframe.loc[_name_or_path].tolist()
+            all_mean_macro_f1_scores_cleaned = [x for x in all_mean_macro_f1_scores if type(x)!=str]
+            if all_mean_macro_f1_scores_cleaned!=all_mean_macro_f1_scores:
+                logging.warning('Attention! There are string values for your score!')
+
+            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
+            dataframe.at[_name_or_path,column_name]=all_mean_macro_f1_scores_mean
+
+        columns = dataframe.columns.tolist()
+        first_columns = [column_name]
+        dataframe = dataframe[first_columns+[col for col in columns if col not in first_columns]]
+
+        return dataframe
+
+
     def insert_config_average_scores(self, overview_template, available_predict_scores=None):
 
         logging.info("*** Calculating average scores ***")
@@ -180,10 +235,10 @@ class ResultAggregator:
                     # If not, we can process with the normal predict/_macro-f1 that stands for the entire config
                     # If yes, we loop through all avalaible language-specific macro-f1 scores
 
-                    if len(meta_infos["task_language_mapping"][finetuning_task])==1:
+                    if len(self.meta_infos["task_language_mapping"][finetuning_task])==1:
                         mean_macro_f1_score = self.get_average_score(finetuning_task, _name_or_path)
                     
-                    elif len(meta_infos["task_language_mapping"][finetuning_task])>1:
+                    elif len(self.meta_infos["task_language_mapping"][finetuning_task])>1:
                         predict_language_mean_collected = list()
                         predict_language_collected = list()
 
@@ -198,11 +253,11 @@ class ResultAggregator:
                                 # TODO: Add logger informartion
                                 
                         if len(predict_language_mean_collected)>0:
-                            if set(predict_language_collected) != set(meta_infos["task_language_mapping"][finetuning_task]):
+                            if set(predict_language_collected) != set(self.meta_infos["task_language_mapping"][finetuning_task]):
                                 logging.error("We do not have the prediction results for all languages for finetuning task "+finetuning_task+" with language model " +_name_or_path)
                                 logging.info("We have results for the following languages: " + ", ".join(sorted(predict_language_collected)))
-                                logging.info("But we need results for the following languages: " + ", ".join(sorted(meta_infos["task_language_mapping"][finetuning_task])))
-                                logging.info("The the results for the following language(s) are mssing: " + ', '.join([l for l in meta_infos["task_language_mapping"][finetuning_task] if l not in predict_language_collected]))
+                                logging.info("But we need results for the following languages: " + ", ".join(sorted(self.meta_infos["task_language_mapping"][finetuning_task])))
+                                logging.info("The the results for the following language(s) are mssing: " + ', '.join([l for l in self.meta_infos["task_language_mapping"][finetuning_task] if l not in predict_language_collected]))
 
                             mean_macro_f1_score = self.get_mean_from_list_of_values(predict_language_mean_collected)
                         else:
@@ -212,12 +267,12 @@ class ResultAggregator:
                         
 
 
-        if overview_template.isnull().values.any():
-            logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
-            overview_template.fillna(0.0, inplace=True)
+        #if overview_template.isnull().values.any():
+            #logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
+            #overview_template.fillna("", inplace=True)
 
         
-        overview_template = self.convert_numpy_float_to_python_float(overview_template)
+        overview_template = overview_template
 
 
 
@@ -234,20 +289,7 @@ class ResultAggregator:
         elif average_over_language == True:
             self.insert_config_average_scores(self.config_aggregated_score, available_predict_scores)
 
-        self.config_aggregated_score['config_aggregate_score']=''
-
-        for _name_or_path in self.config_aggregated_score.index.tolist():
-            all_mean_macro_f1_scores =  self.config_aggregated_score.loc[_name_or_path].tolist()
-            all_mean_macro_f1_scores_cleaned = [x for x in all_mean_macro_f1_scores if type(x)!=str]
-            if all_mean_macro_f1_scores_cleaned!=all_mean_macro_f1_scores:
-                logging.warning('Attention! There are string values for your score!')
-                
-            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
-            self.config_aggregated_score.at[_name_or_path,'config_aggregate_score']=all_mean_macro_f1_scores_mean
-
-        columns = self.config_aggregated_score.columns.tolist()
-        first_columns = ['config_aggregate_score']
-        self.config_aggregated_score = self.config_aggregated_score[first_columns+[col for col in columns if col not in first_columns]]
+        self.config_aggregated_score = self.insert_aggregated_score_over_language_models(self.config_aggregated_score)
         
         if write_to_csv:
             if average_over_language==False:
@@ -260,12 +302,12 @@ class ResultAggregator:
 
         self.get_config_aggregated_score(average_over_language=average_over_language, write_to_csv=write_to_csv)
 
-        columns = list(meta_infos["dataset_to_config"].keys())
+        columns = list(self.meta_infos["dataset_to_config"].keys())
 
         self.dataset_aggregated_score = self.create_template(columns=columns)
 
         for _name_or_path in self.results._name_or_path.unique():
-            for dataset, configs in meta_infos["dataset_to_config"].items():
+            for dataset, configs in self.meta_infos["dataset_to_config"].items():
                 dataset_mean = list()
                 for conf in configs:
                     config_mean = self.config_aggregated_score.at[_name_or_path, conf]
@@ -284,25 +326,8 @@ class ResultAggregator:
                     dataset_mean = ''
                 self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
-        
-        self.dataset_aggregated_score['dataset_aggregate_score']=''
-
-        for _name_or_path in self.dataset_aggregated_score.index.tolist():
-            dataset_all_scores = self.dataset_aggregated_score.loc[_name_or_path].tolist()
-            dataset_all_scores = [float(x) for x in dataset_all_scores if x != 0.0 and x != ""]
-            if len(dataset_all_scores)>0:
-                dataset_aggregate_score = self.get_mean_from_list_of_values(dataset_all_scores)
-            else:
-                dataset_aggregate_score = ""
-            
-            self.dataset_aggregated_score.at[_name_or_path, 'dataset_aggregate_score'] = dataset_aggregate_score
-
-        columns = self.dataset_aggregated_score.columns.tolist()
-        first_columns = ['dataset_aggregate_score']
-        self.dataset_aggregated_score = self.dataset_aggregated_score[first_columns+[col for col in columns if col not in first_columns]]
-
-
-
+        self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(self.dataset_aggregated_score)
+    
         if write_to_csv:
             if average_over_language==False:
                 self.dataset_aggregated_score.to_csv('dataset_aggregated_scores_simple.csv')
@@ -310,12 +335,82 @@ class ResultAggregator:
                 self.dataset_aggregated_score.to_csv('dataset_aggregated_scores_average_over_language.csv')
 
 
+    
+    def get_aggregated_score_for_language(self, score_type):
+        
+        tasks_relevant_for_language = list(self.results[self.results[score_type].isnull()==False].finetuning_task.unique())
+        languge_models_relevant_for_language = list(self.results[self.results[score_type].isnull()==False]["_name_or_path"].unique())
+        tasks_relevant_for_language
 
 
+        # Collect all average scores for each config grouped by dataset
+        language_model_config_score_dict = defaultdict(dict)
+        for ft in tasks_relevant_for_language: 
+            for lm in languge_models_relevant_for_language:
+                result = self.get_average_score(ft, lm, score_type)
+                if result not in ["", np.nan]:
+                    dataset_for_finetuning_task = self.meta_infos['config_to_dataset'][ft]
+                    if dataset_for_finetuning_task not in language_model_config_score_dict[lm].keys():
+                        language_model_config_score_dict[lm][dataset_for_finetuning_task]=list()
+                    language_model_config_score_dict[lm][dataset_for_finetuning_task].append(result)
 
+
+        language_model_config_score_dict = dict(language_model_config_score_dict)
+
+        # Average over configs per dataset
+        results_averaged_over_configs = defaultdict(dict)
+
+        for language_model, dataset_and_config_scores in language_model_config_score_dict.items():
+            for dataset, config_scores in dataset_and_config_scores.items():
+                results_averaged_over_configs[language_model][dataset]=self.get_mean_from_list_of_values(config_scores)
+
+        results_averaged_over_configs = dict(results_averaged_over_configs)
+
+
+        # Average over datasets within language model
+
+        results_averaged_over_datasets = dict()
+
+        for language_model, dataset_and_score in results_averaged_over_configs.items():
+            results_averaged_over_datasets[language_model]=self.get_mean_from_list_of_values(list(dataset_and_score.values()))
+
+        results_averaged_over_datasets = dict(results_averaged_over_datasets)
+        
+        return results_averaged_over_datasets
+
+    
+    def get_language_aggregated_score(self, write_to_csv=True):
+
+        all_languages = set()
+
+        for languages in self.meta_infos['task_language_mapping'].values():
+            for l in languages:
+                all_languages.add(l)
+
+        self.language_aggregated_score = self.create_template(all_languages)
+        
+        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_macro-f1',col))]
+        available_predict_scores = sorted(available_predict_scores)
+
+        for score_type in available_predict_scores:
+            language = score_type.split('_')[0]
+            lookup_table = self.get_aggregated_score_for_language(score_type)
+            for language_model, score in lookup_table.items():
+                self.language_aggregated_score.at[language_model,language]=score
+
+        self.language_aggregated_score = self.insert_aggregated_score_over_language_models(self.language_aggregated_score)
+
+        if write_to_csv:
+            self.language_aggregated_score.to_csv('language_aggregated_scores.csv')
 
 
         
+        
+
+    
+    
+            
+            
 
 
 
