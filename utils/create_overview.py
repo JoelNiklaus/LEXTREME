@@ -298,7 +298,7 @@ class ResultAggregator:
                 self.config_aggregated_score.to_csv('config_aggregated_scores_average_over_language.csv')
 
 
-    def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True):
+    def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint=None):
 
         self.get_config_aggregated_score(average_over_language=average_over_language, write_to_csv=write_to_csv)
 
@@ -308,6 +308,9 @@ class ResultAggregator:
 
         for _name_or_path in self.results._name_or_path.unique():
             for dataset, configs in self.meta_infos["dataset_to_config"].items():
+                if task_constraint is not None:
+                    configs = [conf for conf in configs if conf in task_constraint]
+                    
                 dataset_mean = list()
                 for conf in configs:
                     config_mean = self.config_aggregated_score.at[_name_or_path, conf]
@@ -336,9 +339,13 @@ class ResultAggregator:
 
 
     
-    def get_aggregated_score_for_language(self, score_type):
+    def get_aggregated_score_for_language(self, score_type, task_constraint=None):
         
         tasks_relevant_for_language = list(self.results[self.results[score_type].isnull()==False].finetuning_task.unique())
+
+        if task_constraint is not None:
+            tasks_relevant_for_language = [t for t in tasks_relevant_for_language if t in task_constraint]
+
         languge_models_relevant_for_language = list(self.results[self.results[score_type].isnull()==False]["_name_or_path"].unique())
         tasks_relevant_for_language
 
@@ -379,7 +386,7 @@ class ResultAggregator:
         return results_averaged_over_datasets
 
     
-    def get_language_aggregated_score(self, write_to_csv=True):
+    def get_language_aggregated_score(self, write_to_csv=True, task_constraint=None):
 
         all_languages = set()
 
@@ -394,7 +401,7 @@ class ResultAggregator:
 
         for score_type in available_predict_scores:
             language = score_type.split('_')[0]
-            lookup_table = self.get_aggregated_score_for_language(score_type)
+            lookup_table = self.get_aggregated_score_for_language(score_type, task_constraint)
             for language_model, score in lookup_table.items():
                 self.language_aggregated_score.at[language_model,language]=score
 
