@@ -212,8 +212,8 @@
         "greek_legal_ner": "greek_legal_ner",
         "legalnero": "legalnero",
         "lener_br": "lener_br",
-        "mapa_coarse": "mapa_coarse",
-        "mapa_fine": "mapa_fine"
+        "mapa_coarse": "mapa",
+        "mapa_fine": "mapa"
     },
     "dataset_to_config": {
         "brazilian_court_decisions": [
@@ -252,10 +252,8 @@
         "lener_br": [
             "lener_br"
         ],
-        "mapa_coarse": [
-            "mapa_coarse"
-        ],
-        "mapa_fine": [
+        "mapa": [
+            "mapa_coarse",
             "mapa_fine"
         ]
     }
