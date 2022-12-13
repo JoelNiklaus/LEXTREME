@@ -132,7 +132,7 @@ class ResultAggregator:
             logging.error('Attention! It seems you do not have the required seeds 1,2,3 for the finetuning task '+finetuning_task+' with the model '+_name_or_path+ '. The average score will be calculated on the basis of incomplete information.')
 
         if len(results_filtered.seed.tolist())==0:
-            
+            logging.info('It seems you have duplicate seeds task '+finetuning_task+' with the model '+_name_or_path+ " has no meaningful results.")
             return "" # There is nothing to be calculated
         else:
             mean_value = results_filtered[score].mean()
@@ -192,12 +192,11 @@ class ResultAggregator:
                             language = aps.split('_')[0]
                             predict_language_mean = self.get_average_score(finetuning_task,_name_or_path,aps)
                             if predict_language_mean not in ["", np.nan]: # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
-                                #print("language mean: ", predict_language_mean)
-                                print("Mean for", _name_or_path, finetuning_task, language,'value is: ',predict_language_mean)
                                 predict_language_mean_collected.append(predict_language_mean)
                                 predict_language_collected.append(language)
-                            else:
-                                print("No mean for", _name_or_path, finetuning_task, language,'value is: ',predict_language_mean)
+                            #else:
+                                # TODO: Add logger informartion
+                                
                         if len(predict_language_mean_collected)>0:
                             if set(predict_language_collected) != set(meta_infos["task_language_mapping"][finetuning_task]):
                                 logging.error("We do not have the prediction results for all languages for finetuning task "+finetuning_task+" with language model " +_name_or_path)
