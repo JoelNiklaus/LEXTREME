@@ -1,5 +1,5 @@
 {
-    "task_code_mapping" : {
+    "task_code_mapping": {
         "brazilian_court_decisions_judgment": "SLTC",
         "brazilian_court_decisions_unanimity": "SLTC",
         "german_argument_mining": "SLTC",
@@ -19,24 +19,244 @@
         "mapa_coarse": "NER",
         "mapa_fine": "NER"
     },
-    "task_language_mapping" : {
-        "brazilian_court_decisions_judgment": ["pt"],
-        "brazilian_court_decisions_unanimity": ["pt"],
-        "german_argument_mining": ["de"],
-        "greek_legal_code_chapter": ["el"],
-        "greek_legal_code_subject": ["el"],
-        "greek_legal_code_volume": ["el"],
-        "swiss_judgment_prediction": ["de", "fr", "it"],
-        "online_terms_of_service_unfairness_levels": ["de", "en", "it", "pl"],
-        "online_terms_of_service_clause_topics": ["de", "en", "it", "pl"],
-        "covid19_emergency_event": ["hu", "it", "pl", "nl", "en", "fr", "nb"],
-        "multi_eurlex_level_1": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
-        "multi_eurlex_level_2": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
-        "multi_eurlex_level_3": ["it", "pl", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "sl", "lt", "hr", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"],
-        "greek_legal_ner": ["el"],
-        "legalnero": ["ro"],
-        "lener_br": ["pt"],
-        "mapa_coarse": ["it", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "lt", "ga", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"], 
-        "mapa_fine": ["it", "sk", "mt", "es", "en", "el", "de", "pt", "ro", "lt", "ga", "fi", "bg", "nl", "fr", "et", "hu", "lv", "da", "cs", "sv"]
+    "task_language_mapping": {
+        "brazilian_court_decisions_judgment": [
+            "pt"
+        ],
+        "brazilian_court_decisions_unanimity": [
+            "pt"
+        ],
+        "german_argument_mining": [
+            "de"
+        ],
+        "greek_legal_code_chapter": [
+            "el"
+        ],
+        "greek_legal_code_subject": [
+            "el"
+        ],
+        "greek_legal_code_volume": [
+            "el"
+        ],
+        "swiss_judgment_prediction": [
+            "de",
+            "fr",
+            "it"
+        ],
+        "online_terms_of_service_unfairness_levels": [
+            "de",
+            "en",
+            "it",
+            "pl"
+        ],
+        "online_terms_of_service_clause_topics": [
+            "de",
+            "en",
+            "it",
+            "pl"
+        ],
+        "covid19_emergency_event": [
+            "hu",
+            "it",
+            "pl",
+            "nl",
+            "en",
+            "fr",
+            "nb"
+        ],
+        "multi_eurlex_level_1": [
+            "it",
+            "pl",
+            "sk",
+            "mt",
+            "es",
+            "en",
+            "el",
+            "de",
+            "pt",
+            "ro",
+            "sl",
+            "lt",
+            "hr",
+            "fi",
+            "bg",
+            "nl",
+            "fr",
+            "et",
+            "hu",
+            "lv",
+            "da",
+            "cs",
+            "sv"
+        ],
+        "multi_eurlex_level_2": [
+            "it",
+            "pl",
+            "sk",
+            "mt",
+            "es",
+            "en",
+            "el",
+            "de",
+            "pt",
+            "ro",
+            "sl",
+            "lt",
+            "hr",
+            "fi",
+            "bg",
+            "nl",
+            "fr",
+            "et",
+            "hu",
+            "lv",
+            "da",
+            "cs",
+            "sv"
+        ],
+        "multi_eurlex_level_3": [
+            "it",
+            "pl",
+            "sk",
+            "mt",
+            "es",
+            "en",
+            "el",
+            "de",
+            "pt",
+            "ro",
+            "sl",
+            "lt",
+            "hr",
+            "fi",
+            "bg",
+            "nl",
+            "fr",
+            "et",
+            "hu",
+            "lv",
+            "da",
+            "cs",
+            "sv"
+        ],
+        "greek_legal_ner": [
+            "el"
+        ],
+        "legalnero": [
+            "ro"
+        ],
+        "lener_br": [
+            "pt"
+        ],
+        "mapa_coarse": [
+            "it",
+            "sk",
+            "mt",
+            "es",
+            "en",
+            "el",
+            "de",
+            "pt",
+            "ro",
+            "lt",
+            "ga",
+            "fi",
+            "bg",
+            "nl",
+            "fr",
+            "et",
+            "hu",
+            "lv",
+            "da",
+            "cs",
+            "sv"
+        ],
+        "mapa_fine": [
+            "it",
+            "sk",
+            "mt",
+            "es",
+            "en",
+            "el",
+            "de",
+            "pt",
+            "ro",
+            "lt",
+            "ga",
+            "fi",
+            "bg",
+            "nl",
+            "fr",
+            "et",
+            "hu",
+            "lv",
+            "da",
+            "cs",
+            "sv"
+        ]
+    },
+    "config_to_dataset": {
+        "brazilian_court_decisions_judgment": "brazilian_court_decisions",
+        "brazilian_court_decisions_unanimity": "brazilian_court_decisions",
+        "german_argument_mining": "german_argument_mining",
+        "greek_legal_code_chapter": "greek_legal_code",
+        "greek_legal_code_subject": "greek_legal_code",
+        "greek_legal_code_volume": "greek_legal_code",
+        "swiss_judgment_prediction": "swiss_judgment_prediction",
+        "online_terms_of_service_unfairness_levels": "online_terms_of_service",
+        "online_terms_of_service_clause_topics": "online_terms_of_service",
+        "covid19_emergency_event": "covid19_emergency_event",
+        "multi_eurlex_level_1": "multi_eurlex_level",
+        "multi_eurlex_level_2": "multi_eurlex_level",
+        "multi_eurlex_level_3": "multi_eurlex_level",
+        "greek_legal_ner": "greek_legal_ner",
+        "legalnero": "legalnero",
+        "lener_br": "lener_br",
+        "mapa_coarse": "mapa_coarse",
+        "mapa_fine": "mapa_fine"
+    },
+    "dataset_to_config": {
+        "brazilian_court_decisions": [
+            "brazilian_court_decisions_judgment",
+            "brazilian_court_decisions_unanimity"
+        ],
+        "german_argument_mining": [
+            "german_argument_mining"
+        ],
+        "greek_legal_code": [
+            "greek_legal_code_chapter",
+            "greek_legal_code_subject",
+            "greek_legal_code_volume"
+        ],
+        "swiss_judgment_prediction": [
+            "swiss_judgment_prediction"
+        ],
+        "online_terms_of_service": [
+            "online_terms_of_service_unfairness_levels",
+            "online_terms_of_service_clause_topics"
+        ],
+        "covid19_emergency_event": [
+            "covid19_emergency_event"
+        ],
+        "multi_eurlex_level": [
+            "multi_eurlex_level_1",
+            "multi_eurlex_level_2",
+            "multi_eurlex_level_3"
+        ],
+        "greek_legal_ner": [
+            "greek_legal_ner"
+        ],
+        "legalnero": [
+            "legalnero"
+        ],
+        "lener_br": [
+            "lener_br"
+        ],
+        "mapa_coarse": [
+            "mapa_coarse"
+        ],
+        "mapa_fine": [
+            "mapa_fine"
+        ]
     }
 }
