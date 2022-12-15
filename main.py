@@ -24,166 +24,15 @@ _LANGUAGES = ['bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'ga', 
 _SIZES = ['small', 'base', 'large']
 
 # TODO look if there are other models available that we want to run: e.g. small or large ones
+# TODO add more legal models maybe from nllpw: https://nllpw.org/workshop/program/
 # HERE many models are reported: https://arxiv.org/pdf/2109.00904.pdf
-language_models = {
-    "general": {
-        "bg": {
-            "small": [],
-            "base": ["iarfmoose/roberta-base-bulgarian"],
-            "large": []
-        },
-        "cs": {
-            "small": [],
-            "base": ["UWB-AIR/Czert-B-base-cased"],
-            "large": []
-        },
-        "da": {
-            "small": [],
-            "base": ["Maltehb/danish-bert-botxo"],
-            "large": []
-        },
-        "de": {
-            "small": [],
-            "base": ["dbmdz/bert-base-german-cased", "deepset/gbert-base"],
-            "large": []
-        },
-        "el": {
-            "small": [],
-            "base": ["nlpaueb/bert-base-greek-uncased-v1"],
-            "large": []
-        },
-        "en": {
-            "small": [],
-            "base": ["roberta-base"],  # TODO maybe test more etc.
-            "large": []
-        },
-        "es": {
-            "small": [],
-            "base": ["bertin-project/bertin-roberta-base-spanish", "PlanTL-GOB-ES/roberta-base-bne", "BSC-TeMU/roberta-base-bne"],
-            "large": []
-        },
-        "et": {
-            "small": [],
-            "base": ["tartuNLP/EstBERT"],
-            "large": []
-        },
-        "fi": {
-            "small": [],
-            "base": ["TurkuNLP/bert-base-finnish-cased-v1"],
-            "large": []
-        },
-        "fr": {
-            "small": [],
-            "base": ["camembert-base", "dbmdz/bert-base-french-europeana-cased"],
-            "large": []
-        },
-        "ga": {
-            "small": [],
-            "base": ["DCU-NLP/bert-base-irish-cased-v1"],
-            "large": []
-        },
-        "hr": {
-            "small": [],
-            "base": [],
-            "large": []
-        },
-        "hu": {
-            "small": [],
-            "base": ["SZTAKI-HLT/hubert-base-cc"],
-            "large": []
-        },
-        "it": {
-            "small": [],
-            "base": ["Musixmatch/umberto-commoncrawl-cased-v1", "dbmdz/bert-base-italian-cased"],
-            "large": []
-        },
-        "lt": {
-            "small": [],
-            "base": [],
-            "large": []
-        },
-        "lv": {
-            "small": [],
-            "base": [],
-            "large": []
-        },
-        "mt": {
-            "small": [],
-            "base": [],
-            "large": []
-        },
-        "nl": {
-            "small": [],
-            "base": ["GroNLP/bert-base-dutch-cased", "pdelobelle/robbert-v2-dutch-base"],
-            "large": []
-        },
-        "pl": {
-            "small": [],
-            "base": ["dkleczek/bert-base-polish-uncased-v1"],
-            "large": []
-        },
-        "pt": {
-            "small": [],
-            "base": ["neuralmind/bert-base-portuguese-cased"],
-            "large": []
-        },
-        "ro": {
-            "small": [],
-            "base": ["dumitrescustefan/bert-base-romanian-uncased-v1"],
-            "large": []
-        },
-        "sk": {
-            "small": [],
-            "base": ["gerulata/slovakbert"],
-            "large": []
-        },
-        "sl": {
-            "small": [],
-            "base": [],
-            "large": []
-        },
-        "sv": {
-            "small": [],
-            "base": ["KB/bert-base-swedish-cased"],
-            "large": []
-        },
-        "multilingual": {
-            "small": [
-                "distilbert-base-multilingual-cased",
-                "microsoft/Multilingual-MiniLM-L12-H384",
-            ],
-            "base": [
-                "xlm-roberta-base",
-                "microsoft/mdeberta-v3-base",
-            ],
-            "large": [
-                "xlm-roberta-large",
-            ]
-        },
-    },
-    "legal": {
-        "it": {
-            "small": [],
-            "base": ["dlicari/Italian-Legal-BERT"],
-            "large": []
-        },
-        "ro": {
-            "small": [],
-            "base": ["readerbench/jurBERT-base"],
-            "large": []
-        },
-        "en": {
-            "small": [],
-            "base": ["zlucia/custom-legalbert", "nlpaueb/legal-bert-base-uncased"],
-            "large": []
-        },
-        "es": {
-            "small": [],
-            "base": ["PlanTL-GOB-ES/RoBERTalex"],
-            "large": []
-        },
-    }  # TODO add more legal models maybe from nllpw: https://nllpw.org/workshop/program/
-}
+
+with open('meta_infos.json', 'r') as f:
+    meta_infos = js.load(f)
+
+language_models = meta_infos["language_models"]
+
+
 
 # Creating a dictionary to look up the language for each language model 
 model_language_lookup_table = dict()
@@ -279,26 +128,7 @@ optimal_batch_sizes = {
 # SLTC: Single Class Text Classification
 # MLTC: Multi Class Text Classification
 # NER: Named Entity Recognition
-task_code_mapping = {
-    'brazilian_court_decisions_judgment': 'SLTC',
-    'brazilian_court_decisions_unanimity': 'SLTC',
-    'german_argument_mining': 'SLTC',
-    'greek_legal_code_chapter': 'SLTC',
-    'greek_legal_code_subject': 'SLTC',
-    'greek_legal_code_volume': 'SLTC',
-    'swiss_judgment_prediction': 'SLTC',
-    'online_terms_of_service_unfairness_levels': 'SLTC',
-    'online_terms_of_service_clause_topics': 'MLTC',
-    'covid19_emergency_event': 'MLTC',
-    'multi_eurlex_level_1': 'MLTC',
-    'multi_eurlex_level_2': 'MLTC',
-    'multi_eurlex_level_3': 'MLTC',
-    'greek_legal_ner': 'NER',
-    'legalnero': 'NER',
-    'lener_br': 'NER',
-    'mapa_coarse': 'NER',
-    'mapa_fine': 'NER',
-}
+task_code_mapping = meta_infos["task_code_mapping"]
 
 max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'brazilian_court_decisions_judgment': 8 * 128,  # 1024
@@ -443,6 +273,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     preprocessing_num_workers = int(preprocessing_num_workers)
 
     batch_size_to_be_found = True if batch_size is None else False
+    language_to_be_found = True if language is None else False
 
     if num_train_epochs is None:
         if 'multi_eurlex' in task:
@@ -554,6 +385,9 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
             preprocessing_num_workers=preprocessing_num_workers,
             dataset_cache_dir=dataset_cache_dir
         )
+        if language_to_be_found:
+            language = None # Set language back to None
+        
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None

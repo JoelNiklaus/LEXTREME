@@ -268,7 +268,9 @@
             },
             "cs": {
                 "small": [],
-                "base": [],
+                "base": [
+                    "UWB-AIR/Czert-B-base-cased"
+                ],
                 "large": []
             },
             "da": {
@@ -304,13 +306,16 @@
                 "small": [],
                 "base": [
                     "bertin-project/bertin-roberta-base-spanish",
-                    "PlanTL-GOB-ES/roberta-base-bne"
+                    "PlanTL-GOB-ES/roberta-base-bne",
+                    "BSC-TeMU/roberta-base-bne"
                 ],
                 "large": []
             },
             "et": {
                 "small": [],
-                "base": [],
+                "base": [
+                    "tartuNLP/EstBERT"
+                ],
                 "large": []
             },
             "fi": {
@@ -342,7 +347,9 @@
             },
             "hu": {
                 "small": [],
-                "base": [],
+                "base": [
+                    "SZTAKI-HLT/hubert-base-cc"
+                ],
                 "large": []
             },
             "it": {
@@ -371,7 +378,8 @@
             "nl": {
                 "small": [],
                 "base": [
-                    "GroNLP/bert-base-dutch-cased"
+                    "GroNLP/bert-base-dutch-cased",
+                    "pdelobelle/robbert-v2-dutch-base"
                 ],
                 "large": []
             },
@@ -460,37 +468,5 @@
                 "large": []
             }
         }
-    },
-    "model_language_lookup_table": {
-        "iarfmoose/roberta-base-bulgarian": "bg",
-        "Maltehb/danish-bert-botxo": "da",
-        "dbmdz/bert-base-german-cased": "de",
-        "deepset/gbert-base": "de",
-        "nlpaueb/bert-base-greek-uncased-v1": "el",
-        "roberta-base": "en",
-        "bertin-project/bertin-roberta-base-spanish": "es",
-        "PlanTL-GOB-ES/roberta-base-bne": "es",
-        "TurkuNLP/bert-base-finnish-cased-v1": "fi",
-        "camembert-base": "fr",
-        "dbmdz/bert-base-french-europeana-cased": "fr",
-        "DCU-NLP/bert-base-irish-cased-v1": "ga",
-        "Musixmatch/umberto-commoncrawl-cased-v1": "it",
-        "dbmdz/bert-base-italian-cased": "it",
-        "GroNLP/bert-base-dutch-cased": "nl",
-        "dkleczek/bert-base-polish-uncased-v1": "pl",
-        "neuralmind/bert-base-portuguese-cased": "pt",
-        "dumitrescustefan/bert-base-romanian-uncased-v1": "ro",
-        "gerulata/slovakbert": "sk",
-        "KB/bert-base-swedish-cased": "sv",
-        "distilbert-base-multilingual-cased": "all",
-        "microsoft/Multilingual-MiniLM-L12-H384": "all",
-        "xlm-roberta-base": "all",
-        "microsoft/mdeberta-v3-base": "all",
-        "xlm-roberta-large": "all",
-        "dlicari/Italian-Legal-BERT": "it",
-        "readerbench/jurBERT-base": "ro",
-        "zlucia/custom-legalbert": "en",
-        "nlpaueb/legal-bert-base-uncased": "en",
-        "PlanTL-GOB-ES/RoBERTalex": "es"
     }
 }
