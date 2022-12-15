@@ -24,6 +24,7 @@ _LANGUAGES = ['bg', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'ga', 
 _SIZES = ['small', 'base', 'large']
 
 # TODO look if there are other models available that we want to run: e.g. small or large ones
+# HERE many models are reported: https://arxiv.org/pdf/2109.00904.pdf
 language_models = {
     "general": {
         "bg": {
@@ -33,7 +34,7 @@ language_models = {
         },
         "cs": {
             "small": [],
-            "base": [],
+            "base": ["UWB-AIR/Czert-B-base-cased"],
             "large": []
         },
         "da": {
@@ -58,12 +59,12 @@ language_models = {
         },
         "es": {
             "small": [],
-            "base": ["bertin-project/bertin-roberta-base-spanish", "PlanTL-GOB-ES/roberta-base-bne"],
+            "base": ["bertin-project/bertin-roberta-base-spanish", "PlanTL-GOB-ES/roberta-base-bne", "BSC-TeMU/roberta-base-bne"],
             "large": []
         },
         "et": {
             "small": [],
-            "base": [],
+            "base": ["tartuNLP/EstBERT"],
             "large": []
         },
         "fi": {
@@ -88,7 +89,7 @@ language_models = {
         },
         "hu": {
             "small": [],
-            "base": [],
+            "base": ["SZTAKI-HLT/hubert-base-cc"],
             "large": []
         },
         "it": {
@@ -113,7 +114,7 @@ language_models = {
         },
         "nl": {
             "small": [],
-            "base": ["GroNLP/bert-base-dutch-cased"],
+            "base": ["GroNLP/bert-base-dutch-cased", "pdelobelle/robbert-v2-dutch-base"],
             "large": []
         },
         "pl": {
@@ -441,10 +442,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
 
     preprocessing_num_workers = int(preprocessing_num_workers)
 
-    if batch_size is None:
-        batch_size_to_be_found = True
-    else:
-        batch_size_to_be_found = False
+    batch_size_to_be_found = True if batch_size is None else False
 
     if num_train_epochs is None:
         if 'multi_eurlex' in task:
