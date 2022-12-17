@@ -18,6 +18,18 @@ from copy import deepcopy
 with open(os.path.abspath("../meta_infos.json"), "r") as f:
     meta_infos = js.load(f)
 
+# Creating a dictionary to look up the language for each language model 
+model_language_lookup_table = dict()
+for k, v in meta_infos["language_models"].items():
+    if type(v) == dict:
+        for language, info in v.items():
+            if language == "multilingual":
+                language = "all"
+            for size, models in info.items():
+                for m in models:
+                    model_language_lookup_table[m] = language
+
+meta_infos["model_language_lookup_table"]=model_language_lookup_table
 
 # TODO: Add a function for error analysis, i.e. which looks if there are enough seeds for each task + model
 
@@ -61,6 +73,7 @@ class ResultAggregator:
         self._path = name_of_log_file
         if path_to_csv_export is None:
             results = self.get_wandb_overview()
+            results.to_csv("current_wandb_results_unprocessed.csv", index=False)
         else:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results)
@@ -150,8 +163,11 @@ class ResultAggregator:
         return dataframe
 
     def language_and_model_match(self, language_model, language):
-
-        return self.meta_infos["model_language_lookup_table"][language_model]==language
+        
+        if self.meta_infos["model_language_lookup_table"][language_model]=="all":
+            return True
+        else:
+            return self.meta_infos["model_language_lookup_table"][language_model]==language
 
     def check_for_model_language_consistency(self, dataframe):
         
