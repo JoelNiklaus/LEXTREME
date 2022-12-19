@@ -229,7 +229,6 @@ class ResultAggregator:
                 if rm not in available_models:
                     message = "For task "+task+" in combination with the language "+self.meta_infos['model_language_lookup_table'][rm]+" we do not have any results for this model: "+rm
                     logging.warn(message)
-                    print(message)
                     item = dict()
                     item['finetuning_task']=task
                     item['_name_or_path']=rm
@@ -244,7 +243,6 @@ class ResultAggregator:
                     missing_seeds = set([s for s in required_seeds if s not in list_of_seeds])
                     message = "There not enough seeds for task "+task+" in combination with the language model "+am+". We have only results for the following seeds: ", ', '.join(list(list_of_seeds))+". Results are missing for the following seeds: ", ', '.join(list(missing_seeds))
                     logging.warn(message)
-                    print(message)
                     item = dict()
                     item['finetuning_task']=task
                     item['_name_or_path']=am
@@ -252,12 +250,62 @@ class ResultAggregator:
                     item['missing_seeds']=sorted(list(missing_seeds))
                     report.append(item)
             
+        
+        report_df = pd.DataFrame(report)
+
+        return report_df
+
+        
+
+
+    def create_overview_of_results_per_seed(self, score=None):
+
+        if score is None:
+            score = self.score
+        else:
+            old_score = deepcopy(self.score)
+            self.score = score
+
+        report = list()
+
+        required_seeds = [1,2,3]
+
+        df = self.results[(self.results.seed.isin(required_seeds))][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
+        df_pivot = df.pivot_table(values='predict/_'+self.score, index=['finetuning_task', '_name_or_path', 'language'], columns='seed')
+        datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
+        df_pivot['datasets']=datasets
+        df_pivot.reset_index(inplace=True)
+        df_pivot = df_pivot[['datasets','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
+        df_pivot['mean_over_seeds']=df_pivot.mean(axis=1)
+        
+        self.score = old_score
+        
+        return df_pivot
+
+
+    def create_report(self):
+
+        seed_check = self.check_seed_per_task()
+        self.seed_check = seed_check
+        macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1")
+        self.macro_f1_overview = macro_f1_overview
+        micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1")
+        self.micro_f1_overview = micro_f1_overview
+        weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1")
+        self.weighted_f1_overview = weighted_f1_overview
+
+
         with pd.ExcelWriter('report.xlsx') as writer:
-            pd.DataFrame(report).to_excel(writer, index=False, sheet_name="completeness_report")
-            pd.DataFrame(report).to_excel(writer, index=False, sheet_name="completeness_report_1")
+            seed_check.to_excel(writer, index=False, sheet_name="completeness_report")
+            macro_f1_overview.to_excel(writer, index=False, sheet_name="macro_f1_overview")
+            micro_f1_overview.to_excel(writer, index=False, sheet_name="micro_f1_overview")
+            weighted_f1_overview.to_excel(writer, index=False, sheet_name="weighted_f1_overview")
+            
 
 
-    
+
+                        
+                
 
 
     def convert_numpy_float_to_python_float(self, value):
@@ -573,9 +621,9 @@ if __name__ == "__main__":
 
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key)
 
-    ra.get_info()
+    self.get_info()
 
-    ra.get_dataset_aggregated_score()
+    self.get_dataset_aggregated_score()
 
     
 
