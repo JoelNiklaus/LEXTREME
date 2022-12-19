@@ -39,14 +39,14 @@ class ResultAggregator:
     meta_infos = meta_infos
 
 
-    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True):
+    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, score='macro-f1'):
 
         # Create the result directory if not existent
         if os.path.isdir('results')==False:
             os.mkdir('results')
-    
-        
 
+        self.score = score
+        
         name_of_log_file = 'logs/loggings_'+datetime.now().isoformat()+'.txt'
         name_of_log_file = os.path.join(os.path.dirname(__file__), name_of_log_file)
 
@@ -76,7 +76,7 @@ class ResultAggregator:
             results.to_csv("current_wandb_results_unprocessed.csv", index=False)
         else:
             results = pd.read_csv(Path(path_to_csv_export))
-            results = self.edit_result_dataframe(results)
+            results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull()==False]
 
         # When fetching the data from the wandb api it it return state instead of State as column name
@@ -86,7 +86,7 @@ class ResultAggregator:
         elif 'state' in results.columns:
             self.results = results[results.state=="finished"]
 
-        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_macro-f1',col))]
+        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_'+self.score,col))]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -142,7 +142,7 @@ class ResultAggregator:
         """ For monolingual datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score """
         
         if score is None:
-            score = 'predict/_macro-f1'
+            score = 'predict/_'+self.score
 
         monolingual_configs = [] 
         for config, languages in self.meta_infos['task_language_mapping'].items():
@@ -179,11 +179,12 @@ class ResultAggregator:
         return dataframe
 
 
-    def edit_result_dataframe(self, results):
+    def edit_result_dataframe(self, results, name_editing = True):
         results = self.edit_column_names_in_df(results)
         #all_finetuning_tasks = results.finetuning_task 
-        results['language']= results.finetuning_task.apply(lambda x: str(x).split('_')[0])
-        results['finetuning_task']= results.finetuning_task.apply(lambda x: '_'.join(str(x).split('_')[1:]))
+        if name_editing==True:
+            results['language']= results.finetuning_task.apply(lambda x: str(x).split('_')[0])
+            results['finetuning_task']= results.finetuning_task.apply(lambda x: '_'.join(str(x).split('_')[1:]))
         results['hierarchical']=results.name.apply(self.insert_hierarchical)
         # Remove all cases where language == nan
         results = results[results.language!="nan"]
@@ -204,6 +205,116 @@ class ResultAggregator:
     def reset_list_of_available_languages(self):
         self.available_predict_scores = deepcopy(self.available_predict_scores_original)
 
+    
+    def check_seed_per_task(self):
+
+        report = list()
+
+        required_seeds = {"1", "2", "3"}
+
+        for task, languages in self.meta_infos["task_language_mapping"].items():
+            required_models = list()
+
+            for model_name, language in self.meta_infos['model_language_lookup_table'].items():
+                if language =="all":
+                    required_models.append(model_name)
+                else:
+                    for lang in languages:
+                        if lang==language:
+                            required_models.append(model_name)
+
+            available_models = self.results[(self.results.finetuning_task==task) & (self.results._name_or_path.isin(required_models))]._name_or_path.unique()
+
+            for rm in required_models:
+                if rm not in available_models:
+                    message = "For task "+task+" in combination with the language "+self.meta_infos['model_language_lookup_table'][rm]+" we do not have any results for this model: "+rm
+                    logging.warn(message)
+                    item = dict()
+                    item['finetuning_task']=task
+                    item['_name_or_path']=rm
+                    item['language']=self.meta_infos['model_language_lookup_table'][rm]
+                    item['missing_seeds']=sorted(list(required_seeds))
+                    report.append(item)
+
+            for am in available_models:
+                list_of_seeds = set(self.results[(self.results.finetuning_task==task) & (self.results._name_or_path==am)].seed.unique())
+                list_of_seeds = set([str(int(x)) for x in list_of_seeds])
+                if list_of_seeds.intersection(required_seeds) != required_seeds:
+                    missing_seeds = set([s for s in required_seeds if s not in list_of_seeds])
+                    message = "There not enough seeds for task "+task+" in combination with the language model "+am+". We have only results for the following seeds: ", ', '.join(list(list_of_seeds))+". Results are missing for the following seeds: ", ', '.join(list(missing_seeds))
+                    logging.warn(message)
+                    item = dict()
+                    item['finetuning_task']=task
+                    item['_name_or_path']=am
+                    item['language']=self.meta_infos['model_language_lookup_table'][am]
+                    item['missing_seeds']=sorted(list(missing_seeds))
+                    report.append(item)
+            
+        
+        report_df = pd.DataFrame(report)
+
+        return report_df
+
+        
+
+
+    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=False):
+
+        if score is None:
+            score = self.score
+        else:
+            old_score = deepcopy(self.score)
+            self.score = score
+
+        seed_check = self.check_seed_per_task()
+
+        incomplete_tasks = set(seed_check.finetuning_task.unique())
+
+        required_seeds = [1,2,3]
+
+        if only_completed_tasks == True:
+            df = self.results[(self.results.seed.isin(required_seeds)) & (self.results.finetuning_task.isin(incomplete_tasks)==False)][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
+        elif only_completed_tasks == False:
+            df = self.results[(self.results.seed.isin(required_seeds))][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
+        df_pivot = df.pivot_table(values='predict/_'+self.score, index=['finetuning_task', '_name_or_path', 'language'], columns='seed')
+        datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
+        df_pivot['datasets']=datasets
+        df_pivot.reset_index(inplace=True)
+        df_pivot = df_pivot[['datasets','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
+        df_pivot['mean_over_seeds']=df_pivot.mean(axis=1, numeric_only=True)
+        
+        self.score = old_score
+        
+        return df_pivot
+
+
+    def create_report(self, only_completed_tasks=False):
+
+        seed_check = self.check_seed_per_task()
+        self.seed_check = seed_check
+        macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1", only_completed_tasks=only_completed_tasks)
+        self.macro_f1_overview = macro_f1_overview
+        micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1", only_completed_tasks=only_completed_tasks)
+        self.micro_f1_overview = micro_f1_overview
+        weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1", only_completed_tasks=only_completed_tasks)
+        self.weighted_f1_overview = weighted_f1_overview
+        accuracy_normalized_overview = self.create_overview_of_results_per_seed(score="accuracy_normalized", only_completed_tasks=only_completed_tasks)
+        self.accuracy_normalized_overview = accuracy_normalized_overview
+
+
+        with pd.ExcelWriter('results/report.xlsx') as writer:
+            self.seed_check.to_excel(writer, index=False, sheet_name="completeness_report")
+            self.macro_f1_overview.to_excel(writer, index=False, sheet_name="macro_f1_overview")
+            self.micro_f1_overview.to_excel(writer, index=False, sheet_name="micro_f1_overview")
+            self.weighted_f1_overview.to_excel(writer, index=False, sheet_name="weighted_f1_overview")
+            self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name="accuracy_normalized_overview")
+            
+
+
+
+                        
+                
+
 
     def convert_numpy_float_to_python_float(self, value):
         if value == np.nan:
@@ -221,7 +332,10 @@ class ResultAggregator:
             return ""
     
 
-    def get_average_score(self, finetuning_task:str, _name_or_path:str, score:str='predict/_macro-f1') -> float:
+    def get_average_score(self, finetuning_task:str, _name_or_path:str, score:str=None) -> float:
+
+        if score is None:
+            score = 'predict/_'+self.score
     
         results_filtered = self.results[(self.results.finetuning_task==finetuning_task) & (self.results._name_or_path==_name_or_path)][["seed",score]]
 
@@ -515,9 +629,9 @@ if __name__ == "__main__":
 
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key)
 
-    ra.get_info()
+    self.get_info()
 
-    ra.get_dataset_aggregated_score()
+    self.get_dataset_aggregated_score()
 
     
 
