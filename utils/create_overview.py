@@ -246,7 +246,7 @@ class ResultAggregator:
                     item = dict()
                     item['finetuning_task']=task
                     item['_name_or_path']=am
-                    item['language']=self.meta_infos['model_language_lookup_table'][rm]
+                    item['language']=self.meta_infos['model_language_lookup_table'][am]
                     item['missing_seeds']=sorted(list(missing_seeds))
                     report.append(item)
             
@@ -258,7 +258,7 @@ class ResultAggregator:
         
 
 
-    def create_overview_of_results_per_seed(self, score=None):
+    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=False):
 
         if score is None:
             score = self.score
@@ -266,40 +266,48 @@ class ResultAggregator:
             old_score = deepcopy(self.score)
             self.score = score
 
-        report = list()
+        seed_check = self.check_seed_per_task()
+
+        incomplete_tasks = set(seed_check.finetuning_task.unique())
 
         required_seeds = [1,2,3]
 
-        df = self.results[(self.results.seed.isin(required_seeds))][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
+        if only_completed_tasks == True:
+            df = self.results[(self.results.seed.isin(required_seeds)) & (self.results.finetuning_task.isin(incomplete_tasks)==False)][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
+        elif only_completed_tasks == False:
+            df = self.results[(self.results.seed.isin(required_seeds))][['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_'+score]]
         df_pivot = df.pivot_table(values='predict/_'+self.score, index=['finetuning_task', '_name_or_path', 'language'], columns='seed')
         datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
         df_pivot['datasets']=datasets
         df_pivot.reset_index(inplace=True)
         df_pivot = df_pivot[['datasets','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
-        df_pivot['mean_over_seeds']=df_pivot.mean(axis=1)
+        df_pivot['mean_over_seeds']=df_pivot.mean(axis=1, numeric_only=True)
         
         self.score = old_score
         
         return df_pivot
 
 
-    def create_report(self):
+    def create_report(self, only_completed_tasks=False):
 
         seed_check = self.check_seed_per_task()
         self.seed_check = seed_check
-        macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1")
+        macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1", only_completed_tasks=only_completed_tasks)
         self.macro_f1_overview = macro_f1_overview
-        micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1")
+        micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1", only_completed_tasks=only_completed_tasks)
         self.micro_f1_overview = micro_f1_overview
-        weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1")
+        weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1", only_completed_tasks=only_completed_tasks)
         self.weighted_f1_overview = weighted_f1_overview
+        accuracy_normalized_overview = self.create_overview_of_results_per_seed(score="accuracy_normalized", only_completed_tasks=only_completed_tasks)
+        self.accuracy_normalized_overview = accuracy_normalized_overview
 
 
-        with pd.ExcelWriter('report.xlsx') as writer:
-            seed_check.to_excel(writer, index=False, sheet_name="completeness_report")
-            macro_f1_overview.to_excel(writer, index=False, sheet_name="macro_f1_overview")
-            micro_f1_overview.to_excel(writer, index=False, sheet_name="micro_f1_overview")
-            weighted_f1_overview.to_excel(writer, index=False, sheet_name="weighted_f1_overview")
+        with pd.ExcelWriter('results/report.xlsx') as writer:
+            self.seed_check.to_excel(writer, index=False, sheet_name="completeness_report")
+            self.macro_f1_overview.to_excel(writer, index=False, sheet_name="macro_f1_overview")
+            self.micro_f1_overview.to_excel(writer, index=False, sheet_name="micro_f1_overview")
+            self.weighted_f1_overview.to_excel(writer, index=False, sheet_name="weighted_f1_overview")
+            self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name="accuracy_normalized_overview")
             
 
 
