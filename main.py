@@ -277,7 +277,9 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
 
     if num_train_epochs is None:
         if 'multi_eurlex' in task:
-            num_train_epochs = 1  # this dataset is so large, one epoch is enough to save compute
+        # this dataset is so large, one epoch is enough to save compute
+        # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
+            num_train_epochs = 1
         else:
             num_train_epochs = 50
 
