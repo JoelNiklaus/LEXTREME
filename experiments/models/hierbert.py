@@ -177,7 +177,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 # This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
 # be encoded differently whether it is at the beginning of the sentence (without space) or not
 # You need to pass add_prefix_space=True to make it work, otherwise an error will occur
-models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base", "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish"]
+models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base", "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish", "BSC-TeMU/roberta-base-bne", "pdelobelle/robbert-v2-dutch-base"]
 
 
 def get_tokenizer(model_name_or_path):
