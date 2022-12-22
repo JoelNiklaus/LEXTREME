@@ -91,7 +91,7 @@ optimal_batch_sizes = {
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 16, 2048: 8, 4096: 8},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 8, 4096: 8},
     },
     # TODO test sizes here
     # e.g. A6000
