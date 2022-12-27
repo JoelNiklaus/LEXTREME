@@ -143,14 +143,21 @@ class ResultAggregator:
     def update_language_specifc_predict_columns(self, dataframe, score = None):
     
         """ For monolingual datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score """
+
+        """ For multilinugal datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score if a monolingual model was finetuned on them. """
         
         if score is None:
             score = 'predict/_'+self.score
 
-        monolingual_configs = [] 
+        monolingual_configs = []
+        multilingual_configs = [] 
+        
+
         for config, languages in self.meta_infos['task_language_mapping'].items():
             if len(languages)==1:
                 monolingual_configs.append(config)
+            else:
+                multilingual_configs.append(config)
             
         all_available_languages_for_training_set = list(dataframe['language'].unique())
         all_available_languages_for_training_set = [l for l in all_available_languages_for_training_set if l != "all"]
@@ -162,6 +169,27 @@ class ResultAggregator:
                 indices = dataframe[(dataframe.language==language) & (dataframe.finetuning_task==config)].index.tolist()
                 for i in indices:
                     dataframe.at[i,column_name]=dataframe.at[i, score]
+        
+        monolingual_models = [_model_name for _model_name, _language in self.meta_infos['model_language_lookup_table'].items() if _language!="all"]
+        print('monolingual_models', monolingual_models)
+
+        for config in multilingual_configs:
+            languages = self.meta_infos['task_language_mapping'][config]
+            for language in languages:
+                column_name = language + '_'+score
+                indices = dataframe[(dataframe.language==language) & (dataframe.finetuning_task==config) & (dataframe._name_or_path.isin(monolingual_models))].index.tolist()
+                for i in indices:
+                    if type(dataframe.at[i, column_name])!=float:
+                        dataframe.at[i,column_name]=dataframe.at[i, score]
+
+        
+        return dataframe
+
+
+        
+
+
+
         
         return dataframe
 
@@ -331,19 +359,15 @@ class ResultAggregator:
             self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name="accuracy_normalized_overview")
             
 
-
-
-                        
-                
-
-
     def convert_numpy_float_to_python_float(self, value):
         if value == np.nan:
-            return ""
+            final_value = ""
         elif isinstance(value, np.floating):
-            return value.item()
+            final_value = value.item()
         else:
-            return value
+            final_value = value
+
+        return final_value
 
     def get_mean_from_list_of_values(self, list_of_values):
         list_of_values = [x for x in list_of_values if type(x)!=str]
@@ -375,12 +399,16 @@ class ResultAggregator:
         if len(results_filtered.seed.tolist())==0:
             logging.info('It seems you have duplicate seeds task '+finetuning_task+' with the model '+_name_or_path+ " has no meaningful results.")
             return "" # There is nothing to be calculated
-        else:
-            mean_value = results_filtered[score].mean()
-            if mean_value == np.nan:
-                return ""
-            else:
-                return self.convert_numpy_float_to_python_float(mean_value)
+        #else:
+        mean_value = results_filtered[score].mean()
+
+        mean_value = self.convert_numpy_float_to_python_float(mean_value)
+
+        if mean_value in ["", np.nan]:
+            print('There is an error for ', finetuning_task, _name_or_path, score)
+            print(results_filtered[score].tolist())
+        
+        return mean_value
 
 
     def create_template(self, columns = None):
@@ -426,17 +454,17 @@ class ResultAggregator:
         return dataframe
 
 
-    def insert_config_average_scores(self, overview_template, language_specific_scores=True):
+    def insert_config_average_scores(self, overview_template, average_over_language=True):
 
         logging.info("*** Calculating average scores ***")
 
-        if language_specific_scores == False:
+        if average_over_language == False:
             for _name_or_path in self.results._name_or_path.unique():
                 for finetuning_task in self.results.finetuning_task.unique():
                     mean_macro_f1_score = self.get_average_score(finetuning_task, _name_or_path)
                     overview_template.at[_name_or_path,finetuning_task]=mean_macro_f1_score
 
-        elif language_specific_scores == True:
+        elif average_over_language == True:
             for _name_or_path in self.results._name_or_path.unique():
                 for finetuning_task in self.results.finetuning_task.unique():
                     
@@ -454,12 +482,14 @@ class ResultAggregator:
                         # Average over languages
                         for aps in self.available_predict_scores:
                             language = aps.split('_')[0]
-                            predict_language_mean = self.get_average_score(finetuning_task, _name_or_path, aps)
-                            if predict_language_mean not in ["", np.nan]: # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
-                                predict_language_mean_collected.append(predict_language_mean)
-                                predict_language_collected.append(language)
-                            #else:
-                                # TODO: Add logger informartion
+                            if language in self.meta_infos["task_language_mapping"][finetuning_task]:
+                                if self.meta_infos["model_language_lookup_table"][_name_or_path]==language or self.meta_infos["model_language_lookup_table"][_name_or_path]=='all':
+                                    predict_language_mean = self.get_average_score(finetuning_task, _name_or_path, aps)
+                                    if predict_language_mean not in ["", np.nan]: # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
+                                        predict_language_mean_collected.append(predict_language_mean)
+                                        predict_language_collected.append(language)
+                                    #else:
+                                        # TODO: Add logger informartion
                                 
                         if len(predict_language_mean_collected)>0:
                             
@@ -493,10 +523,7 @@ class ResultAggregator:
 
         self.config_aggregated_score = self.create_template()
         
-        if average_over_language == False:
-            self.insert_config_average_scores(self.config_aggregated_score, language_specific_scores=False)
-        elif average_over_language == True:
-            self.insert_config_average_scores(self.config_aggregated_score, language_specific_scores=True)
+        self.insert_config_average_scores(self.config_aggregated_score, average_over_language=average_over_language)
 
         self.config_aggregated_score = self.insert_aggregated_score_over_language_models(self.config_aggregated_score)
         
