@@ -171,7 +171,7 @@ class ResultAggregator:
                     dataframe.at[i,column_name]=dataframe.at[i, score]
         
         monolingual_models = [_model_name for _model_name, _language in self.meta_infos['model_language_lookup_table'].items() if _language!="all"]
-        print('monolingual_models', monolingual_models)
+        
 
         for config in multilingual_configs:
             languages = self.meta_infos['task_language_mapping'][config]
