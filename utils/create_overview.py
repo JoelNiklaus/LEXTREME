@@ -31,15 +31,13 @@ for k, v in meta_infos["language_models"].items():
 
 meta_infos["model_language_lookup_table"]=model_language_lookup_table
 
-# TODO: Add a function for error analysis, i.e. which looks if there are enough seeds for each task + model
-
 class ResultAggregator:
 
 
     meta_infos = meta_infos
 
 
-    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, score='macro-f1'):
+    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True, score='macro-f1'):
 
         # Create the result directory if not existent
         if os.path.isdir('results')==False:
@@ -49,6 +47,8 @@ class ResultAggregator:
         
         name_of_log_file = 'logs/loggings_'+datetime.now().isoformat()+'.txt'
         name_of_log_file = os.path.join(os.path.dirname(__file__), name_of_log_file)
+
+        self.only_completed_tasks = only_completed_tasks
 
         if verbose_logging:
             handlers = [
@@ -89,6 +89,9 @@ class ResultAggregator:
         available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_'+self.score,col))]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
+
+        # Add column to rows to indicate if this run pertains to completed tasks or not
+        self.mark_incomplete_tasks()
 
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
@@ -255,10 +258,27 @@ class ResultAggregator:
 
         return report_df
 
+    def mark_incomplete_tasks(self):
         
+        seed_check = self.check_seed_per_task()
+        
+        seed_check["look_up"] = seed_check["finetuning_task"]+"_"+seed_check["_name_or_path"]+"_"+seed_check["language"]
+
+        self.results["look_up"] = self.results["finetuning_task"]+"_"+self.results["_name_or_path"]+"_"+self.results["language"]
+
+        self.results['completed_task'] = np.where(self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
+
+        del self.results['look_up']
 
 
-    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=False):
+
+
+    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=None):
+
+        if only_completed_tasks is None:
+            only_completed_tasks = self.only_completed_tasks
+
+        old_score = ""
 
         if score is None:
             score = self.score
@@ -283,7 +303,8 @@ class ResultAggregator:
         df_pivot = df_pivot[['datasets','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
         df_pivot['mean_over_seeds']=df_pivot.mean(axis=1, numeric_only=True)
         
-        self.score = old_score
+        if old_score:
+            self.score = old_score
         
         return df_pivot
 
