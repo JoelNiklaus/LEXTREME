@@ -5,6 +5,7 @@ import json as js
 import os
 import re
 import shutil
+import time
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
@@ -159,7 +160,6 @@ def get_python_file_for_task(task):
 def generate_command(time_now, **data):
     command_template = 'python3 ./experiments/{CODE} ' \
                        '--model_name_or_path {MODEL_NAME} ' \
-                       '--output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} ' \
                        '--log_directory {LOG_DIRECTORY} ' \
                        '--do_train --do_eval --do_predict ' \
                        '--overwrite_output_dir ' \
@@ -181,6 +181,9 @@ def generate_command(time_now, **data):
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
+        command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/results_after_training_only_on_language_with_id__{LANGUAGE}/seed_{SEED} '
+    else:
+        command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
     run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
@@ -263,17 +266,21 @@ def run_in_parallel(commands_to_run):
 
 
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
-                   accumulation_steps, lower_case, language, learning_rate, gpu_number, gpu_memory, hierarchical,
+                   accumulation_steps, lower_case, list_of_languages, learning_rate, gpu_number, gpu_memory, hierarchical,
                    preprocessing_num_workers,
                    dataset_cache_dir, num_train_epochs=None, log_directory=None):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
-    time_stamp = datetime.datetime.now().isoformat()
+    
 
     preprocessing_num_workers = int(preprocessing_num_workers)
 
     batch_size_to_be_found = True if batch_size is None else False
-    language_to_be_found = True if language is None else False
+    language_to_be_found = True if list_of_languages is None else False
+    
+    if list_of_languages is not None:
+        if type(list_of_languages)==str:
+            list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
 
     if num_train_epochs is None:
         if 'multi_eurlex' in task:
@@ -340,6 +347,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 for s in sizes:
                     if l in language_models[t]:
                         models_to_be_used.extend(language_models[t][l][s])  # add all models we want to run
+                        
     models_to_be_used = sorted(list(set(models_to_be_used)))
     print(models_to_be_used)
 
@@ -360,44 +368,58 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
     print(all_variables_perturbations)
 
     for (gpu_id, task, model_name, seed) in all_variables_perturbations:
+
         if bool(re.search('\d', str(gpu_id))):
             gpu_id = int(gpu_id)
         seed = int(seed)
+        
         if batch_size is None:
             batch_size, accumulation_steps = get_optimal_batch_size(model_name, task, gpu_memory)
         else:
             if accumulation_steps is None:
                 accumulation_steps = 1
-        if language is None:
+        
+        if list_of_languages is None:
             if model_name in model_language_lookup_table.keys():
                 # all means just the entire dataset, so that we take the default value
                 if model_language_lookup_table[model_name] != 'all':
-                    language = model_language_lookup_table[model_name]
+                    list_of_languages = [model_language_lookup_table[model_name]]
+                else:
+                    list_of_languages = [None]
+                    
+        for lang in list_of_languages:
 
-        script_new = generate_command(
-            time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
-            model_name=model_name,
-            lower_case=lower_case, task=task, seed=seed,
-            num_train_epochs=num_train_epochs, batch_size=batch_size,
-            accumulation_steps=accumulation_steps, language=language,
-            running_mode=running_mode, learning_rate=learning_rate,
-            code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
-            hierarchical=hierarchical, greater_is_better=greater_is_better,
-            download_mode=download_mode, log_directory=log_directory,
-            preprocessing_num_workers=preprocessing_num_workers,
-            dataset_cache_dir=dataset_cache_dir
-        )
-        if language_to_be_found:
-            language = None # Set language back to None
+            time_stamp = datetime.datetime.now().isoformat()
+            
+            print("LANGUAGE IS: ", lang)
+
+            script_new = generate_command(
+                time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
+                model_name=model_name,
+                lower_case=lower_case, task=task, seed=seed,
+                num_train_epochs=num_train_epochs, batch_size=batch_size,
+                accumulation_steps=accumulation_steps, language=lang,
+                running_mode=running_mode, learning_rate=learning_rate,
+                code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
+                hierarchical=hierarchical, greater_is_better=greater_is_better,
+                download_mode=download_mode, log_directory=log_directory,
+                preprocessing_num_workers=preprocessing_num_workers,
+                dataset_cache_dir=dataset_cache_dir
+            )
+            
+            if script_new is not None:
+                # sleep different time for each seed to prevent access to temporary scripts at the same time
+                command = f'sleep {seed * 10}; bash {str(script_new)}'
+                gpu_command_dict[gpu_id].append(command)
+                print(command)
+
         
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None
-        if script_new is not None:
-            # sleep different time for each seed to prevent access to temporary scripts at the same time
-            command = f'sleep {seed * 10}; bash {str(script_new)}'
-            gpu_command_dict[gpu_id].append(command)
-            print(command)
+
+        if language_to_be_found:
+            list_of_languages = None # Set language back to None
 
     with open('command_dict.json', 'w') as f:
         js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
@@ -428,7 +450,7 @@ if __name__ == '__main__':
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
-    parser.add_argument('-lang', '--language', help='Define if you want to filter the training dataset by language.',
+    parser.add_argument('-lol', '--list_of_languages', help='Define if you want to filter the training dataset by language.',
                         default=None)
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
@@ -485,7 +507,7 @@ if __name__ == '__main__':
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
-        language=args.language,
+        list_of_languages=args.list_of_languages,
         language_model_type=args.language_model_type,
         learning_rate=args.learning_rate,
         list_of_seeds=args.list_of_seeds,
