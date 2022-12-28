@@ -11,4 +11,4 @@ The directory contains the following folders:
 
 # How to use the code
 
-You can have a look at the notebook `Documentation_data_analysis`
+You can have a look at the notebook [Documentation_data_analysis](https://github.com/JoelNiklaus/LEXTREME/blob/main/utils/Documentation_data_analysis.ipynb)
