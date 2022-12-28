@@ -459,9 +459,14 @@ class ResultAggregator:
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
             dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
 
-        columns = dataframe.columns.tolist()
+        columns = sorted(dataframe.columns.tolist())
         first_columns = [column_name]
         dataframe = dataframe[first_columns + [col for col in columns if col not in first_columns]]
+        
+        # Check if column with aggregated scores contains only numerical values
+        # If yes, we can sort the column
+        if len([x for x in dataframe[column_name].tolist() if type(x)==float])==len(dataframe[column_name].tolist()):
+            dataframe = dataframe.sort_values(column_name, ascending = False)
 
         return dataframe
 
@@ -530,7 +535,7 @@ class ResultAggregator:
 
         overview_template = overview_template
 
-    def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False):
+    def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,column_name="aggregated_score"):
 
         # Insert aggregated mean for each model name
 
@@ -538,7 +543,7 @@ class ResultAggregator:
         
         self.insert_config_average_scores(self.config_aggregated_score, average_over_language=average_over_language)
 
-        self.config_aggregated_score = self.insert_aggregated_score_over_language_models(self.config_aggregated_score)
+        self.config_aggregated_score = self.insert_aggregated_score_over_language_models(self.config_aggregated_score,column_name=column_name)
 
         if write_to_csv:
             if average_over_language == False:
