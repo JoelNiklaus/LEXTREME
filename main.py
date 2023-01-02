@@ -197,7 +197,9 @@ def generate_command(time_now, **data):
         else:
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
-            command_template += ' --fp16 --fp16_full_eval'
+            # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16
+            if bool(re.search('(xlm-roberta-base|xlm-roberta-large)',data["model_name"]))==False:
+                command_template += ' --fp16 --fp16_full_eval'
             # mdeberta does not work with fp16 because it was trained with bf16
             # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
             # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
