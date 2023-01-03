@@ -89,10 +89,10 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
     },
     # TODO test sizes here
     # e.g. A6000
@@ -153,11 +153,21 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
 }
 
 
+def get_hierarchical(task):
+    if meta_infos["task_requires_hierarchical_per_default"][task]=="yes":
+        return True
+    else:
+        return False
+
 def get_python_file_for_task(task):
     return f"run_{task}.py"
 
 
 def generate_command(time_now, **data):
+
+    if data["hierarchical"] is None:
+        data["hierarchical"] = get_hierarchical(data["task"])
+
     command_template = 'python3 ./experiments/{CODE} ' \
                        '--model_name_or_path {MODEL_NAME} ' \
                        '--log_directory {LOG_DIRECTORY} ' \
@@ -166,7 +176,7 @@ def generate_command(time_now, **data):
                        '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
                        '--greater_is_better {GREATER_IS_BETTER} ' \
                        '--evaluation_strategy epoch --save_strategy epoch ' \
-                       '--save_total_limit 5 ' \
+                       '--save_total_limit 6 ' \
                        '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
                        '--learning_rate {LEARNING_RATE} ' \
                        '--per_device_train_batch_size {BATCH_SIZE} --per_device_eval_batch_size {BATCH_SIZE} ' \
@@ -174,7 +184,8 @@ def generate_command(time_now, **data):
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} --eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} '
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                       '--hierarchical {HIERARCHICAL} '
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -197,9 +208,14 @@ def generate_command(time_now, **data):
         else:
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
-            # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16
-            if bool(re.search('(xlm-roberta-base|xlm-roberta-large)',data["model_name"]))==False:
+            if str(data["hierarchical"]).lower()=='true': # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
+                if bool(re.search('(xlm-roberta-base|xlm-roberta-large)',data["model_name"]))==False:
+                    command_template += ' --fp16 --fp16_full_eval'
+                else:
+                    command_template += ' --fp16 '
+            else:
                 command_template += ' --fp16 --fp16_full_eval'
+
             # mdeberta does not work with fp16 because it was trained with bf16
             # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
             # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
@@ -220,11 +236,9 @@ def generate_command(time_now, **data):
                                             DOWNLOAD_MODE=data["download_mode"],
                                             LOG_DIRECTORY=data["log_directory"],
                                             PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
-                                            DATASET_CACHE_DIR=data["dataset_cache_dir"]
+                                            DATASET_CACHE_DIR=data["dataset_cache_dir"],
+                                            HIERARCHICAL=data["hierarchical"]
                                             )
-
-    if "hierarchical" in data.keys() and data["hierarchical"] is not None:
-        final_command += ' --hierarchical ' + data["hierarchical"]
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
         data["seed"]) + "_" + str(data["model_name"]).replace('/', '_') + "_" + time_now + ".sh"
