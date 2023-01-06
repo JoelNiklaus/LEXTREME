@@ -1,30 +1,45 @@
-# LEXTREME: A Multlingual Benchmark Dataset for Legal Language Understanding 
+# LEXTREME: A Multlingual Benchmark Dataset for Legal Language Understanding
 
 ## Setup
+
 It works best with python 3.9 and torch==1.10.0+cu113. Otherwise we experienced problems with fp16 training and evaluation.
 
 ```bash
 # install torch like this to avoid fp16 problems
-pip install torch==1.10.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html 
+pip install torch==1.10.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 pip install -r requirements.txt
 ```
 
 In case you get the error `AttributeError: module 'distutils' has no attribute 'version'` (https://github.com/pytorch/pytorch/issues/69894)
-Run 
+Run
+
 ```bash
 pip install setuptools==59.5.0
 ```
 
+In order to log the training results, we used [Weights & Biases](https://wandb.ai/site/). When running the script below, you will be asked if you want to use Weights & Biases or not. In case you want to use Weights & Biases too, you should log in to your Weights & Biases account beforehand, by typing the following command in the terminal:
+
+```
+wandb login {WANDB_API_KEY}
+```
+
 ## Dataset Summary
+
 [comming soon]
+
 ## Supported Tasks
+
 [comming soon]
+
 ## LEXTREME Scores
+
 [comming soon]
+
 ## Frequently Asked Questions (FAQ)
 
 ### Where are the datasets?
-We provide access to LEXTREME at https://huggingface.co/datasets/joelito/lextreme.  
+
+We provide access to LEXTREME at https://huggingface.co/datasets/joelito/lextreme.
 
 For example, to load the swiss_judgment_prediction ([Niklaus et al. 2021](https://aclanthology.org/2021.nllp-1.3/)) dataset, you first simply install the datasets python library and then make the following call:
 
@@ -36,10 +51,9 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 
 ```
 
-
 ### How to run experiments?
 
-The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the ```swiss_judgment_prediction``` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:  
+The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the `swiss_judgment_prediction` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:
 
 ```
 CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_prediction.py \
@@ -70,10 +84,9 @@ CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_predic
 
 ```
 
-
 ### How reproduce the results of the paper?
 
-It is possible to reproduce the results of the paper by running the finetuning for each dataset separately. Alternatively, you can run [main.py](https://github.com/JoelNiklaus/LEXTREME/tree/main/main.py) which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available). 
+It is possible to reproduce the results of the paper by running the finetuning for each dataset separately. Alternatively, you can run [main.py](https://github.com/JoelNiklaus/LEXTREME/tree/main/main.py) which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available).
 
 The following command will make sure that you run all experiments as described in the paper:
 
@@ -83,26 +96,24 @@ python main.py
 
 It allows a certain degree of customizability by specifying the following arguments:
 
+| short argument name | full argument name   | description                                                                                                                            | default value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| :------------------ | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -as                 | --accumulation_steps | Define the number of accumulation_steps.                                                                                               | Generated automatically depending on the batch size and the size of the pretrained model                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -bz                 | --batch_size         | Define the batch size.                                                                                                                 | Generated automatically depending on the size of the pretrained model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -gn                 | --gpu_number         | Define which GPU you would like to use. If you want to specify multiple GPUs, seperate the integers by a comma.                        | Available GPUs are detected automatically. If no GPU is available, the CPU is used instead.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -hier               | --hierarchical       | Define whether you want to use a hierarchical model or not. Caution: this will not work for every task.                                | Defined automatically depending on the dataset                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -lang               | --language           | Define if you want to filter the training dataset by language.                                                                         | `all`; only important for multlingual datasets; per default the entire dataset is used                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -lc                 | --lower_case         | Define if lower case or not.                                                                                                           | False                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -lmt                | 50                   | Define which kind of language model you would like to use; you can choose between small,base and large language models or all of them. | `all` = all pretrained language models as decribed in the paper                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -los                | --list_of_seeds      | Define the number of training epochs.                                                                                                  | Five seeds (1,2,3) are used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -lr                 | --learning_rate      | Define the learning rate.                                                                                                              | 1e-05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -nte                | --num_train_epochs   | Define the number of training epochs.                                                                                                  | 50                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -rmo                | --running_mode       | Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.             | `default` = the entire dataset will be used for finetuning. The other option is `experimental` which will only take a small fraction of the dataset for experimental purposes.                                                                                                                                                                                                                                                                                                                                                                                      |
+| -t                  | --task               | Choose a specific task or all of them.                                                                                                 | `all`. The other options are: `brazilian_court_decisions_judgment`, `brazilian_court_decisions_unanimity`, `covid19_emergency_event`, `german_argument_mining`, `greek_legal_code_chapter_level`, `greek_legal_code_subject_level`, `greek_legal_code_volume_level`, `greek_legal_ner`, `legalnero`, `lener_br`, `mapa_ner_coarse_grained`, `mapa_ner_fine_grained`, `multi_eurlex_level_1`, `multi_eurlex_level_2`, `multi_eurlex_level_3`, `online_terms_of_service_unfairness_category`, `online_terms_of_service_unfairness_level`, `swiss_judgment_prediction` |
+| -dmo                | --download_mode      | Choose if you want to redownload the datasets or use load them from cache.                                                             | `force_redownload`. The other options are `reuse_dataset_if_exists`, `reuse_cache_if_exists`. For more information, visit: https://huggingface.co/docs/datasets/v1.4.1/loading_datasets.html.                                                                                                                                                                                                                                                                                                                                                                       |
+| -od                 | --output_dir         | Specify the output directory for the logs.                                                                                             | Generated automatically with a time stamp.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-| short argument name   | full argument name   | description                                                                                                                            | default value                                                                                                                                                                |
-|:----------------------|:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| -as                   | --accumulation_steps | Define the number of accumulation_steps.                                                                                               | Generated automatically depending on the batch size and the size of the pretrained model                                                                                     |
-| -bz                   | --batch_size         | Define the batch size.                                                                                                                 | Generated automatically depending on the size of the pretrained model                                                                                                        |
-| -gn                   | --gpu_number         | Define which GPU you would like to use. If you want to specify multiple GPUs, seperate the integers by a comma.                                                                                                | Available GPUs are detected automatically. If no GPU is available, the CPU is used instead.                                                                                                                                                       |
-| -hier                 | --hierarchical       | Define whether you want to use a hierarchical model or not. Caution: this will not work for every task.                                | Defined automatically depending on the dataset                                                                                                                               |
-| -lang                 | --language           | Define if you want to filter the training dataset by language.                                                                         | ```all```; only important for multlingual datasets; per default the entire dataset is used                                                                               |
-| -lc                   | --lower_case         | Define if lower case or not.                                                                                                           | False                                                                                                                                                                        |
-| -lmt                  | 50                   | Define which kind of language model you would like to use; you can choose between small,base and large language models or all of them. | ```all``` = all pretrained language models as decribed in the paper                                                                                                                |
-| -los                  | --list_of_seeds      | Define the number of training epochs.                                                                                                  | Five seeds (1,2,3,4,5) are used                                                                                                                                       |
-| -lr                   | --learning_rate      | Define the learning rate.                                                                                                              | 1e-05                                                                                                                                                                        |
-| -nte                  | --num_train_epochs   | Define the number of training epochs.                                                                                                  | 50                                                                                                                                                                           |
-| -rmo                  | --running_mode       | Define whether you want to run the finetungin on all available training data or just a small portion for testing purposes.             | ```default``` = the entire dataset will be used for finetuning. The other option is ```experimental``` which will only take a small fraction of the dataset for experimental purposes. |
-| -t                    | --task               | Choose a specific task or all of them.                                                                                                 | ```all```. The other options are: ```brazilian_court_decisions_judgment```, ```brazilian_court_decisions_unanimity```, ```covid19_emergency_event```, ```german_argument_mining```, ```greek_legal_code_chapter_level```, ```greek_legal_code_subject_level```, ```greek_legal_code_volume_level```, ```greek_legal_ner```, ```legalnero```, ```lener_br```, ```mapa_ner_coarse_grained```, ```mapa_ner_fine_grained```, ```multi_eurlex_level_1```, ```multi_eurlex_level_2```, ```multi_eurlex_level_3```, ```online_terms_of_service_unfairness_category```, ```online_terms_of_service_unfairness_level```, ```swiss_judgment_prediction```                                                                                                                                                                          |
-| -dmo  | --download_mode | Choose if you want to redownload the datasets or use load them from cache. | ```force_redownload```. The other options are ```reuse_dataset_if_exists```, ```reuse_cache_if_exists```. For more information, visit: https://huggingface.co/docs/datasets/v1.4.1/loading_datasets.html.
-| -od | --output_dir | Specify the output directory for the logs. | Generated automatically with a time stamp.
-
-
-For example, if you want to finetune on ```swiss_judgment_prediction``` with the seeds [1,2,3], 10 epochs, and all pretrained language models as described in the paper, you can type the following:
+For example, if you want to finetune on `swiss_judgment_prediction` with the seeds [1,2,3], 10 epochs, and all pretrained language models as described in the paper, you can type the following:
 
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list_of_seeds
@@ -111,18 +122,21 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
 
 Temporary bash files will be created and saved in the folder [temporary_scripts](https://github.com/JoelNiklaus/LEXTREME/tree/main/temporary_scripts) and they will be run immediately. These bash files will be overwritten the next time you run main.py.
 
-If you want to finetune only on, let's say, ```xlm-roberta-large```, you can type the following command.
+If you want to finetune only on, let's say, `xlm-roberta-large`, you can type the following command.
+
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large
 ```
 
-If, additionally, you don't want to make use of a hierarchical model (```swiss_judgment_prediction``` makes use of hierarchical models due to the length of the input documents), you type the following.
+If, additionally, you don't want to make use of a hierarchical model (`swiss_judgment_prediction` makes use of hierarchical models due to the length of the input documents), you type the following.
+
 ```
 python main.py --task swiss_judgment_prediction -python main.py --task swiss_judgment_prediction -list
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
-Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting ```-hierarchical``` to True will cause an error.
+
+Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting `-hierarchical` to True will cause an error.
 
 ## References
 
@@ -141,4 +155,4 @@ Not all tasks support the use of hierarchical types. For example, the code for t
     doi = "10.18653/v1/2021.nllp-1.3",
     pages = "19--35",
     abstra
-´´´
+```
