@@ -12,6 +12,8 @@ import wandb_summarizer.download
 import numpy as np
 from collections import defaultdict
 from copy import deepcopy
+import wandb
+from traceback import print_exc
 
 with open(os.path.abspath("../meta_infos.json"), "r") as f:
     meta_infos = js.load(f)
@@ -34,14 +36,21 @@ class ResultAggregator:
     meta_infos = meta_infos
 
 
-    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True, score='macro-f1'):
+    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, only_completed_tasks = True, split="predict", score='macro-f1'):
 
         # Create the result directory if not existent
         if os.path.isdir('results') == False:
             os.mkdir('results')
 
+        if split == "eval":
+            self.split = split + "/"
+        elif split =="predict":
+            self.split = split + "/_"
+            
         self.score = score
 
+        self.api = wandb.Api()
+        
         name_of_log_file = 'logs/loggings_' + datetime.now().isoformat() + '.txt'
         name_of_log_file = os.path.join(os.path.dirname(__file__), name_of_log_file)
 
@@ -83,7 +92,7 @@ class ResultAggregator:
         elif 'state' in results.columns:
             self.results = results[results.state == "finished"]
 
-        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_' + self.score, col))]
+        available_predict_scores = [col for col in self.results if bool(re.search('^\w'+self.split+ self.score, col))]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -102,10 +111,63 @@ class ResultAggregator:
         logging.info("The current export contains results for the following tasks:")
         logging.info(self.results.finetuning_task.unique())
 
+    def remove_slashes(self, string):
+        return re.sub('\/','', string)
+
+    def generate_concrete_score_name(self):
+    
+        languages = {'hu', 'en', 'sv', 'da', 'nl', 'pl', 'de', 'mt', 'it', 'cs', 'ro', 'lt', 'sk', 'hr', 'fi', 'nb', 'lv', 'el', 'bg', 'pt', 'et', 'sl', 'fr', 'es', 'ga'}
+        scores = ['macro-f1', 'micro-f1','weighted-f1','macro-precision', 'micro-recall','weighted-recall','macro-precision', 'micro-precision','weighted-precision','accuracy_normalized']
+        splits = ['eval/', 'predict/_']
+        
+        score_names = set()
+        
+        for spl in splits:
+            for lang in languages:
+                for s in scores:
+                    if 'predict' in spl:
+                        score_name = lang+'_'+spl+s
+                        score_names.add(score_name)
+                    score_name = spl+s
+                    score_names.add(score_name)
+                        
+        score_names.add('eval/loss')
+
+        return score_names
+
+    def fetch_data(self, project_name):
+
+        # Project is specified by <entity/project-name>
+        runs = self.api.runs(project_name)
+        
+        score_names = self.generate_concrete_score_name()
+        
+        results = list()
+        for x in runs:
+            entry = dict()
+            try:
+                if x.state=="finished":
+                    entry['state'] = x.state
+                    entry["finetuning_task"] = x.config['finetuning_task']
+                    entry["seed"] = x.config['seed']
+                    entry["_name_or_path"] = x.config['_name_or_path']
+                    entry['name'] = x.name
+                    for sn in score_names:
+                        if sn in x.history_keys['keys'].keys():
+                            entry[sn] = x.history_keys['keys'][sn]['previousValue']
+                        else:
+                            entry[sn] = ''
+                    results.append(entry)
+            except:
+                print_exc()
+        
+        return results
+
     def get_wandb_overview(self, project_name: str = None):
         if project_name is None:
             project_name = "lextreme/paper_results"
-        results = wandb_summarizer.download.get_results(project_name=project_name)
+        #results = wandb_summarizer.download.get_results(project_name=project_name)
+        results = self.fetch_data(project_name=project_name)
         results = pd.DataFrame(results)
         results.to_csv("results/current_wandb_results_unprocessed.csv", index=False)
         results = self.edit_result_dataframe(results)
@@ -137,13 +199,12 @@ class ResultAggregator:
         return dataframe
 
     def update_language_specifc_predict_columns(self, dataframe, score = None):
-    
-        """ For monolingual datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score """
+
 
         """ For multilinugal datasets we insert the overall macro-f1 score into the column for the language specific macro-f1 score if a monolingual model was finetuned on them. """
         
         if score is None:
-            score = 'predict/_'+self.score
+            score = self.split+self.score
 
         monolingual_configs = []
         multilingual_configs = [] 
@@ -183,13 +244,6 @@ class ResultAggregator:
         return dataframe
 
 
-        
-
-
-
-        
-        return dataframe
-
     def language_and_model_match(self, language_model, language):
 
         if self.meta_infos["model_language_lookup_table"][language_model] == "all":
@@ -219,6 +273,9 @@ class ResultAggregator:
         results['seed'] = results.seed.apply(lambda x: int(x))
         results = self.update_language_specifc_predict_columns(results)
         results = self.check_for_model_language_consistency(results)
+        
+        #Remove all cases where eval/loss is not a float
+        results = results[results['eval/loss'] != ""]
 
         return results
 
@@ -322,15 +379,20 @@ class ResultAggregator:
 
         required_seeds = [1, 2, 3]
 
+        if bool(re.search('(eval|train)', score)):
+            score_to_filter = score
+        else:
+            score_to_filter = self.split+ score
+
         if only_completed_tasks == True:
             df = self.results[(self.results.seed.isin(required_seeds)) & (
                         self.results.finetuning_task.isin(incomplete_tasks) == False)][
-                ['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_' + score]]
+                ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
         elif only_completed_tasks == False:
             df = self.results[(self.results.seed.isin(required_seeds))][
-                ['finetuning_task', '_name_or_path', 'language', 'seed', 'predict/_' + score]]
-        df_pivot = df.pivot_table(values='predict/_' + self.score,
-                                  index=['finetuning_task', '_name_or_path', 'language'], columns='seed')
+                ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
+        
+        df_pivot = df.pivot_table(values = score_to_filter , index = ['finetuning_task', '_name_or_path', 'language'], columns='seed', aggfunc='first')
         datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
         df_pivot['datasets'] = datasets
         df_pivot.reset_index(inplace=True)
@@ -342,11 +404,12 @@ class ResultAggregator:
         
         return df_pivot
 
-        self.score = old_score
 
-        return df_pivot
 
-    def create_report(self, only_completed_tasks=False):
+    def create_report(self, only_completed_tasks = None):
+
+        if only_completed_tasks is None:
+            only_completed_tasks = self.only_completed_tasks
 
         seed_check = self.check_seed_per_task()
         self.seed_check = seed_check
@@ -364,11 +427,12 @@ class ResultAggregator:
         self.accuracy_normalized_overview = accuracy_normalized_overview
 
         with pd.ExcelWriter('results/report.xlsx') as writer:
+            split_name = self.remove_slashes(self.split)
             self.seed_check.to_excel(writer, index=False, sheet_name="completeness_report")
-            self.macro_f1_overview.to_excel(writer, index=False, sheet_name="macro_f1_overview")
-            self.micro_f1_overview.to_excel(writer, index=False, sheet_name="micro_f1_overview")
-            self.weighted_f1_overview.to_excel(writer, index=False, sheet_name="weighted_f1_overview")
-            self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name="accuracy_normalized_overview")
+            self.macro_f1_overview.to_excel(writer, index=False, sheet_name = split_name+"_macro_f1_overview")
+            self.micro_f1_overview.to_excel(writer, index=False, sheet_name = split_name+"_micro_f1_overview")
+            self.weighted_f1_overview.to_excel(writer, index=False, sheet_name = split_name+"_weighted_f1_overview")
+            self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name = split_name+"_accuracy_normalized_overview")
             
 
     def convert_numpy_float_to_python_float(self, value):
