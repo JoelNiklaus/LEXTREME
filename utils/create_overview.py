@@ -15,6 +15,7 @@ from copy import deepcopy
 import wandb
 from traceback import print_exc
 
+
 with open(os.path.abspath("../meta_infos.json"), "r") as f:
     meta_infos = js.load(f)
 
@@ -92,7 +93,8 @@ class ResultAggregator:
         elif 'state' in results.columns:
             self.results = results[results.state == "finished"]
 
-        available_predict_scores = [col for col in self.results if bool(re.search('^\w'+self.split+ self.score, col))]
+        #available_predict_scores = [col for col in self.results if bool(re.search('^\w'+self.split+ self.score, col))]
+        available_predict_scores = list(self.generate_concrete_score_name())
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -131,7 +133,6 @@ class ResultAggregator:
                     score_name = spl+s
                     score_names.add(score_name)
                         
-        score_names.add('eval/loss')
 
         return score_names
 
@@ -141,6 +142,8 @@ class ResultAggregator:
         runs = self.api.runs(project_name)
         
         score_names = self.generate_concrete_score_name()
+
+        score_names.add('eval/loss')
         
         results = list()
         for x in runs:
@@ -261,6 +264,18 @@ class ResultAggregator:
 
         return dataframe
 
+    def loss_equals_nan(self, loss):
+
+        '''
+        For some reason, when wandb shows loss == nan, you will not get a nan value from the API.
+        Instead, it returns a very low value in scientifc notation.
+        This functions tries to detect these cases. 
+        A manuel evaluation showed that the predictions are worse in these cases, so we need to rerun the experiments again.
+
+        '''
+
+        return '+' in str(loss)
+
     def edit_result_dataframe(self, results, name_editing=True):
         results = self.edit_column_names_in_df(results)
         # all_finetuning_tasks = results.finetuning_task
@@ -276,6 +291,9 @@ class ResultAggregator:
         
         #Remove all cases where eval/loss is not a float
         results = results[results['eval/loss'] != ""]
+
+        # Remove all cases where eval/loss is nan according to wandb
+        results = results[results['eval/loss'].apply(self.loss_equals_nan)==False]
 
         return results
 
