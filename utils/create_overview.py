@@ -93,8 +93,9 @@ class ResultAggregator:
         elif 'state' in results.columns:
             self.results = results[results.state == "finished"]
 
-        #available_predict_scores = [col for col in self.results if bool(re.search('^\w'+self.split+ self.score, col))]
-        available_predict_scores = list(self.generate_concrete_score_name())
+        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_'+self.score,col))]
+        #available_predict_scores = list(self.generate_concrete_score_name())
+        #available_predict_scores = [ x for x in available_predict_scores if bool(re.search("^eval.*",x))==False]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -144,6 +145,7 @@ class ResultAggregator:
         score_names = self.generate_concrete_score_name()
 
         score_names.add('eval/loss')
+        score_names.add('predict/_loss')
         
         results = list()
         for x in runs:
@@ -291,6 +293,9 @@ class ResultAggregator:
         
         #Remove all cases where eval/loss is not a float
         results = results[results['eval/loss'] != ""]
+
+        #Remove all cases where predict/_loss is not a float
+        results = results[results['predict/_loss'] != ""]
 
         # Remove all cases where eval/loss is nan according to wandb
         results = results[results['eval/loss'].apply(self.loss_equals_nan)==False]
@@ -683,13 +688,13 @@ class ResultAggregator:
     def get_aggregated_score_for_language(self, score_type, task_constraint=None):
 
         tasks_relevant_for_language = list(
-            self.results[self.results[score_type].isnull() == False].finetuning_task.unique())
+            self.results[(self.results[score_type].isnull() == False) & (self.results[score_type]!="")].finetuning_task.unique())
 
         if task_constraint is not None:
             tasks_relevant_for_language = [t for t in tasks_relevant_for_language if t in task_constraint]
 
         languge_models_relevant_for_language = list(
-            self.results[self.results[score_type].isnull() == False]["_name_or_path"].unique())
+            self.results[(self.results[score_type].isnull() == False) & (self.results[score_type]!="") ]["_name_or_path"].unique())
         tasks_relevant_for_language
 
         # Collect all average scores for each config grouped by dataset
