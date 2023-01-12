@@ -32,6 +32,11 @@ for k, v in meta_infos["language_models"].items():
 
 meta_infos["model_language_lookup_table"] = model_language_lookup_table
 
+# This sorting is very imprtant!
+x = meta_infos['model_language_lookup_table']
+x = {k: v for k, v in sorted(x.items(), key=lambda item: (item[1], item[0]))}
+meta_infos['model_language_lookup_table'] = x
+
 
 class ResultAggregator:
     meta_infos = meta_infos
@@ -94,8 +99,6 @@ class ResultAggregator:
             self.results = results[results.state == "finished"]
 
         available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_'+self.score,col))]
-        #available_predict_scores = list(self.generate_concrete_score_name())
-        #available_predict_scores = [ x for x in available_predict_scores if bool(re.search("^eval.*",x))==False]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -525,6 +528,11 @@ class ResultAggregator:
             for col in columns:
                 overview_template[col] = ''
 
+        # Sort the models according to language
+        x = self.meta_infos['model_language_lookup_table']
+        models_sorted = list(x.keys())
+        overview_template = overview_template.reindex(index = models_sorted)
+
         return overview_template
 
     def insert_aggregated_score_over_language_models(self, dataframe, column_name="aggregated_score"):
@@ -552,8 +560,8 @@ class ResultAggregator:
         
         # Check if column with aggregated scores contains only numerical values
         # If yes, we can sort the column
-        if len([x for x in dataframe[column_name].tolist() if type(x)==float])==len(dataframe[column_name].tolist()):
-            dataframe = dataframe.sort_values(column_name, ascending = False)
+        # if len([x for x in dataframe[column_name].tolist() if type(x)==float])==len(dataframe[column_name].tolist()):
+            # dataframe = dataframe.sort_values(column_name, ascending = False)
 
         return dataframe
 
@@ -721,7 +729,6 @@ class ResultAggregator:
         results_averaged_over_configs = dict(results_averaged_over_configs)
 
         # Average over datasets within language model
-
         results_averaged_over_datasets = dict()
 
         for language_model, dataset_and_score in results_averaged_over_configs.items():
