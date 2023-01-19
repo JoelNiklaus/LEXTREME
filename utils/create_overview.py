@@ -259,8 +259,33 @@ class ResultAggregator:
         else:
             return self.meta_infos["model_language_lookup_table"][language_model] == language
 
+    def correct_language(self, finetuning_task, language_model, language):
+
+        '''
+        Sometimes the language column is wrong.
+        For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased the run names start with “all_” instead of “el_” which should not be.
+        This code will check if a language model is multilingual and if a task is monolingual. If the language is all, it must be corrected to the language of the monolingual model.
+        '''
+
+        if self.meta_infos["model_language_lookup_table"][language_model] == "all":
+            if len(self.meta_infos["task_language_mapping"][finetuning_task])==1:
+                if language == "all":
+                    new_language = self.meta_infos["task_language_mapping"][finetuning_task][0]
+                    log_message = ' '.join(["Changed language to from "+ language +" to "+ new_language +" for the following combinations: ", finetuning_task, language_model])
+                    logging.info(log_message)
+                    return new_language
+                else:
+                    return language
+            else:
+                return language
+        else:
+            return language
+
     def check_for_model_language_consistency(self, dataframe):
 
+        dataframe['language'] = dataframe.apply(
+            lambda x: self.correct_language(x["finetuning_task"], x["_name_or_path"], x["language"]), axis=1)
+        
         dataframe['model_language_consistency'] = dataframe.apply(
             lambda x: self.language_and_model_match(x["_name_or_path"], x["language"]), axis=1)
 
@@ -268,6 +293,8 @@ class ResultAggregator:
         del dataframe["model_language_consistency"]
 
         return dataframe
+
+        
 
     def loss_equals_nan(self, loss):
 
