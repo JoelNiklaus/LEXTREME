@@ -447,9 +447,9 @@ class ResultAggregator:
         
         df_pivot = df.pivot_table(values = score_to_filter , index = ['finetuning_task', '_name_or_path', 'language'], columns='seed', aggfunc='first')
         datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
-        df_pivot['datasets'] = datasets
+        df_pivot['dataset'] = datasets
         df_pivot.reset_index(inplace=True)
-        df_pivot = df_pivot[['datasets','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
+        df_pivot = df_pivot[['dataset','finetuning_task', '_name_or_path', 'language',1, 2, 3]]
         df_pivot['mean_over_seeds']=df_pivot.mean(axis=1, numeric_only=True)
         
         if old_score:
@@ -478,6 +478,10 @@ class ResultAggregator:
         accuracy_normalized_overview = self.create_overview_of_results_per_seed(score="accuracy_normalized",
                                                                                 only_completed_tasks=only_completed_tasks)
         self.accuracy_normalized_overview = accuracy_normalized_overview
+        
+        eval_macro_f1_overview = self.create_overview_of_results_per_seed(score="eval/macro-f1",only_completed_tasks=True)
+        
+        self.eval_macro_f1_overview = eval_macro_f1_overview
 
         with pd.ExcelWriter('results/report.xlsx') as writer:
             split_name = self.remove_slashes(self.split)
@@ -486,6 +490,7 @@ class ResultAggregator:
             self.micro_f1_overview.to_excel(writer, index=False, sheet_name = split_name+"_micro_f1_overview")
             self.weighted_f1_overview.to_excel(writer, index=False, sheet_name = split_name+"_weighted_f1_overview")
             self.accuracy_normalized_overview.to_excel(writer, index=False, sheet_name = split_name+"_accuracy_normalized_overview")
+            self.eval_macro_f1_overview.to_excel(writer, index=False, sheet_name = "eval_macro__f1_overview")
             
 
     def convert_numpy_float_to_python_float(self, value):
@@ -582,13 +587,14 @@ class ResultAggregator:
             dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
-        first_columns = [column_name]
-        dataframe = dataframe[first_columns + [col for col in columns if col not in first_columns]]
+        first_column = [column_name]
+        dataframe = dataframe[first_column + [col for col in columns if col not in first_column]]
         
         # Check if column with aggregated scores contains only numerical values
         # If yes, we can sort the column
         # if len([x for x in dataframe[column_name].tolist() if type(x)==float])==len(dataframe[column_name].tolist()):
             # dataframe = dataframe.sort_values(column_name, ascending = False)
+
 
         return dataframe
 
@@ -711,6 +717,12 @@ class ResultAggregator:
                 self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(self.dataset_aggregated_score)
+        
+        for finetuning_task, abbreviation in self.meta_infos["dataset_abbreviations"].items():
+            try:
+                self.dataset_aggregated_score.rename(columns={finetuning_task: abbreviation}, inplace=True)
+            except:
+                pass
 
         if write_to_csv:
             if average_over_language == False:
