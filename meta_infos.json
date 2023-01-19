@@ -1,4 +1,39 @@
 {
+  "dataset_abbreviations": 
+    {
+      "brazilian_court_decisions": "BC",
+      "german_argument_mining": "GAM",
+      "greek_legal_code": "GLC",
+      "swiss_judgment_prediction": "SJP",
+      "online_terms_of_service": "OTS",
+      "covid19_emergency_event": "C19",
+      "multi_eurlex_level": "MUL",
+      "greek_legal_ner": "GLN",
+      "legalnero": "LNR",
+      "lener_br": "LNB",
+      "mapa": "M"
+    },
+  "task_abbreviations": 
+    {
+      "brazilian_court_decisions_judgment": "BCDJ",
+      "brazilian_court_decisions_unanimity": "BCDU",
+      "covid19_emergency_event": "C19EE",
+      "german_argument_mining": "GAM",
+      "greek_legal_code_chapter": "GLCC",
+      "greek_legal_code_subject": "GLCS",
+      "greek_legal_code_volume": "GLCV",
+      "greek_legal_ner": "GLN",
+      "legalnero": "LNR",
+      "lener_br": "LNB",
+      "mapa_coarse": "MC",
+       "mapa_fine": "MF",
+      "multi_eurlex_level_1": "MUL1",
+      "multi_eurlex_level_2": "MUL2",
+      "multi_eurlex_level_3": "MUL3",
+      "online_terms_of_service_clause_topics": "OTSCT",
+      "online_terms_of_service_unfairness_levels": "OTSUL",
+      "swiss_judgment_prediction": "SJP"
+    },
   "task_requires_hierarchical_per_default": {
     "brazilian_court_decisions_judgment": "yes",
     "brazilian_court_decisions_unanimity": "yes",
