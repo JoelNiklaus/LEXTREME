@@ -187,6 +187,7 @@ class ResultAggregator:
         results = self.edit_result_dataframe(results)
         return results
 
+
     def edit_column_name(self, column_name):
         if column_name.startswith('config_'):
             column_name = re.sub('^config_', '', column_name)
@@ -332,6 +333,11 @@ class ResultAggregator:
         # Remove all cases where eval/loss is nan according to wandb
         results = results[results['eval/loss']
                           .apply(self.loss_equals_nan) == False]
+
+
+        # Keep only results from seed 1,2,3 and remove anything else
+        results = results[results.seed.isin([1,2,3])]
+        results  = results.drop_duplicates(["seed", "finetuning_task", "_name_or_path"])
 
         return results
 
@@ -671,17 +677,17 @@ class ResultAggregator:
                             mean_macro_f1_score = self.get_mean_from_list_of_values(
                                 predict_language_mean_collected)
 
-                            if set(predict_language_collected) != set(
-                                    self.meta_infos["task_language_mapping"][finetuning_task]):
-                                logging.error(
-                                    "We do not have the prediction results for all languages for finetuning task " + finetuning_task + " with language model " + _name_or_path)
-                                logging.info("We have results for the following languages: " + ", ".join(
-                                    sorted(predict_language_collected)))
-                                logging.info("But we need results for the following languages: " + ", ".join(
-                                    sorted(self.meta_infos["task_language_mapping"][finetuning_task])))
-                                logging.info("The the results for the following language(s) are mssing: " + ', '.join(
-                                    [l for l in self.meta_infos["task_language_mapping"][finetuning_task] if
-                                     l not in predict_language_collected]))
+                            if set(predict_language_collected) != set(self.meta_infos["task_language_mapping"][finetuning_task]):
+                                    if set(self.meta_infos["model_language_lookup_table"][_name_or_path])!=set(predict_language_collected):
+                                        logging.error(
+                                            "We do not have the prediction results for all languages for finetuning task " + finetuning_task + " with language model " + _name_or_path)
+                                        logging.info("We have results for the following languages: " + ", ".join(
+                                            sorted(predict_language_collected)))
+                                        logging.info("But we need results for the following languages: " + ", ".join(
+                                            sorted(self.meta_infos["task_language_mapping"][finetuning_task])))
+                                        logging.info("The the results for the following language(s) are mssing: " + ', '.join(
+                                            [l for l in self.meta_infos["task_language_mapping"][finetuning_task] if
+                                            l not in predict_language_collected]))
 
                         else:
                             mean_macro_f1_score = ""
