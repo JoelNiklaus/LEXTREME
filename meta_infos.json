@@ -349,11 +349,17 @@
         "large": []
       },
       "en": {
-        "small": [],
+        "small": [
+          "distilbert-base-uncased"
+        ],
         "base": [
+          "bert-base-uncased",
+          "bert-base-cased",
           "roberta-base"
         ],
-        "large": []
+        "large": [
+          "roberta-large"
+        ]
       },
       "es": {
         "small": [],
