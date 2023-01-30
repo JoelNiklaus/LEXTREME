@@ -33,9 +33,7 @@ with open('meta_infos.json', 'r') as f:
 
 language_models = meta_infos["language_models"]
 
-
-
-# Creating a dictionary to look up the language for each language model 
+# Creating a dictionary to look up the language for each language model
 model_language_lookup_table = dict()
 for k, v in language_models.items():
     if type(v) == dict:
@@ -154,17 +152,17 @@ max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
 
 
 def get_hierarchical(task):
-    if meta_infos["task_requires_hierarchical_per_default"][task]=="yes":
+    if meta_infos["task_requires_hierarchical_per_default"][task] == "yes":
         return True
     else:
         return False
+
 
 def get_python_file_for_task(task):
     return f"run_{task}.py"
 
 
 def generate_command(time_now, **data):
-
     if data["hierarchical"] is None:
         data["hierarchical"] = get_hierarchical(data["task"])
 
@@ -208,8 +206,9 @@ def generate_command(time_now, **data):
         else:
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
-            if str(data["hierarchical"]).lower()=='true': # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
-                if bool(re.search('(xlm-roberta-base|xlm-roberta-large)',data["model_name"]))==False:
+            if str(data[
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
+                if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
                 else:
                     command_template += ' --fp16 '
@@ -282,26 +281,26 @@ def run_in_parallel(commands_to_run):
 
 
 def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
-                   accumulation_steps, lower_case, list_of_languages, learning_rate, gpu_number, gpu_memory, hierarchical,
+                   accumulation_steps, lower_case, list_of_languages, learning_rate, gpu_number, gpu_memory,
+                   hierarchical,
                    preprocessing_num_workers,
                    dataset_cache_dir, num_train_epochs=None, log_directory=None):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
-    
 
     preprocessing_num_workers = int(preprocessing_num_workers)
 
     batch_size_to_be_found = True if batch_size is None else False
     language_to_be_found = True if list_of_languages is None else False
-    
+
     if list_of_languages is not None:
-        if type(list_of_languages)==str:
+        if type(list_of_languages) == str:
             list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
 
     if num_train_epochs is None:
         if 'multi_eurlex' in task:
-        # this dataset is so large, one epoch is enough to save compute
-        # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
+            # this dataset is so large, one epoch is enough to save compute
+            # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
             num_train_epochs = 1
         else:
             num_train_epochs = 50
@@ -363,7 +362,7 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 for s in sizes:
                     if l in language_models[t]:
                         models_to_be_used.extend(language_models[t][l][s])  # add all models we want to run
-                        
+
     models_to_be_used = sorted(list(set(models_to_be_used)))
     print(models_to_be_used)
 
@@ -388,13 +387,13 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
         if bool(re.search('\d', str(gpu_id))):
             gpu_id = int(gpu_id)
         seed = int(seed)
-        
+
         if batch_size is None:
             batch_size, accumulation_steps = get_optimal_batch_size(model_name, task, gpu_memory)
         else:
             if accumulation_steps is None:
                 accumulation_steps = 1
-        
+
         if list_of_languages is None:
             if model_name in model_language_lookup_table.keys():
                 # all means just the entire dataset, so that we take the default value
@@ -402,11 +401,11 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                     list_of_languages = [model_language_lookup_table[model_name]]
                 else:
                     list_of_languages = [None]
-                    
+
         for lang in list_of_languages:
 
             time_stamp = datetime.datetime.now().isoformat()
-            
+
             print("LANGUAGE IS: ", lang)
 
             script_new = generate_command(
@@ -422,20 +421,19 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
                 preprocessing_num_workers=preprocessing_num_workers,
                 dataset_cache_dir=dataset_cache_dir
             )
-            
+
             if script_new is not None:
                 # sleep different time for each seed to prevent access to temporary scripts at the same time
                 command = f'sleep {seed * 10}; bash {str(script_new)}'
                 gpu_command_dict[gpu_id].append(command)
                 print(command)
 
-        
         if batch_size_to_be_found:
             # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
             batch_size = None
 
         if language_to_be_found:
-            list_of_languages = None # Set language back to None
+            list_of_languages = None  # Set language back to None
 
     with open('command_dict.json', 'w') as f:
         js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
@@ -466,7 +464,8 @@ if __name__ == '__main__':
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
-    parser.add_argument('-lol', '--list_of_languages', help='Define if you want to filter the training dataset by language.',
+    parser.add_argument('-lol', '--list_of_languages',
+                        help='Define if you want to filter the training dataset by language.',
                         default=None)
     parser.add_argument('-lc', '--lower_case', help='Define if lower case or not.', default=False)
     parser.add_argument('-lmt', '--language_model_type',
