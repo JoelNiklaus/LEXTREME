@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import sys
 import wandb
 from datasets import Dataset, concatenate_datasets, load_dataset, load_metric
 from scipy.special import expit
@@ -26,25 +27,12 @@ from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
                              get_tokenizer)
 
+utils_path = os.path.join(os.path.dirname(__file__), '../utils')
 
+sys.path.append(utils_path)
 
-def get_meta_infos():
-    absolute_path = os.path.dirname(__file__)
-    relative_path = '../meta_infos.json'
-    full_path = os.path.join(absolute_path, relative_path)
-    with open(full_path, 'r') as f:
-        meta_infos = js.load(f)
+from utilities import get_meta_infos
 
-    code_task_mapping = defaultdict(list)
-
-    for k,v in meta_infos["task_code_mapping"].items():
-        code_task_mapping[v].append(k)
-
-    code_task_mapping = dict(code_task_mapping)
-
-    meta_infos["code_task_mapping"]=code_task_mapping
-
-    return meta_infos
 
 
 meta_infos = get_meta_infos()

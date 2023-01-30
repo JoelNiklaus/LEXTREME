@@ -1,6 +1,10 @@
 import arrow
+from collections import defaultdict
+import json as js
 import os
 from pathlib import Path
+
+
 
 
 def remove_old_files(path_to_directory, days=-7):
@@ -16,3 +20,202 @@ def remove_old_files(path_to_directory, days=-7):
                     os.remove(file)
                 except OSError:
                     pass  # we don't care if the file is not there
+
+
+def get_meta_infos():
+    
+    path_to_json_file = os.path.join(os.path.dirname(__file__), 'meta_infos.json')
+    with open(path_to_json_file, 'r') as f:
+        meta_infos = js.load(f)
+
+    language_models = meta_infos["language_models"]
+
+    # Creating a dictionary to look up the language for each language model
+    model_language_lookup_table = dict()
+    for k, v in language_models.items():
+        if type(v) == dict:
+            for language, info in v.items():
+                if language == "multilingual":
+                    language = "all"
+                for size, models in info.items():
+                    for m in models:
+                        model_language_lookup_table[m] = language
+    
+    meta_infos["model_language_lookup_table"] = model_language_lookup_table
+
+
+    code_task_mapping = defaultdict(list)
+
+    for k,v in meta_infos["task_code_mapping"].items():
+        code_task_mapping[v].append(k)
+
+    code_task_mapping = dict(code_task_mapping)
+
+    meta_infos["code_task_mapping"]=code_task_mapping
+
+    return meta_infos
+
+meta_infos = get_meta_infos()
+
+
+
+optimal_batch_sizes = {
+    # e.g. RTX 2080 Ti or GTX 1080 Ti
+    # TODO test sizes here
+    11: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 1},  # untested
+    },
+    # TODO test sizes here
+    # e.g. P100
+    16: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
+        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
+    },
+    # e.g. RTX 3090
+    24: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+    },
+    # e.g. V100
+    32: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
+    },
+    # TODO test sizes here
+    # e.g. A6000
+    48: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+    },
+    # e.g. A100
+    80: {
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
+        # 'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
+        # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
+        # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
+        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},  # fp16
+        # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},  # fp32
+        # lower batch sizes because not possible with fp16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+        # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
+    },
+}
+
+# TODO get this directly from the LEXTREME huggingface dataset loader
+# SLTC: Single Class Text Classification
+# MLTC: Multi Class Text Classification
+# NER: Named Entity Recognition
+task_code_mapping = meta_infos["task_code_mapping"]
+
+max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
+    'brazilian_court_decisions_judgment': 8 * 128,  # 1024
+    'brazilian_court_decisions_unanimity': 8 * 128,  # 1024
+    'covid19_emergency_event': 256,
+    'german_argument_mining': 256,
+    'greek_legal_code_chapter': 32 * 128,  # 4096
+    'greek_legal_code_subject': 32 * 128,  # 4096
+    'greek_legal_code_volume': 32 * 128,  # 4096
+    'greek_legal_ner': 512,
+    'legalnero': 512,
+    'lener_br': 512,
+    'mapa_fine': 512,
+    'mapa_coarse': 512,
+    'multi_eurlex_level_1': 32 * 128,  # 4096
+    'multi_eurlex_level_2': 32 * 128,  # 4096
+    'multi_eurlex_level_3': 32 * 128,  # 4096
+    'online_terms_of_service_clause_topics': 256,
+    'online_terms_of_service_unfairness_levels': 256,
+    'swiss_judgment_prediction': 16 * 128,  # 2048
+}
+
+
+def get_hierarchical(task):
+    if meta_infos["task_requires_hierarchical_per_default"][task] == "yes":
+        return True
+    else:
+        return False
+
+
+def get_python_file_for_task(task):
+    return f"run_{task}.py"
+
+
+def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
+    max_seq_len = max_sequence_lengths[task]
+    try:
+        batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
+    except:
+        print("The language model ", language_model, " will be considered a monolingual model. "
+                                                     "Therefore, we revert to the default batch size.")
+        batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
+    batch_size = None
+    while batch_size is None:
+        try:
+            batch_size = batch_size_dict[max_seq_len]
+        except KeyError:
+            max_seq_len *= 2  # if the sequence length is not in the dictionary, we try the next higher one
+    accumulation_steps = total_batch_size // batch_size
+
+    return batch_size, accumulation_steps
+
+
+def get_default_number_of_training_epochs(task, model_name, language=None):
+    
+    if meta_infos["model_language_lookup_table"][model_name]=="all":
+        if 'multi_eurlex' in task:
+            if language is None:
+                # this dataset is so large, one epoch is enough to save compute
+                # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
+                num_train_epochs = 1
+            elif language in ['all', 'multilingual']:
+                # this dataset is so large, one epoch is enough to save compute
+                # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
+                num_train_epochs = 1
+            else:
+                num_train_epochs = 50
+        else:
+            num_train_epochs = 50
+    else:
+        num_train_epochs = 50
+        
+    
+    return num_train_epochs
+
+
+    
