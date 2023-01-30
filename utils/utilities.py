@@ -195,27 +195,74 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
     return batch_size, accumulation_steps
 
 
-def get_default_number_of_training_epochs(task, model_name, language=None):
+def get_strategies():
+    pass
+
+def get_default_number_of_training_epochs(task, model_name, running_mode,language=None):
+    
+    output_dict = dict()
+
+    eval_steps = None
+    logging_steps = None
+    save_steps = None
     
     if meta_infos["model_language_lookup_table"][model_name]=="all":
         if 'multi_eurlex' in task:
-            if language is None:
+            if language is None and running_mode=="default":
                 # this dataset is so large, one epoch is enough to save compute
                 # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
                 num_train_epochs = 1
-            elif language in ['all', 'multilingual']:
+                evaluation_strategy = "steps"
+                logging_strategy = "steps"
+                save_strategy = "steps"
+                eval_steps = 1000
+                logging_steps = 1000
+                save_steps = 1000
+            elif language in ['all', 'multilingual'] and running_mode=="default":
                 # this dataset is so large, one epoch is enough to save compute
                 # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
                 num_train_epochs = 1
+                evaluation_strategy = "steps"
+                logging_strategy = "steps"
+                save_strategy = "steps"
+                eval_steps = 1000
+                logging_steps = 1000
+                save_steps = 1000
             else:
                 num_train_epochs = 50
+                evaluation_strategy = "epoch"
+                logging_strategy = "epoch"
+                save_strategy = "epoch"
+
         else:
             num_train_epochs = 50
+            num_train_epochs = 50
+            evaluation_strategy = "epoch"
+            logging_strategy = "epoch"
+            save_strategy = "epoch"
+
     else:
         num_train_epochs = 50
+        num_train_epochs = 50
+        evaluation_strategy = "epoch"
+        logging_strategy = "epoch"
+        save_strategy = "epoch"
+
         
+    output_dict["num_train_epochs"] = num_train_epochs
+
+    output_dict["evaluation_strategy"] = evaluation_strategy
+    output_dict["logging_strategy"] = logging_strategy
+    output_dict["save_strategy"] = save_strategy
+    output_dict["eval_steps"] = eval_steps
+    output_dict["logging_steps"] = logging_steps
+    output_dict["save_steps"] = save_steps
+
+    return output_dict
+
+# Get the evaluation_strategy, logging_strategy, save_strategy, eval_steps, logging_steps
+
     
-    return num_train_epochs
 
 
     

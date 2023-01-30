@@ -42,7 +42,9 @@ def generate_command(time_now, **data):
                        '--overwrite_output_dir ' \
                        '--load_best_model_at_end --metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
                        '--greater_is_better {GREATER_IS_BETTER} ' \
-                       '--evaluation_strategy epoch --save_strategy epoch ' \
+                       '--evaluation_strategy {EVALUATION_STRATEGY} ' \
+                       '--logging_strategy {LOGGING_STRATEGY} ' \
+                       '--save_strategy {SAVE_STRATEGY} ' \
                        '--save_total_limit 6 ' \
                        '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
                        '--learning_rate {LEARNING_RATE} ' \
@@ -83,6 +85,12 @@ def generate_command(time_now, **data):
                     command_template += ' --fp16 '
             else:
                 command_template += ' --fp16 --fp16_full_eval'
+    if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
+        command_template += ' --logging_steps '+str(data["logging_steps"]) +' '
+    if 'eval_steps' in data.keys() and data['eval_steps'] is not None:
+        command_template += ' --eval_steps '+str(data["eval_steps"]) +' '
+    if 'save_steps' in data.keys() and data['save_steps'] is not None:
+        command_template += ' --save_steps '+str(data["save_steps"]) +' '
 
             # mdeberta does not work with fp16 because it was trained with bf16
             # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -105,7 +113,10 @@ def generate_command(time_now, **data):
                                             LOG_DIRECTORY=data["log_directory"],
                                             PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
                                             DATASET_CACHE_DIR=data["dataset_cache_dir"],
-                                            HIERARCHICAL=data["hierarchical"]
+                                            HIERARCHICAL=data["hierarchical"],
+                                            EVALUATION_STRATEGY=data["evaluation_strategy"],
+                                            LOGGING_STRATEGY=data["logging_strategy"],
+                                            SAVE_STRATEGY=data["save_strategy"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -131,11 +142,31 @@ def run_in_parallel(commands_to_run):
         pool.map(run_script, commands_to_run)
 
 
-def run_experiment(running_mode, download_mode, language_model_type, task, list_of_seeds, batch_size,
-                   accumulation_steps, lower_case, list_of_languages, learning_rate, gpu_number, gpu_memory,
-                   hierarchical,
-                   preprocessing_num_workers,
-                   dataset_cache_dir, num_train_epochs=None, log_directory=None):
+def run_experiment(
+                accumulation_steps, 
+                batch_size,
+                dataset_cache_dir, 
+                download_mode,
+                eval_steps,
+                evaluation_strategy,
+                gpu_memory,
+                gpu_number, 
+                hierarchical,
+                language_model_type, 
+                learning_rate, 
+                list_of_languages, 
+                list_of_seeds,
+                logging_strategy,
+                logging_steps,
+                lower_case,  
+                preprocessing_num_workers,
+                running_mode,
+                save_strategy,
+                save_steps,
+                task,
+                log_directory=None,
+                num_train_epochs=None
+                ):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
 
@@ -148,13 +179,6 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
         if type(list_of_languages) == str:
             list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
 
-    '''if num_train_epochs is None:
-        if 'multi_eurlex' in task:
-            # this dataset is so large, one epoch is enough to save compute
-            # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
-            num_train_epochs = 1
-        else:
-            num_train_epochs = 50'''
 
     if log_directory is None:
         log_directory = 'results/logs_' + str(time_stamp)
@@ -259,20 +283,50 @@ def run_experiment(running_mode, download_mode, language_model_type, task, list_
 
             print("LANGUAGE IS: ", lang)
 
-            num_train_epochs = get_default_number_of_training_epochs(task = task, model_name = model_name, language = lang)
+            epoch_and_strategies = get_default_number_of_training_epochs(task = task, model_name = model_name, language = lang, running_mode = running_mode)
+
+            eval_steps = epoch_and_strategies["eval_steps"]
+            logging_steps = epoch_and_strategies["logging_steps"]
+            save_steps = epoch_and_strategies["save_steps"]
+
+            if num_train_epochs is None:
+                num_train_epochs = epoch_and_strategies["num_train_epochs"]
+            if evaluation_strategy is None:
+                evaluation_strategy = epoch_and_strategies["evaluation_strategy"]
+            if logging_strategy is None:
+                logging_strategy = epoch_and_strategies["logging_strategy"]
+            if save_strategy is None:
+                save_strategy = epoch_and_strategies["save_strategy"]
+            
 
             script_new = generate_command(
-                time_now=time_stamp, gpu_number=gpu_id, gpu_memory=gpu_memory,
+                accumulation_steps=accumulation_steps, 
+                batch_size=batch_size,
+                code=get_python_file_for_task(task), 
+                dataset_cache_dir=dataset_cache_dir,
+                download_mode=download_mode,
+                evaluation_strategy=evaluation_strategy,
+                eval_steps=eval_steps,
+                gpu_memory=gpu_memory,
+                gpu_number=gpu_id, 
+                greater_is_better=greater_is_better,
+                hierarchical=hierarchical, 
+                language=lang,
+                learning_rate=learning_rate,
+                logging_strategy=logging_strategy,
+                logging_steps=logging_steps,
+                log_directory=log_directory,
+                lower_case=lower_case, 
+                metric_for_best_model=metric_for_best_model,
                 model_name=model_name,
-                lower_case=lower_case, task=task, seed=seed,
-                num_train_epochs=num_train_epochs, batch_size=batch_size,
-                accumulation_steps=accumulation_steps, language=lang,
-                running_mode=running_mode, learning_rate=learning_rate,
-                code=get_python_file_for_task(task), metric_for_best_model=metric_for_best_model,
-                hierarchical=hierarchical, greater_is_better=greater_is_better,
-                download_mode=download_mode, log_directory=log_directory,
+                num_train_epochs=num_train_epochs, 
                 preprocessing_num_workers=preprocessing_num_workers,
-                dataset_cache_dir=dataset_cache_dir
+                running_mode=running_mode, 
+                save_strategy=save_strategy,
+                save_steps=save_steps,
+                seed=seed,
+                task=task, 
+                time_now=time_stamp
             )
 
             if script_new is not None:
@@ -311,12 +365,14 @@ if __name__ == '__main__':
 
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
+    parser.add_argument('-es', '--evaluation_strategy', help = "The evaluation strategy to adopt during training. Possible values are: no = No evaluation is done during training; steps = Evaluation is done (and logged) every eval_steps; epoch = Evaluation is done at the end of each epoch.", default=None)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
     parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=None)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
+    parser.add_argument('-ls', '--logging_strategy', help = "The logging strategy to adopt during training. Possible values are: no: No logging is done during training ; epoch: Logging is done at the end of each epoch; steps: Logging is done every logging_steps.", default = None)
     parser.add_argument('-lol', '--list_of_languages',
                         help='Define if you want to filter the training dataset by language.',
                         default=None)
@@ -354,6 +410,11 @@ if __name__ == '__main__':
     parser.add_argument('-cad', '--dataset_cache_dir',
                         help="Specify the directory you want to cache your datasets.",
                         default=None)
+    parser.add_argument('-ss','--save_strategy', help="The checkpoint save strategy to adopt during training. Possible values are: no: No save is done during training; epoch: Save is done at the end of each epoch; steps: Save is done every save_steps.", default = None)
+    parser.add_argument('-est', '--eval_steps', help='Number of update steps between two evaluations if evaluation_strategy="steps". Will default to the same value as logging_steps if not set.', default=None)
+    parser.add_argument('-lst', '--logging_steps', help='Number of update steps between two logs if logging_strategy="steps".', default=None)
+    parser.add_argument('-sst', '--save_steps', help='Number of updates steps before two checkpoint saves if save_strategy="steps".', default=None)
+        
 
     args = parser.parse_args()
 
@@ -372,10 +433,14 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         dataset_cache_dir=args.dataset_cache_dir,
         download_mode=args.download_mode,
+        evaluation_strategy=args.evaluation_strategy,
+        eval_steps=args.eval_steps,
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
         list_of_languages=args.list_of_languages,
+        logging_strategy = args.logging_strategy,
+        logging_steps=args.logging_steps, 
         language_model_type=args.language_model_type,
         learning_rate=args.learning_rate,
         list_of_seeds=args.list_of_seeds,
@@ -384,5 +449,7 @@ if __name__ == '__main__':
         log_directory=args.log_directory,
         preprocessing_num_workers=args.preprocessing_num_workers,
         running_mode=args.running_mode,
+        save_strategy = args.save_strategy,
+        save_steps = args.save_steps,
         task=args.task
     )
