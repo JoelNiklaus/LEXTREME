@@ -321,15 +321,8 @@ def main():
 
     # Initialize our Trainer
     training_args.metric_for_best_model = "eval_loss"
-    if data_args.running_mode=="experimental":
-        training_args.evaluation_strategy = IntervalStrategy.EPOCH
-        training_args.logging_strategy = IntervalStrategy.EPOCH
-    else:
-        training_args.evaluation_strategy = IntervalStrategy.STEPS
-        training_args.logging_strategy = IntervalStrategy.STEPS
-        training_args.save_strategy = IntervalStrategy.STEPS
-        training_args.eval_steps = 1000
-        training_args.logging_steps = 1000
+    training_args.evaluation_strategy = IntervalStrategy.EPOCH
+    training_args.logging_strategy = IntervalStrategy.EPOCH
     
 
 
