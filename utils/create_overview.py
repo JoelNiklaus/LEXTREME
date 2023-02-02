@@ -14,28 +14,11 @@ from collections import defaultdict
 from copy import deepcopy
 import wandb
 from traceback import print_exc
+from utilities import get_meta_infos
 
 
-with open(os.path.abspath("../meta_infos.json"), "r") as f:
-    meta_infos = js.load(f)
+meta_infos = get_meta_infos()
 
-# Creating a dictionary to look up the language for each language model
-model_language_lookup_table = dict()
-for k, v in meta_infos["language_models"].items():
-    if type(v) == dict:
-        for language, info in v.items():
-            if language == "multilingual":
-                language = "all"
-            for size, models in info.items():
-                for m in models:
-                    model_language_lookup_table[m] = language
-
-meta_infos["model_language_lookup_table"] = model_language_lookup_table
-
-# This sorting is very imprtant!
-x = meta_infos['model_language_lookup_table']
-x = {k: v for k, v in sorted(x.items(), key=lambda item: (item[1], item[0]))}
-meta_infos['model_language_lookup_table'] = x
 
 
 class ResultAggregator:
@@ -462,6 +445,7 @@ class ResultAggregator:
                     for i in df_pivot.index.tolist()]
         df_pivot['dataset'] = datasets
         df_pivot.reset_index(inplace=True)
+        print(df_pivot.head())
         df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
             lambda x: self.meta_infos["task_code_mapping"][x])
         df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
