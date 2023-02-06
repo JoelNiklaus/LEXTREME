@@ -62,6 +62,18 @@ For a detailed description of each task and dataset see [Niklaus et al. (2023)](
 
 ## LEXTREME Scores
 
+We evaluated multilingual models as well as monolingual models. The multilingual models are the following:
+
+| **Model**                                                               | **Source**                                                                                             | **Parameters** | **Vocabulary Size** | **Pretraining Specs** | **Pretraining Corpora** | **Pretraining Languages** |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------- | ------------------- | --------------------- | ----------------------- | ------------------------- |
+| [MiniLM](microsoft/Multilingual-MiniLM-L12-H384)                        | [Wang et al. (2020)](https://dl.acm.org/doi/pdf/10.5555/3495724.3496209)                               | 118M           | 250K                | 1M steps / BS 256     | 2.5T CC100 data         | 100                       |
+| [DistilBert](https://huggingface.co/distilbert-base-multilingual-cased) | [Sanh (2019)](https://arxiv.org/pdf/1910.01108.pdf)                                                    | 135M           | 120K                | BS up to 4000         | Wikipedia               | 104                       |
+| [mDeberta-v3](https://huggingface.co/microsoft/mdeberta-v3-base)        | He et al. ([2020](https://arxiv.org/pdf/2006.03654.pdf), [2021](https://arxiv.org/pdf/2111.09543.pdf)) | 278M           | 128K                | 500K steps / BS 8192  | 2.5T CC100 data         | 100                       |
+| [XLM-R base](https://huggingface.co/xlm-roberta-base)                   | [Conneau et al. (2020)](https://aclanthology.org/2020.acl-main.747.pdf)                                | 278M           | 250K                | 1.5M steps / BS 8192  | 2.5T CC100 data         | 100                       |
+| [XLM-R large](https://huggingface.co/xlm-roberta-large)                 | [Conneau et al. (2020)](https://aclanthology.org/2020.acl-main.747.pdf)                                | 560M           | 250K                | 1.5M steps / BS 8192  | 2.5T CC100 data         | 100                       |
+
+In the following we will provide the results on the basis of the multilingual models.
+
 The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score. We compute the dataset aggregate score by taking the successive harmonic mean of (1.) the languages inside the configurations (e.g., de,fr,it within SJP), (2.) the configurations inside the datasets (e.g., OTS-UL, OTS-CT within OTS), and (3.) the datasets inside LEXTREME (BCD, GAM, etc.).
 
 | **Model**   | **BCD**  | **GAM**  | **GLC**  | **SJP**  | **OTS**  | **C19**  | **MEU**  | **GLN**  | **LNR**  | **LNB**  | **MAP**  | **Agg.** |
