@@ -139,20 +139,14 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
 Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting `-hierarchical` to True will cause an error.
 
 ## References
-
+Please cite the following preprint:
 ```
-@inproceedings{niklaus-etal-2021-swiss,
-    title = "{S}wiss-Judgment-Prediction: A Multilingual Legal Judgment Prediction Benchmark",
-    author = {Niklaus, Joel  and
-      Chalkidis, Ilias  and
-      St{\"u}rmer, Matthias},
-    booktitle = "Proceedings of the Natural Legal Language Processing Workshop 2021",
-    month = nov,
-    year = "2021",
-    address = "Punta Cana, Dominican Republic",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2021.nllp-1.3",
-    doi = "10.18653/v1/2021.nllp-1.3",
-    pages = "19--35",
-    abstra
+@misc{niklaus2023lextreme,
+    title={LEXTREME: A Multi-Lingual and Multi-Task Benchmark for the Legal Domain},
+    author={Joel Niklaus and Veton Matoshi and Pooja Rani and Andrea Galassi and Matthias Stürmer and Ilias Chalkidis},
+    year={2023},
+    eprint={2301.13126},
+    archivePrefix={arXiv},
+    primaryClass={cs.CL}
+}
 ```
