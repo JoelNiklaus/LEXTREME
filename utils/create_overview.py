@@ -75,12 +75,7 @@ class ResultAggregator:
             results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull() == False]
 
-        # When fetching the data from the wandb api it it return state instead of State as column name
-        # I could make every column name lowercase, but I am afraid this might cause some problems
-        if 'State' in results.columns:
-            self.results = results[results.State == "finished"]
-        elif 'state' in results.columns:
-            self.results = results[results.state == "finished"]
+        self.results = results
 
         available_predict_scores = [col for col in self.results if bool(
             re.search(r'^\w+_predict/_'+self.score, col))]
@@ -320,7 +315,18 @@ class ResultAggregator:
 
         # Keep only results from seed 1,2,3 and remove anything else
         results = results[results.seed.isin([1,2,3])]
-        results  = results.drop_duplicates(["seed", "finetuning_task", "_name_or_path"])
+
+        # When fetching the data from the wandb api it it return state instead of State as column name
+        # I could make every column name lowercase, but I am afraid this might cause some problems
+        if 'State' in results.columns:
+            results = results[results.State == "finished"]
+        elif 'state' in results.columns:
+            results = results[results.state == "finished"]
+    
+
+        results  = results.drop_duplicates(["seed", "finetuning_task", "_name_or_path", "language"])
+
+
 
         return results
 
@@ -370,6 +376,32 @@ class ResultAggregator:
                     item['missing_seeds'] = sorted(list(required_seeds))
                     report.append(item)
 
+            # Now we have to check cases where we finetune multilingual models on monolingual subsets
+            
+            for task, languages in self.meta_infos["task_language_mapping"].items():
+                if len(languages)>1: # Monolingual datasets are not needed
+                    for model_name, language in self.meta_infos['model_language_lookup_table'].items():
+                        if language == "all":
+                            for lang in languages:
+                                available_seeds = self.results[(self.results.finetuning_task == task) & (
+                                    self.results._name_or_path == model_name) & (self.results.language == lang)].seed.unique()
+                                
+                                available_seeds = set([str(s) for s in available_seeds])
+                            
+                                if required_seeds.intersection(available_seeds) != required_seeds:
+                                        message = "For task " + task + " in combination with the language subset" + \
+                                                lang + " we do not have any results for this model: " + model_name
+                                        logging.warn(message)
+                                        item = dict()
+                                        item['finetuning_task'] = task
+                                        item['_name_or_path'] = model_name
+                                        item['language'] = lang + '_subset'
+                                        item['missing_seeds'] = sorted([s for s in required_seeds if s not in available_seeds])
+                                        report.append(item)
+
+            ######################################
+
+
             for am in available_models:
                 list_of_seeds = set(self.results[(self.results.finetuning_task == task) & (
                     self.results._name_or_path == am)].seed.unique())
@@ -389,6 +421,8 @@ class ResultAggregator:
                     report.append(item)
 
         report_df = pd.DataFrame(report)
+
+        report_df = report_df[report_df._name_or_path.str.contains('joelito')==False] # We will not check Joel's pretrained models yet
 
         return report_df
 
@@ -445,7 +479,6 @@ class ResultAggregator:
                     for i in df_pivot.index.tolist()]
         df_pivot['dataset'] = datasets
         df_pivot.reset_index(inplace=True)
-        print(df_pivot.head())
         df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
             lambda x: self.meta_infos["task_code_mapping"][x])
         df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
