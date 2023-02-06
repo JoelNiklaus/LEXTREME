@@ -25,15 +25,64 @@ wandb login {WANDB_API_KEY}
 
 ## Dataset Summary
 
-[comming soon]
+[LEXTREME](https://huggingface.co/datasets/joelito/lextreme) constist of three classification task types:
+
+- Single Label Text Classification (SLTC)
+- Multi Label Text Classification (MLTC)
+- Named Entity Recognition (NER)
+
+The dataset consists of 11 diverse multilingual legal NLU datasets. 6 datasets have one single configuration and 5 datasets have two or three configurations. This leads to a total of 18 tasks (8 SLTC, 5 MLTC and 5 NER).
+
+We use the existing train, validation, and test splits if present. In the other cases we split the data ourselves (80\% train, 10\% validation and test each).
 
 ## Supported Tasks
 
-[comming soon]
+For a detailed description of each task and dataset see [Niklaus et al. (2023)](https://arxiv.org/abs/2301.13126). Datasets are abbreviated by three capital letters. Configurations of datasets, in case they exist, are indicated by an additional letter seperated by a hyphen.
+
+| Task                                               | Type                             | Train / Dev / Test Examples | Train / Dev / Test Labels |
+| -------------------------------------------------- | -------------------------------- | --------------------------- | ------------------------- |
+| BCD-J (brazilian_court_decisions_judgment)         | SLTC (Judgment Prediction)       | 3234 / 404 / 405            | 3 / 3 / 3                 |
+| BCD-U (brazilian_court_decisions_unan)             | SLTC (Judgment Prediction)       | 1715 / 211 / 204            | 2 / 2 / 2                 |
+| GAM (german_argument_mining)                       | SLTC (Argument Mining)           | 19271 / 2726 / 3078         | 4 / 4 / 4                 |
+| GLC-V (greek_legal_code_volume)                    | SLTC (Topic Classification)      | 28536 / 9511 / 9516         | 47 / 47 / 47              |
+| GLC-C (greek_legal_code_chapter)                   | SLTC (Topic Classification)      | 28536 / 9511 / 9516         | 386 / 377 / 374           |
+| GLC-S (greek_legal_code_subject)                   | SLTC (Topic Classification)      | 28536 / 9511 / 9516         | 2143 / 1679 / 1685        |
+| SJP (swiss_judgment_prediction)                    | SLTC (Judgment Prediction)       | 59709 / 8208 / 17357        | 2 / 2 / 2                 |
+| OTS-UL (online_terms_of_service_unfairness_levels) | SLTC (Unfairness Classification) | 2074 / 191 / 417            | 3 / 3 / 3                 |
+| OTS-CT (online_terms_of_service_clause_topics)     | MLTC (Unfairness Classification) | 19942 / 1690 / 4297         | 9 / 8 / 9                 |
+| C19 (covid19_emergency_event)                      | MLTC (Event Classification)      | 3312 / 418 / 418            | 8 / 8 / 8                 |
+| MEU-1 (multi_eurlex_level_1)                       | MLTC (Topic Classification)      | 817239 / 112500 / 115000    | 21 / 21 / 21              |
+| MEU-2 (multi_eurlex_level_2)                       | MLTC (Topic Classification)      | 817239 / 112500 / 115000    | 127 / 126 / 127           |
+| MEU-3 (multi_eurlex_level_3)                       | MLTC (Topic Classification)      | 817239 / 112500 / 115000    | 500 / 454 / 465           |
+| GLN (greek_legal_ner)                              | NER                              | 17699 / 4909 / 4017         | 17 / 17 / 17              |
+| LNR (legalnero)                                    | NER                              | 7552 / 966 / 907            | 11 / 9 / 11               |
+| LNB (lener_br)                                     | NER                              | 7828 / 1177 / 1390          | 13 / 13 / 13              |
+| MAP-C (mapa_coarse)                                | NER                              | 27823 / 3354 / 10590        | 13 / 11 / 11              |
+| MAP-F (mapa_fine)                                  | NER                              | 27823 / 3354 / 10590        | 44 / 26 / 34              |
 
 ## LEXTREME Scores
 
-[comming soon]
+The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score. We compute the dataset aggregate score by taking the successive harmonic mean of (1.) the languages inside the configurations (e.g., de,fr,it within SJP), (2.) the configurations inside the datasets (e.g., OTS-UL, OTS-CT within OTS), and (3.) the datasets inside LEXTREME (BCD, GAM, etc.).
+
+| **Model**   | **BCD**  | **GAM**  | **GLC**  | **SJP**  | **OTS**  | **C19**  | **MEU**  | **GLN**  | **LNR**  | **LNB**  | **MAP**  | **Agg.** |
+| ----------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| MiniLM      | 53.0     | **73.3** | 42.1     | 67.7     | 44.1     | 2.6      | 62.0     | 40.5     | 46.8     | 86.0     | 55.5     | 52.2     |
+| DistilBERT  | 54.5     | 69.5     | **62.8** | 66.8     | 56.1     | 22.2     | 63.6     | 38.1     | 48.4     | 78.7     | 55.0     | 56.0     |
+| mDeBERTa v3 | 57.6     | 70.9     | 52.2     | 69.1     | 66.5     | 25.5     | 65.1     | 42.2     | 46.6     | 87.8     | **60.2** | 58.5     |
+| XLM-R base  | **63.5** | 72.0     | 56.8     | **69.3** | 67.8     | 26.4     | 65.6     | 47.0     | 47.7     | 86.0     | 56.1     | 59.9     |
+| XLM-R large | 58.7     | 73.1     | 57.4     | 69.0     | **75.0** | **29.0** | **68.1** | **48.0** | **49.5** | **88.2** | 58.5     | **61.3** |
+
+We compute the language aggregate score by taking the successive harmonic mean of (1.) the configurations inside the datasets, (2.) the datasets for the given language (e.g., MAP and MEU for lv), and (3.) the languages inside LEXTREME (bg,cs, etc.).
+
+### Language aggregate scores for multilingual models. The best scores are in bold.
+
+| **Model**   | **bg**   | **cs**   | **da**   | **de**   | **el**   | **en**   | **es**   | **et**   | **fi**   | **fr**   | **ga**   | **hr**   | **hu**   | **it**   | **lt**   | **lv**   | **mt**   | **nl**   | **pl**   | **pt**   | **ro**   | **sk**   | **sl**   | **sv**   | **Agg.** |
+| ----------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| MiniLM      | 64.0     | 57.7     | 55.4     | 60.1     | 48.9     | 42.8     | 63.8     | 59.7     | 56.6     | 48.5     | 41.5     | 62.2     | 41.8     | 45.6     | 59.8     | 60.2     | 55.7     | 38.8     | 33.5     | 63.5     | 58.4     | 58.9     | 62.2     | 59.4     | 54.1     |
+| DistilBERT  | 65.3     | 60.2     | 57.4     | 64.1     | 53.1     | 54.0     | 66.9     | 57.4     | 55.7     | 55.8     | 45.5     | 63.1     | 39.9     | 54.9     | 58.0     | 57.7     | 57.3     | 42.0     | 43.6     | 64.7     | 57.4     | 59.0     | 63.3     | 59.2     | 56.5     |
+| mDeBERTa v3 | 61.9     | 60.6     | 59.3     | 66.6     | 54.0     | 58.9     | 66.9     | 60.3     | **61.1** | 57.0     | 50.2     | 65.0     | 44.2     | 59.7     | 63.7     | 61.4     | **61.2** | **48.1** | 50.2     | 67.9     | **60.8** | **65.2** | 65.2     | **65.4** | 59.8     |
+| XLM-R base  | **68.3** | 61.3     | 58.5     | 66.0     | 54.7     | 58.6     | 63.8     | 59.3     | 57.5     | 57.7     | 47.8     | 65.9     | 43.3     | 59.6     | 60.3     | 60.8     | 58.0     | 45.0     | 52.0     | **68.2** | 59.2     | 60.3     | 66.2     | 61.7     | 58.9     |
+| XLM-R large | 64.5     | **63.3** | **65.1** | **68.3** | **59.6** | **61.9** | **70.0** | **61.3** | 60.9     | **57.9** | **50.3** | **68.3** | **44.7** | **62.9** | **66.1** | **65.5** | 60.1     | 43.9     | **55.0** | 68.1     | 60.2     | 62.8     | **68.2** | 62.5     | **61.3** |
 
 ## Frequently Asked Questions (FAQ)
 
@@ -88,7 +137,7 @@ CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_predic
 
 It is possible to reproduce the results of the paper by running the finetuning for each dataset separately. Alternatively, you can run [main.py](https://github.com/JoelNiklaus/LEXTREME/tree/main/main.py) which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available).
 
-The following command will make sure that you run all experiments as described in the paper:
+The following command will make sure that you run most experiments as described in the paper:
 
 ```
 python main.py
@@ -139,7 +188,9 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
 Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting `-hierarchical` to True will cause an error.
 
 ## References
+
 Please cite the following preprint:
+
 ```
 @misc{niklaus2023lextreme,
     title={LEXTREME: A Multi-Lingual and Multi-Task Benchmark for the Legal Domain},
