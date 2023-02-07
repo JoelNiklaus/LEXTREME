@@ -39,6 +39,9 @@ class ResultAggregator:
 
         self.api = wandb.Api()
 
+        if os.path.exists('logs') == False:
+            os.mkdir('logs')
+
         name_of_log_file = 'logs/loggings_' + datetime.now().isoformat() + '.txt'
         name_of_log_file = os.path.join(
             os.path.dirname(__file__), name_of_log_file)
@@ -397,7 +400,8 @@ class ResultAggregator:
                                         item['_name_or_path'] = model_name
                                         item['language'] = lang + '_subset'
                                         item['missing_seeds'] = sorted([s for s in required_seeds if s not in available_seeds])
-                                        report.append(item)
+                                        if item not in report:
+                                            report.append(item)
 
             ######################################
 
@@ -421,8 +425,12 @@ class ResultAggregator:
                     report.append(item)
 
         report_df = pd.DataFrame(report)
+        report_df['missing_seeds'] = report_df.missing_seeds.apply(lambda x: ','.join(x))
 
-        report_df = report_df[report_df._name_or_path.str.contains('joelito')==False] # We will not check Joel's pretrained models yet
+        report_df = report_df.drop_duplicates()
+
+        # TODO: # We will not check Joel's pretrained models yet. In the future, we need to remove this constraint.
+        report_df = report_df[report_df._name_or_path.str.contains('joelito')==False] 
 
         return report_df
 
