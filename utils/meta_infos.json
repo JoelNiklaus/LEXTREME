@@ -539,6 +539,27 @@
       }
     },
     "legal": {
+      "bg": {
+        "small": [],
+        "base": [
+          "joelito/legal-bulgarian-roberta-base"
+        ],
+        "large": []
+      },
+      "cs": {
+        "small": [],
+        "base": [
+          "joelito/legal-czech-roberta-base"
+        ],
+        "large": []
+      },
+      "da": {
+        "small": [],
+        "base": [
+          "joelito/legal-danish-roberta-base"
+        ],
+        "large": []
+      },
       "de": {
         "small": [],
         "base": [
@@ -549,6 +570,13 @@
           "joelito/legal-german-roberta-large",
           "joelito/legal-swiss-roberta-large"
         ]
+      },
+      "el": {
+        "small": [],
+        "base": [
+          "joelito/legal-greek-roberta-base"
+        ],
+        "large": []
       },
       "en": {
         "small": [],
@@ -571,6 +599,20 @@
           "joelito/legal-spanish-roberta-large"
         ]
       },
+      "et": {
+        "small": [],
+        "base": [
+          "joelito/legal-estonian-roberta-base"
+        ],
+        "large": []
+      },
+      "fi": {
+        "small": [],
+        "base": [
+          "joelito/legal-finnish-roberta-base"
+        ],
+        "large": []
+      },
       "fr": {
         "small": [],
         "base": [
@@ -581,6 +623,27 @@
           "joelito/legal-french-roberta-large",
           "joelito/legal-swiss-roberta-large"
         ]
+      },
+      "ga": {
+        "small": [],
+        "base": [
+          "joelito/legal-irish-roberta-base"
+        ],
+        "large": []
+      },
+      "hr": {
+        "small": [],
+        "base": [
+          "joelito/legal-croatian-roberta-base"
+        ],
+        "large": []
+      },
+      "hu": {
+        "small": [],
+        "base": [
+          "joelito/legal-hungarian-roberta-base"
+        ],
+        "large": []
       },
       "it": {
         "small": [],
@@ -593,6 +656,41 @@
           "joelito/legal-italian-roberta-large",
           "joelito/legal-swiss-roberta-large"
         ]
+      },
+      "lt": {
+        "small": [],
+        "base": [
+          "joelito/legal-lithuanian-roberta-base"
+        ],
+        "large": []
+      },
+      "lv": {
+        "small": [],
+        "base": [
+          "joelito/legal-latvian-roberta-base"
+        ],
+        "large": []
+      },
+      "mt": {
+        "small": [],
+        "base": [
+          "joelito/legal-maltese-roberta-base"
+        ],
+        "large": []
+      },
+      "nl": {
+        "small": [],
+        "base": [
+          "joelito/legal-dutch-roberta-base"
+        ],
+        "large": []
+      },
+      "pl": {
+        "small": [],
+        "base": [
+          "joelito/legal-polish-roberta-base"
+        ],
+        "large": []
       },
       "pt": {
         "small": [],
@@ -607,6 +705,27 @@
         "small": [],
         "base": [
           "readerbench/jurBERT-base"
+        ],
+        "large": []
+      },
+      "sk": {
+        "small": [],
+        "base": [
+          "joelito/legal-slovak-roberta-base"
+        ],
+        "large": []
+      },
+      "sl": {
+        "small": [],
+        "base": [
+          "joelito/legal-slovenian-roberta-base"
+        ],
+        "large": []
+      },
+      "sv": {
+        "small": [],
+        "base": [
+          "joelito/legal-swedish-roberta-base"
         ],
         "large": []
       },
