@@ -180,16 +180,16 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base", "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish", "BSC-TeMU/roberta-base-bne", "pdelobelle/robbert-v2-dutch-base", "roberta-large"]
 
 
-def get_tokenizer(model_name_or_path):
+def get_tokenizer(model_name_or_path, revision):
     # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".   
     # However, after refactoring, using XLMRobertaTokenizer causes some errors: ValueError: word_ids() is not available when using non-fast tokenizers (e.g. instance of a `XxxTokenizerFast` class).
     # AutoTokenizer works anyway
     # AutTokenizer gives the following infos: This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. 
     tokenizer_class = AutoTokenizer
     if model_name_or_path in models_that_require_add_prefix_space:
-        return tokenizer_class.from_pretrained(model_name_or_path, add_prefix_space=True)
+        return tokenizer_class.from_pretrained(model_name_or_path, add_prefix_space=True, revision=revision)
     else:
-        return tokenizer_class.from_pretrained(model_name_or_path)
+        return tokenizer_class.from_pretrained(model_name_or_path, revision=revision)
 
 
 def get_model_class_for_sequence_classification(model_type, model_args=None):

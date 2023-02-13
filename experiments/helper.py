@@ -33,121 +33,107 @@ sys.path.append(utils_path)
 
 from utilities import get_meta_infos
 
-
-
 meta_infos = get_meta_infos()
 
-def return_language_prefix(language, finetuning_task):
 
+def return_language_prefix(language, finetuning_task):
     '''
         In wandb we log the name of the task with a prefix to distinguish the filtered languages.
         Due to some changes in the code, we use the prefix all_.
         But in combination with monolingual datasets, we should only use the language-specific abbreviation.
     '''
 
-    if len(meta_infos["task_language_mapping"][finetuning_task])>1:
+    if len(meta_infos["task_language_mapping"][finetuning_task]) > 1:
         return language
     else:
         return meta_infos["task_language_mapping"][finetuning_task][0]
 
-        
-
 
 def filter_dataset_by_language(dataset, language):
-
     if language not in ["all"]:
-        dataset = dataset.filter(lambda x : x["language"]==language)
-    
+        dataset = dataset.filter(lambda x: x["language"] == language)
+
     return dataset
 
 
 def make_efficient_split(data_args, split_name, ner_tasks):
-
-    
     if data_args.running_mode == "debug":
-            split_name = split_name + '[:100]'
+        split_name = split_name + '[:100]'
     if data_args.running_mode == "experimental":
         split_name = split_name + '[:5%]'
-    
+
     if data_args.dataset_cache_dir is None:
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name, 
-            download_mode=data_args.download_mode)
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                               download_mode=data_args.download_mode)
 
     else:
         if not os.path.exists(data_args.dataset_cache_dir):
             os.mkdir(data_args.dataset_cache_dir)
 
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                        cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
-    
+                               cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
+
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
-    
+
     if data_args.finetuning_task in ner_tasks:
         dataset = dataset.rename_column("label", "labels")
 
     dataset = filter_dataset_by_language(dataset, data_args.language)
-
 
     return dataset
 
 
 def make_split_with_postfiltering(data_args, split_name, ner_tasks):
-
-    
     if data_args.dataset_cache_dir is None:
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name, 
-            download_mode=data_args.download_mode)
+        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+                               download_mode=data_args.download_mode)
 
     else:
         if not os.path.exists(data_args.dataset_cache_dir):
             os.mkdir(data_args.dataset_cache_dir)
 
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
-                        cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
-    
+                               cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
+
     if bool(re.search('eurlex', data_args.finetuning_task)):
         dataset = split_into_languages(dataset)
-    
+
     if data_args.finetuning_task in ner_tasks:
         dataset = dataset.rename_column("label", "labels")
 
-    
     dataset = filter_dataset_by_language(dataset, data_args.language)
 
     # When filtering for languages, the amount of data is very small. In those cases, the distinction between debug and experimental may not make sense or
     # can lead to errors, if, for example, the amount of data is smaller than 100
-    if len(dataset["input"])>1000:
+    if len(dataset["input"]) > 1000:
         if data_args.running_mode == "debug":
-            dataset = dataset.select([n for n in range(0,100)])
+            dataset = dataset.select([n for n in range(0, 100)])
         if data_args.running_mode == "experimental":
-            num_rows_10_percent = int(round(dataset.num_rows*0.1,0))
-            dataset = dataset.select([n for n in range(0,num_rows_10_percent)])
-    
-    elif len(dataset["input"])>100:
-        if data_args.running_mode in ["debug", "experimental"]:
-            dataset = dataset.select([n for n in range(0,100)])
+            num_rows_10_percent = int(round(dataset.num_rows * 0.1, 0))
+            dataset = dataset.select([n for n in range(0, num_rows_10_percent)])
 
+    elif len(dataset["input"]) > 100:
+        if data_args.running_mode in ["debug", "experimental"]:
+            dataset = dataset.select([n for n in range(0, 100)])
 
     return dataset
 
 
 def make_split(data_args, split_name):
-
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     multilingual_datasets = ['swiss_judgment_prediction',
-                            'online_terms_of_service_unfairness_level',
-                            'online_terms_of_service_unfairness_category',
-                            'covid19_emergency_event',
-                            'multi_eurlex_level_1',
-                            'multi_eurlex_level_2',
-                            'multi_eurlex_level_3',
-                            'mapa_coarse',
-                            'mapa_fine'
-                            ]
-    
-    
+                             'online_terms_of_service_unfairness_level',
+                             'online_terms_of_service_unfairness_category',
+                             'covid19_emergency_event',
+                             'multi_eurlex_level_1',
+                             'multi_eurlex_level_2',
+                             'multi_eurlex_level_3',
+                             'mapa_coarse',
+                             'mapa_fine'
+                             ]
+
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
@@ -155,7 +141,6 @@ def make_split(data_args, split_name):
     else:
 
         dataset = make_efficient_split(data_args, split_name, ner_tasks)
-
 
     return dataset
 
@@ -180,7 +165,7 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
 
 
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
-    if len(id2label.keys())>1: #Otherwise there might be some errors when filtering by language because of the class imbalance
+    if len(id2label.keys()) > 1:  # Otherwise there might be some errors when filtering by language because of the class imbalance
         for k in id2label.keys():
             try:
                 train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
@@ -713,20 +698,20 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
             training_args.seed) + '__time-' + time_now
     wandb.run.name = run_name
-    
+
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     data_args_as_dict = dict()
     for x in dataclasses.fields(data_args):
         if x.name != "finetuning_task":
-            data_args_as_dict[x.name]=x.default #We will log the finetuning task later with the language_prefix
-    
+            data_args_as_dict[x.name] = getattr(data_args, x.name)  # We will log the finetuning task later with the language_prefix
+
     wandb.log(data_args_as_dict)
 
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     model_args_as_dict = dict()
     for x in dataclasses.fields(model_args):
-        model_args_as_dict[x.name]=x.default #We will log the finetuning task later with the language_prefix
-    
+        model_args_as_dict[x.name] = getattr(model_args, x.name) # We will log the finetuning task later with the language_prefix
+
     wandb.log(model_args_as_dict)
 
 
@@ -734,8 +719,10 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=return_language_prefix(data_args.language, data_args.finetuning_task) + '_' + data_args.finetuning_task,
-        use_auth_token=True if model_args.use_auth_token else None
+        finetuning_task=return_language_prefix(data_args.language,
+                                               data_args.finetuning_task) + '_' + data_args.finetuning_task,
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
     )
 
     model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
@@ -743,10 +730,11 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
     model = model_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-        use_auth_token=True if model_args.use_auth_token else None
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
     )
 
-    tokenizer = get_tokenizer(model_args.model_name_or_path)
+    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
 
     if model_args.hierarchical:
         model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
@@ -758,17 +746,20 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,
-        finetuning_task=return_language_prefix(data_args.language, data_args.finetuning_task) + '_' + data_args.finetuning_task,
-        use_auth_token=True if model_args.use_auth_token else None
+        finetuning_task=return_language_prefix(data_args.language,
+                                               data_args.finetuning_task) + '_' + data_args.finetuning_task,
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
     )
 
     model = AutoModelForTokenClassification.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-        use_auth_token=True if model_args.use_auth_token else None
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
     )
 
-    tokenizer = get_tokenizer(model_args.model_name_or_path)
+    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
 
     # Hierarchical not applied for token classification taks
     # if model_args.hierarchical == True:

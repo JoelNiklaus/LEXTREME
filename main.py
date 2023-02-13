@@ -9,7 +9,8 @@ import time
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
-from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, max_sequence_lengths, optimal_batch_sizes, get_python_file_for_task, get_optimal_batch_size, get_default_number_of_training_epochs
+from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, max_sequence_lengths, \
+    optimal_batch_sizes, get_python_file_for_task, get_optimal_batch_size, get_default_number_of_training_epochs
 
 import setproctitle
 import torch
@@ -54,14 +55,17 @@ def generate_command(time_now, **data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
-                       '--hierarchical {HIERARCHICAL} '
+                       '--hierarchical {HIERARCHICAL} ' \
+                       '--revision {REVISION} '
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
-        command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/results_after_training_only_on_language_with_id__{LANGUAGE}/seed_{SEED} '
+        command_template = command_template + '--output_dir {LOG_DIRECTORY}/{TASK}/{' \
+                                              'MODEL_NAME}/results_after_training_only_on_language_with_id__{' \
+                                              'LANGUAGE}/seed_{SEED}'
     else:
         command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
@@ -78,7 +82,8 @@ def generate_command(time_now, **data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
                 else:
@@ -86,15 +91,15 @@ def generate_command(time_now, **data):
             else:
                 command_template += ' --fp16 --fp16_full_eval'
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
-        command_template += ' --logging_steps '+str(data["logging_steps"]) +' '
+        command_template += ' --logging_steps ' + str(data["logging_steps"]) + ' '
     if 'eval_steps' in data.keys() and data['eval_steps'] is not None:
-        command_template += ' --eval_steps '+str(data["eval_steps"]) +' '
+        command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
     if 'save_steps' in data.keys() and data['save_steps'] is not None:
-        command_template += ' --save_steps '+str(data["save_steps"]) +' '
+        command_template += ' --save_steps ' + str(data["save_steps"]) + ' '
 
-            # mdeberta does not work with fp16 because it was trained with bf16
-            # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
-            # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
+        # mdeberta does not work with fp16 because it was trained with bf16
+        # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
+        # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
 
     final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
                                             MODEL_NAME=data["model_name"],
@@ -116,7 +121,8 @@ def generate_command(time_now, **data):
                                             HIERARCHICAL=data["hierarchical"],
                                             EVALUATION_STRATEGY=data["evaluation_strategy"],
                                             LOGGING_STRATEGY=data["logging_strategy"],
-                                            SAVE_STRATEGY=data["save_strategy"]
+                                            SAVE_STRATEGY=data["save_strategy"],
+                                            REVISION=data["revision"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -126,7 +132,6 @@ def generate_command(time_now, **data):
         print(final_command, file=f)
 
     return file_name
-
 
 
 def run_script(command):
@@ -143,30 +148,31 @@ def run_in_parallel(commands_to_run):
 
 
 def run_experiment(
-                accumulation_steps, 
-                batch_size,
-                dataset_cache_dir, 
-                download_mode,
-                eval_steps,
-                evaluation_strategy,
-                gpu_memory,
-                gpu_number, 
-                hierarchical,
-                language_model_type, 
-                learning_rate, 
-                list_of_languages, 
-                list_of_seeds,
-                logging_strategy,
-                logging_steps,
-                lower_case,  
-                preprocessing_num_workers,
-                running_mode,
-                save_strategy,
-                save_steps,
-                task,
-                log_directory=None,
-                num_train_epochs=None
-                ):
+        accumulation_steps,
+        batch_size,
+        dataset_cache_dir,
+        download_mode,
+        eval_steps,
+        evaluation_strategy,
+        gpu_memory,
+        gpu_number,
+        hierarchical,
+        language_model_type,
+        learning_rate,
+        list_of_languages,
+        list_of_seeds,
+        logging_strategy,
+        logging_steps,
+        lower_case,
+        preprocessing_num_workers,
+        revision,
+        running_mode,
+        save_strategy,
+        save_steps,
+        task,
+        log_directory=None,
+        num_train_epochs=None
+):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
 
@@ -178,7 +184,6 @@ def run_experiment(
     if list_of_languages is not None:
         if type(list_of_languages) == str:
             list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
-
 
     if log_directory is None:
         log_directory = 'results/logs_' + str(time_stamp)
@@ -236,7 +241,8 @@ def run_experiment(
             for l in languages:
                 for s in sizes:
                     if l in meta_infos["language_models"][t]:
-                        models_to_be_used.extend(meta_infos["language_models"][t][l][s])  # add all models we want to run
+                        models_to_be_used.extend(
+                            meta_infos["language_models"][t][l][s])  # add all models we want to run
 
     models_to_be_used = sorted(list(set(models_to_be_used)))
     print(models_to_be_used)
@@ -283,11 +289,12 @@ def run_experiment(
 
             print("LANGUAGE IS: ", lang)
 
-            epoch_and_strategies = get_default_number_of_training_epochs(task = task, model_name = model_name, language = lang, running_mode = running_mode)
+            epoch_and_strategies = get_default_number_of_training_epochs(task=task, model_name=model_name,
+                                                                         language=lang, running_mode=running_mode)
 
-            eval_steps = epoch_and_strategies["eval_steps"]
-            logging_steps = epoch_and_strategies["logging_steps"]
-            save_steps = epoch_and_strategies["save_steps"]
+            # eval_steps = epoch_and_strategies["eval_steps"]
+            # logging_steps = epoch_and_strategies["logging_steps"]
+            # save_steps = epoch_and_strategies["save_steps"]
 
             if num_train_epochs is None:
                 num_train_epochs = epoch_and_strategies["num_train_epochs"]
@@ -297,35 +304,41 @@ def run_experiment(
                 logging_strategy = epoch_and_strategies["logging_strategy"]
             if save_strategy is None:
                 save_strategy = epoch_and_strategies["save_strategy"]
-            
+            if logging_steps is None:
+                logging_steps = epoch_and_strategies["logging_steps"]
+            if save_steps is None:
+                save_steps = epoch_and_strategies["save_steps"]
+            if eval_steps is None:
+                eval_steps = epoch_and_strategies["eval_steps"]
 
             script_new = generate_command(
-                accumulation_steps=accumulation_steps, 
+                accumulation_steps=accumulation_steps,
                 batch_size=batch_size,
-                code=get_python_file_for_task(task), 
+                code=get_python_file_for_task(task),
                 dataset_cache_dir=dataset_cache_dir,
                 download_mode=download_mode,
                 evaluation_strategy=evaluation_strategy,
                 eval_steps=eval_steps,
                 gpu_memory=gpu_memory,
-                gpu_number=gpu_id, 
+                gpu_number=gpu_id,
                 greater_is_better=greater_is_better,
-                hierarchical=hierarchical, 
+                hierarchical=hierarchical,
                 language=lang,
                 learning_rate=learning_rate,
                 logging_strategy=logging_strategy,
                 logging_steps=logging_steps,
                 log_directory=log_directory,
-                lower_case=lower_case, 
+                lower_case=lower_case,
                 metric_for_best_model=metric_for_best_model,
                 model_name=model_name,
-                num_train_epochs=num_train_epochs, 
+                num_train_epochs=num_train_epochs,
                 preprocessing_num_workers=preprocessing_num_workers,
-                running_mode=running_mode, 
+                revision=revision,
+                running_mode=running_mode,
                 save_strategy=save_strategy,
                 save_steps=save_steps,
                 seed=seed,
-                task=task, 
+                task=task,
                 time_now=time_stamp
             )
 
@@ -365,14 +378,22 @@ if __name__ == '__main__':
 
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
-    parser.add_argument('-es', '--evaluation_strategy', help = "The evaluation strategy to adopt during training. Possible values are: no = No evaluation is done during training; steps = Evaluation is done (and logged) every eval_steps; epoch = Evaluation is done at the end of each epoch.", default=None)
+    parser.add_argument('-es', '--evaluation_strategy',
+                        help="The evaluation strategy to adopt during training. Possible values are: no = No "
+                             "evaluation is done during training; steps = Evaluation is done (and logged) every "
+                             "eval_steps; epoch = Evaluation is done at the end of each epoch.",
+                        default=None)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
     parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=None)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
-    parser.add_argument('-ls', '--logging_strategy', help = "The logging strategy to adopt during training. Possible values are: no: No logging is done during training ; epoch: Logging is done at the end of each epoch; steps: Logging is done every logging_steps.", default = None)
+    parser.add_argument('-ls', '--logging_strategy',
+                        help="The logging strategy to adopt during training. Possible values are: no: No logging is "
+                             "done during training ; epoch: Logging is done at the end of each epoch; steps: Logging "
+                             "is done every logging_steps.",
+                        default=None)
     parser.add_argument('-lol', '--list_of_languages',
                         help='Define if you want to filter the training dataset by language.',
                         default=None)
@@ -389,6 +410,10 @@ if __name__ == '__main__':
                         default=None)
     parser.add_argument('-lr', '--learning_rate', help='Define the learning rate', default=1e-5)
     parser.add_argument('-nte', '--num_train_epochs', help='Define the number of training epochs.')
+    parser.add_argument('-rev', '--revision', help='The specific model version to use. It can be a branch name, '
+                                                   'a tag name, or a commit id, since we use a git-based system for '
+                                                   'storing models and other artifacts on huggingface.co, so revision '
+                                                   'can be any identifier allowed by git.', default="main")
     parser.add_argument('-rmo', '--running_mode',
                         help='Define whether you want to run the finetuning on all available training data ("default"), '
                              'on 100 examples for debugging ("debug") '
@@ -396,7 +421,8 @@ if __name__ == '__main__':
                         default='default')
     parser.add_argument('-dmo', '--download_mode',
                         help='Define whether you want to redownload the dataset or not. '
-                             'See the options in: https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html#download-mode',
+                             'See the options in: https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html'
+                             '#download-mode',
                         default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
                         choices=sorted(list(meta_infos["task_code_mapping"].keys())))
@@ -410,11 +436,20 @@ if __name__ == '__main__':
     parser.add_argument('-cad', '--dataset_cache_dir',
                         help="Specify the directory you want to cache your datasets.",
                         default=None)
-    parser.add_argument('-ss','--save_strategy', help="The checkpoint save strategy to adopt during training. Possible values are: no: No save is done during training; epoch: Save is done at the end of each epoch; steps: Save is done every save_steps.", default = None)
-    parser.add_argument('-est', '--eval_steps', help='Number of update steps between two evaluations if evaluation_strategy="steps". Will default to the same value as logging_steps if not set.', default=None)
-    parser.add_argument('-lst', '--logging_steps', help='Number of update steps between two logs if logging_strategy="steps".', default=None)
-    parser.add_argument('-sst', '--save_steps', help='Number of updates steps before two checkpoint saves if save_strategy="steps".', default=None)
-        
+    parser.add_argument('-ss', '--save_strategy',
+                        help="The checkpoint save strategy to adopt during training. Possible values are: no: No save "
+                             "is done during training; epoch: Save is done at the end of each epoch; steps: Save is "
+                             "done every save_steps.",
+                        default=None)
+    parser.add_argument('-est', '--eval_steps',
+                        help='Number of update steps between two evaluations if evaluation_strategy="steps". Will '
+                             'default to the same value as logging_steps if not set.',
+                        default=None)
+    parser.add_argument('-lst', '--logging_steps',
+                        help='Number of update steps between two logs if logging_strategy="steps".', default=None)
+    parser.add_argument('-sst', '--save_steps',
+                        help='Number of updates steps before two checkpoint saves if save_strategy="steps".',
+                        default=None)
 
     args = parser.parse_args()
 
@@ -439,8 +474,8 @@ if __name__ == '__main__':
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
         list_of_languages=args.list_of_languages,
-        logging_strategy = args.logging_strategy,
-        logging_steps=args.logging_steps, 
+        logging_strategy=args.logging_strategy,
+        logging_steps=args.logging_steps,
         language_model_type=args.language_model_type,
         learning_rate=args.learning_rate,
         list_of_seeds=args.list_of_seeds,
@@ -448,8 +483,9 @@ if __name__ == '__main__':
         num_train_epochs=args.num_train_epochs,
         log_directory=args.log_directory,
         preprocessing_num_workers=args.preprocessing_num_workers,
+        revision=args.revision,
         running_mode=args.running_mode,
-        save_strategy = args.save_strategy,
-        save_steps = args.save_steps,
+        save_strategy=args.save_strategy,
+        save_steps=args.save_steps,
         task=args.task
     )

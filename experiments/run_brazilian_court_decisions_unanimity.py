@@ -185,6 +185,14 @@ class ModelArguments:
             "with private models)."
         },
     )
+    revision: str = field(
+        default="main",
+        metadata={
+            "help": "The specific model version to use. It can be a branch name, a tag name, or a commit id, "
+                    "since we use a git-based system for storing models and other artifacts on huggingface.co, "
+                    "so revision can be any identifier allowed by git."
+        }
+    )
 
 
 def main():
