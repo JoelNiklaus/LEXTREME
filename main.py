@@ -32,7 +32,10 @@ _SIZES = ['small', 'base', 'large']
 meta_infos = get_meta_infos()
 
 
-def generate_command(time_now, **data):
+def generate_command(**data):
+
+    time_now = datetime.datetime.now().isoformat()
+
     if data["hierarchical"] is None:
         data["hierarchical"] = get_hierarchical(data["task"])
 
@@ -186,9 +189,11 @@ def run_experiment(
             list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
 
     if log_directory is None:
-        log_directory = 'results/logs_' + str(time_stamp)
+        log_directory = "results"
+        time_stamp = re.sub(':','_',datetime.datetime.now().isoformat())
+        log_directory = log_directory+'/logs_' + str(time_stamp)
     else:
-        if os.path.isdir(log_directory) == False:
+        if not os.path.isdir(log_directory):
             os.mkdir(log_directory)
 
     if gpu_number is None:
@@ -285,8 +290,6 @@ def run_experiment(
 
         for lang in list_of_languages:
 
-            time_stamp = datetime.datetime.now().isoformat()
-
             print("LANGUAGE IS: ", lang)
 
             epoch_and_strategies = get_default_number_of_training_epochs(task=task, model_name=model_name,
@@ -338,8 +341,7 @@ def run_experiment(
                 save_strategy=save_strategy,
                 save_steps=save_steps,
                 seed=seed,
-                task=task,
-                time_now=time_stamp
+                task=task
             )
 
             if script_new is not None:
@@ -429,7 +431,7 @@ if __name__ == '__main__':
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',
-                        default='results')
+                        default=None)
     parser.add_argument('-nw', '--preprocessing_num_workers',
                         help="The number of processes to use for the preprocessing. "
                              "If it deadlocks, try setting this to 1.", default=1)
