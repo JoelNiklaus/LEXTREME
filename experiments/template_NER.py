@@ -2,21 +2,15 @@
 # coding=utf-8
 
 
+import glob
 import logging
 import os
-import random
-import sys
-from dataclasses import dataclass, field
-from typing import Optional
 import re
-
-from helper import  Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, get_data
-from datasets import load_dataset, utils
-import glob
 import shutil
-from datasets import disable_caching
-
+import sys
+from dataclasses import replace
 import transformers
+from datasets import utils, disable_caching
 from transformers import (
     DataCollatorForTokenClassification,
     HfArgumentParser,
@@ -28,152 +22,11 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint
 
+from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
+from helper import Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, \
+    get_data, get_label_list_from_ner_tasks
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DataTrainingArguments:
-    """
-    Arguments pertaining to what data we are going to input our model for training and eval.
-
-    Using `HfArgumentParser` we can turn this class
-    into argparse arguments to be able to specify them on
-    the command line.
-    """
-
-    max_seq_length: Optional[int] = field(
-        default=512,
-        metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
-        },
-    )
-    overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
-    )
-    pad_to_max_length: bool = field(
-        default=True,
-        metadata={
-            "help": "Whether to pad all samples to `max_seq_length`. "
-            "If False, will pad the samples dynamically when batching to the maximum length in the batch."
-        },
-    )
-    max_train_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
-            "value if set."
-        },
-    )
-    max_eval_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of evaluation examples to this "
-            "value if set."
-        },
-    )
-    max_predict_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of prediction examples to this "
-            "value if set."
-        },
-    )
-    language:Optional[str] = field(
-        default='all',
-        metadata={
-            "help": "For choosin the language "
-            "value if set."
-        },
-    )
-    running_mode:Optional[str] = field(
-        default='default',
-        metadata={
-            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
-        },
-    )
-    finetuning_task:Optional[str] = field(
-        default='mapa_coarse',
-        metadata={
-            "help": "Name of the finetuning task"
-        },
-    )
-    download_mode:Optional[str] = field(
-        default='reuse_cache_if_exists',
-        metadata={
-            "help": "Name of the finetuning task"
-        },
-    )
-    preprocessing_num_workers: Optional[int] = field(
-        default=8,
-        metadata={"help": "The number of processes to use for the preprocessing."},
-    )
-    dataset_cache_dir: str = field(
-        default=None,
-        metadata={
-            "help": "Specify the directory you want to cache your datasets."
-        },
-    )
-    log_directory: str = field(
-        default=None,
-        metadata={
-            "help": "Specify the directory where you want to save your logs."
-        },
-    )
-
-    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-
-@dataclass
-class ModelArguments:
-    """
-    Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
-    """
-
-    hierarchical: bool = field(
-        default=False, metadata={"help": "Whether to use a hierarchical variant or not"}
-    )
-    model_name_or_path: str = field(
-        default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
-    )
-    config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
-    )
-    tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
-    cache_dir: Optional[str] = field(
-        default='./datasets_cache_dir',
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
-    )
-    do_lower_case: Optional[bool] = field(
-        default=False,
-        metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
-    )
-    use_fast_tokenizer: bool = field(
-        default=True,
-        metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
-    )
-    model_revision: str = field(
-        default="main",
-        metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
-    )
-    use_auth_token: bool = field(
-        default=False,
-        metadata={
-            "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
-            "with private models)."
-        },
-    )
-    revision: str = field(
-        default="main",
-        metadata={
-            "help": "The specific model version to use. It can be a branch name, a tag name, or a commit id, "
-                    "since we use a git-based system for storing models and other artifacts on huggingface.co, "
-                    "so revision can be any identifier allowed by git."
-        }
-    )
 
 
 def main():
@@ -184,9 +37,28 @@ def main():
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    default_values = get_default_values()
 
-    config_wandb(model_args=model_args, data_args=data_args,training_args=training_args)
+    if data_args.finetuning_task in default_values.keys():
+        for argument_type in default_values[data_args.finetuning_task].keys():
+            if argument_type == "DataTrainingArguments":
+                for field, value in default_values[data_args.finetuning_task][argument_type].items():
+                    if field == "language":
+                        if value is None:
+                            para = {field: value}
+                            data_args = replace(data_args, **para)
+                    else:
+                        para = {field: value}
+                        data_args = replace(data_args, **para)
+            elif argument_type == "ModelArguments":
+                for field, value in default_values[data_args.finetuning_task][argument_type].items():
+                    para = {field: value}
+                    model_args = replace(model_args, **para)
 
+    if data_args.disable_caching:
+        disable_caching()
+
+    config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
@@ -243,23 +115,22 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args,data_args)
-    
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+
     # Labels
-    label_list =  ['O', 'B-ORGANISATION', 'I-ORGANISATION', 'B-ADDRESS', 'I-ADDRESS', 'B-DATE', 'I-DATE', 'B-PERSON', 'I-PERSON', 'B-AMOUNT', 'I-AMOUNT', 'B-TIME', 'I-TIME']
+    label_list = get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset)
 
     num_labels = len(label_list)
 
     label2id = dict()
     id2label = dict()
 
-    for n,l in enumerate(label_list):
-        label2id[l]=n
-        id2label[n]=l
+    for n, l in enumerate(label_list):
+        label2id[l] = n
+        id2label[n] = l
 
-
-
-    model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args, num_labels=num_labels)
+    model, tokenizer = generate_Model_Tokenizer_for_TokenClassification(model_args=model_args, data_args=data_args,
+                                                                        num_labels=num_labels)
 
     # Preprocessing the datasets
     # Padding strategy
@@ -269,15 +140,12 @@ def main():
         # We will pad later, dynamically at batch creation, to the max sequence length in each batch
         padding = False
 
-
-
     def preprocess_function(examples):
         tokenized_inputs = tokenizer(examples["input"],
-            is_split_into_words=True,
-            padding=padding,
-            max_length=data_args.max_seq_length,
-            truncation=True
-            )
+                                     is_split_into_words=True,
+                                     padding=padding,
+                                     max_length=data_args.max_seq_length,
+                                     truncation=True)
 
         labels = []
         for i, label in enumerate(examples["labels"]):
@@ -295,7 +163,7 @@ def main():
             labels.append(label_ids)
 
         tokenized_inputs["labels"] = labels
-        
+
         return tokenized_inputs
 
     if training_args.do_train:
@@ -307,7 +175,7 @@ def main():
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
-            )            
+            )
 
     if training_args.do_eval:
         if data_args.max_eval_samples is not None:
@@ -331,7 +199,6 @@ def main():
                 desc="Running tokenizer on prediction dataset",
             )
 
-
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
         data_collator = DataCollatorForTokenClassification(tokenizer)
@@ -339,16 +206,16 @@ def main():
         data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
-    
+
     # Initialize our Trainer
     training_args.metric_for_best_model = "eval_loss"
     training_args.evaluation_strategy = IntervalStrategy.EPOCH
     training_args.logging_strategy = IntervalStrategy.EPOCH
-    
+
     seqeval = Seqeval(label_list=label_list)
 
     # Initialize our Trainer
-    
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -368,12 +235,12 @@ def main():
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
         train_result = trainer.train()
-        #metrics = train_result.metrics #This does not return any valuable results therefore I use the training dataset as input
+        # metrics = train_result.metrics #This does not return any valuable results therefore I use the training dataset as input
         metrics_unprocessed = trainer.evaluate(eval_dataset=train_dataset)
         metrics = dict()
-        for k,v in metrics_unprocessed.items():
-            k_new = re.sub('eval','train', k)
-            metrics[k_new]=v
+        for k, v in metrics_unprocessed.items():
+            k_new = re.sub('eval', 'train', k)
+            metrics[k_new] = v
         max_train_samples = (
             data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
         )
@@ -399,11 +266,8 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-
-        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
-        langs = sorted(list(set(langs)))
-
-        make_predictions_ner(trainer=trainer,tokenizer=tokenizer,data_args=data_args,predict_dataset=predict_dataset,id2label=id2label,training_args=training_args, list_of_languages=langs)
+        make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args, predict_dataset=predict_dataset,
+                             id2label=id2label, training_args=training_args)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]

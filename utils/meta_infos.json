@@ -352,6 +352,53 @@
       "mapa_fine"
     ]
   },
+  "task_default_arguments": {
+    "greek_legal_ner": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "pad_to_max_length": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "legalnero": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "pad_to_max_length": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "lener_br": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "pad_to_max_length": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "mapa_fine": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "pad_to_max_length": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "mapa_coarse": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "pad_to_max_length": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    }
+  },
   "language_models": {
     "general": {
       "bg": {

@@ -158,6 +158,13 @@ def get_data(training_args, data_args):
     return train_dataset, eval_dataset, predict_dataset
 
 
+def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
+    label_list = sorted(list(set(
+        train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
+        predict_dataset.features['labels'].feature.names)))
+    return label_list
+
+
 def append_zero_segments(case_encodings, pad_token_id, data_args):
     """appends a list of zero segments to the encodings to make up for missing segments"""
     return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
@@ -703,14 +710,16 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     data_args_as_dict = dict()
     for x in dataclasses.fields(data_args):
         if x.name != "finetuning_task":
-            data_args_as_dict[x.name] = getattr(data_args, x.name)  # We will log the finetuning task later with the language_prefix
+            data_args_as_dict[x.name] = getattr(data_args,
+                                                x.name)  # We will log the finetuning task later with the language_prefix
 
     wandb.log(data_args_as_dict)
 
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     model_args_as_dict = dict()
     for x in dataclasses.fields(model_args):
-        model_args_as_dict[x.name] = getattr(model_args, x.name) # We will log the finetuning task later with the language_prefix
+        model_args_as_dict[x.name] = getattr(model_args,
+                                             x.name)  # We will log the finetuning task later with the language_prefix
 
     wandb.log(model_args_as_dict)
 

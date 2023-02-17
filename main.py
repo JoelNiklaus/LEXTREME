@@ -5,15 +5,15 @@ import json as js
 import os
 import re
 import shutil
-import time
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
-from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, max_sequence_lengths, \
-    optimal_batch_sizes, get_python_file_for_task, get_optimal_batch_size, get_default_number_of_training_epochs
 
 import setproctitle
 import torch
+
+from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, get_python_file_for_task, \
+    get_optimal_batch_size, get_default_number_of_training_epochs
 
 # Empty folder with temporary scripts
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
