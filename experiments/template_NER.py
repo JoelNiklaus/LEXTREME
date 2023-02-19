@@ -24,7 +24,7 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import Seqeval, make_predictions_ner, config_wandb, generate_Model_Tokenizer_for_TokenClassification, \
-    get_data, get_label_list_from_ner_tasks
+    get_data, get_label_list_from_ner_tasks, model_is_multilingual
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,10 @@ def main():
             if argument_type == "DataTrainingArguments":
                 for field, value in default_values[data_args.finetuning_task][argument_type].items():
                     if field == "language":
-                        if value is None:
+                        if model_is_multilingual(model_args.model_name_or_path) and data_args.language is None:
+                            para = {field: value}
+                            data_args = replace(data_args, **para)
+                        elif data_args.language is None:
                             para = {field: value}
                             data_args = replace(data_args, **para)
                     else:

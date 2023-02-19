@@ -134,6 +134,7 @@ def make_split(data_args, split_name):
                              'mapa_fine'
                              ]
 
+
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
@@ -143,6 +144,13 @@ def make_split(data_args, split_name):
         dataset = make_efficient_split(data_args, split_name, ner_tasks)
 
     return dataset
+
+
+def model_is_multilingual(model_name_or_path):
+    if len(meta_infos["model_language_lookup_table"][model_name_or_path]) == "all":
+        return True
+    else:
+        return False
 
 
 def get_data(training_args, data_args):
@@ -162,6 +170,20 @@ def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
     label_list = sorted(list(set(
         train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
         predict_dataset.features['labels'].feature.names)))
+    return label_list
+
+
+def get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset):
+    label_list = sorted(list(set(
+        train_dataset.features['label'].feature.names + eval_dataset.features['label'].feature.names +
+        predict_dataset.features['label'].feature.names)))
+    return label_list
+
+
+def get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset):
+    label_list = sorted(list(set(
+        train_dataset.features['label'].names + eval_dataset.features['label'].names +
+        predict_dataset.features['label'].names)))
     return label_list
 
 
@@ -265,6 +287,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             max_length=data_args.max_seq_length,
             truncation=True,
         )
+
 
     return tokenized
 

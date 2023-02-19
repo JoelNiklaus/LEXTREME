@@ -355,8 +355,7 @@
   "task_default_arguments": {
     "greek_legal_ner": {
       "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "pad_to_max_length": true
+        "max_seq_length": 512
       },
       "ModelArguments": {
         "hierarchical": false
@@ -364,8 +363,7 @@
     },
     "legalnero": {
       "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "pad_to_max_length": true
+        "max_seq_length": 512
       },
       "ModelArguments": {
         "hierarchical": false
@@ -373,8 +371,7 @@
     },
     "lener_br": {
       "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "pad_to_max_length": true
+        "max_seq_length": 512
       },
       "ModelArguments": {
         "hierarchical": false
@@ -382,8 +379,7 @@
     },
     "mapa_fine": {
       "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "pad_to_max_length": true
+        "max_seq_length": 512
       },
       "ModelArguments": {
         "hierarchical": false
@@ -391,11 +387,132 @@
     },
     "mapa_coarse": {
       "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "pad_to_max_length": true
+        "max_seq_length": 512
       },
       "ModelArguments": {
         "hierarchical": false
+      }
+    },
+    "brazilian_court_decisions_judgment": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 8,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "brazilian_court_decisions_unanimity": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 8,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "german_argument_mining": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "greek_legal_code_chapter": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "greek_legal_code_subject": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "greek_legal_code_volume": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_judgment_prediction": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "online_terms_of_service_unfairness_levels": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "online_terms_of_service_clause_topics": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "covid19_emergency_event": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "multi_eurlex_level_1": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "multi_eurlex_level_2": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "multi_eurlex_level_3": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
       }
     }
   },

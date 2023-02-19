@@ -170,8 +170,11 @@ def get_hierarchical(task):
 def get_python_file_for_task(task):
     if meta_infos["task_code_mapping"][task] == "NER":
         return f"template_NER.py --finetuning_task " + task
-    else:
-        return f"run_{task}.py"
+    elif meta_infos["task_code_mapping"][task] == "SLTC":
+        return f"template_SLTC.py --finetuning_task " + task
+    elif meta_infos["task_code_mapping"][task] == "MLTC":
+        return f"template_MLTC.py --finetuning_task " + task
+
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
