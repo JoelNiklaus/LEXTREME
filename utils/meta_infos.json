@@ -94,7 +94,7 @@
     "mapa_coarse": "no",
     "mapa_fine": "no"
   },
-  "task_code_mapping": {
+  "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
     "brazilian_court_decisions_unanimity": "SLTC",
     "german_argument_mining": "SLTC",

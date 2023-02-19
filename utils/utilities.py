@@ -42,7 +42,7 @@ def get_meta_infos():
 
     code_task_mapping = defaultdict(list)
 
-    for k, v in meta_infos["task_code_mapping"].items():
+    for k, v in meta_infos["task_type_mapping"].items():
         code_task_mapping[v].append(k)
 
     code_task_mapping = dict(code_task_mapping)
@@ -136,7 +136,7 @@ optimal_batch_sizes = {
 # SLTC: Single Class Text Classification
 # MLTC: Multi Class Text Classification
 # NER: Named Entity Recognition
-task_code_mapping = meta_infos["task_code_mapping"]
+task_type_mapping = meta_infos["task_type_mapping"]
 
 max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
     'brazilian_court_decisions_judgment': 8 * 128,  # 1024
@@ -168,11 +168,11 @@ def get_hierarchical(task):
 
 
 def get_python_file_for_task(task):
-    if meta_infos["task_code_mapping"][task] == "NER":
+    if meta_infos["task_type_mapping"][task] == "NER":
         return f"template_NER.py --finetuning_task " + task
-    elif meta_infos["task_code_mapping"][task] == "SLTC":
+    elif meta_infos["task_type_mapping"][task] == "SLTC":
         return f"template_SLTC.py --finetuning_task " + task
-    elif meta_infos["task_code_mapping"][task] == "MLTC":
+    elif meta_infos["task_type_mapping"][task] == "MLTC":
         return f"template_MLTC.py --finetuning_task " + task
 
 

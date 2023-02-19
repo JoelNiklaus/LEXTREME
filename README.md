@@ -1,6 +1,6 @@
 # LEXTREME: A Multlingual Benchmark Dataset for Legal Language Understanding
 
-## Setup
+## Setup 
 
 It works best with python 3.9 and torch==1.10.0+cu113. Otherwise we experienced problems with fp16 training and evaluation.
 
@@ -199,6 +199,46 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
 ```
 
 Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting `-hierarchical` to True will cause an error.
+
+### How can I contribute a dataset to LEXTREME?
+
+If you want to extend the benchmark with your own datasets, you can do so by following the following instructions:
+
+#### *Make your code available on hugginface*
+
+1. Make sure your dataset is available on the huggingface hub and has a train, validation and test split.
+2. Make sure that the structure of your dataset is in compliance with the other datasets of LEXTREME.
+2. Create a pull request to the lextreme repository by adding the following to the LEXTREME.py file:
+   - Create a dict _{YOUR_DATASET_NAME} (similar to _BRAZILIAN_COURT_DECISIONS_JUDGMENT) containing all the necessary information about your dataset (task_type, input_col, label_col, etc.)
+   - Add your dataset to the BUILDER_CONFIGS list: `LextremeConfig(name="{your_dataset_name}", **_{YOUR_DATASET_NAME})`
+   - Test that it works correctly by loading your subset with `load_dataset("lextreme", "{your_dataset_name}")` and inspecting a few examples.  
+
+#### *Github*
+
+The following instructions will suffice only if 
+ - your dataset is in compliance with the other datasets of LEXTREME and
+ - the tasks of your dataset belong to these classes: `token classification`, `single-label text classification`, `multi-label text classification`. 
+
+1. Navigate to the folder `utils` and open the file `meta_infos.json`. 
+2. The file contains several fields with important information about each dataset and finetuning task. Some of these information are essential to run the code. The fields are:
+ - `dataset_jurisdiction`: Not important for the code. Nevertheless, important to assess the jurisdictional coverage of LEXTREME.
+ - `dataset_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables.
+ - `task_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables. 
+ - `task_requires_hierarchical_per_default`: Important for the code. Specify whether your dataset needs hierarchical models ("yes") or not ("no"). This depends on the length of your inputs. If the majority of the inputs exceed 512 word pieces, setting it to "yes" is recommended. Note that our code supports hierarchical models only for text classification tasks!
+ - `task_type_mapping`: Important for the code. Specify to which type of task your dataset, e.g. the respective finetuning task, belongs to. Choose one of the following abbreviations: 
+   - NER (token classification/ named entity recognition) 
+   - SLTC (single-label text classification)
+   - MLTC (multi-label text classification) 
+ - `task_language_mapping`: Important for the code. Provide a list of languages that your finetuning task covers. Use only two-letter lowercase abbreviation. You can find an overview [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes).
+ - `config_to_dataset`: Not important for the code. Nevertheless, this information is useful.
+ - `dataset_to_config`: Not important for the code. Nevertheless, this information is useful.
+ - `task_default_arguments`: Important for the code. Here you can define the arguments that will be served for finetuning. Have a look at the existing examples. Esentially, what you need to provide is `max_seq_length` and `hierarchical`. `max_segments` and `max_seg_length` are only needed if `hierarchical` is set to `true`.
+ - `language_models`: Important for the code. If your dataset covers a new language, you might want to add a new monolingual language model for that language. Provide the name as given on huggingface.
+
+Once these steps are finished make a merge request and we merge the changes into the main branch.
+
+
+#### Code
 
 ## References
 

@@ -488,7 +488,7 @@ class ResultAggregator:
         df_pivot['dataset'] = datasets
         df_pivot.reset_index(inplace=True)
         df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
-            lambda x: self.meta_infos["task_code_mapping"][x])
+            lambda x: self.meta_infos["task_type_mapping"][x])
         df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
                              '_name_or_path', 'language', 1, 2, 3]]
         df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)

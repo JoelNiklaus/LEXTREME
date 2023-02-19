@@ -258,7 +258,7 @@ def run_experiment(
     greater_is_better = False
 
     if task == 'all':
-        all_variables = [[t for t in list(meta_infos["task_code_mapping"].keys())], models_to_be_used, list_of_seeds]
+        all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used, list_of_seeds]
     else:
         all_variables = [[task], models_to_be_used, list_of_seeds]
 
@@ -427,7 +427,7 @@ if __name__ == '__main__':
                              '#download-mode',
                         default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
-                        choices=sorted(list(meta_infos["task_code_mapping"].keys())))
+                        choices=sorted(list(meta_infos["task_type_mapping"].keys())))
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',
