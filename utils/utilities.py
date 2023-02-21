@@ -138,26 +138,18 @@ optimal_batch_sizes = {
 # NER: Named Entity Recognition
 task_type_mapping = meta_infos["task_type_mapping"]
 
-max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
-    'brazilian_court_decisions_judgment': 8 * 128,  # 1024
-    'brazilian_court_decisions_unanimity': 8 * 128,  # 1024
-    'covid19_emergency_event': 256,
-    'german_argument_mining': 256,
-    'greek_legal_code_chapter': 32 * 128,  # 4096
-    'greek_legal_code_subject': 32 * 128,  # 4096
-    'greek_legal_code_volume': 32 * 128,  # 4096
-    'greek_legal_ner': 512,
-    'legalnero': 512,
-    'lener_br': 512,
-    'mapa_fine': 512,
-    'mapa_coarse': 512,
-    'multi_eurlex_level_1': 32 * 128,  # 4096
-    'multi_eurlex_level_2': 32 * 128,  # 4096
-    'multi_eurlex_level_3': 32 * 128,  # 4096
-    'online_terms_of_service_clause_topics': 256,
-    'online_terms_of_service_unfairness_levels': 256,
-    'swiss_judgment_prediction': 16 * 128,  # 2048
-}
+max_sequence_lengths = dict()
+for task in meta_infos["task_default_arguments"].keys():
+    if "max_segments" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"]:
+        max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_segments"] * \
+                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_seg_length"]
+    else:
+        max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+            "max_seq_length"]
 
 
 def get_hierarchical(task):
@@ -174,7 +166,6 @@ def get_python_file_for_task(task):
         return f"template_SLTC.py --finetuning_task " + task
     elif meta_infos["task_type_mapping"][task] == "MLTC":
         return f"template_MLTC.py --finetuning_task " + task
-
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):

@@ -125,6 +125,12 @@ class DataTrainingArguments:
                     "disable_caching()."
         },
     )
+    add_oversampling: bool = field(
+        default=False,
+        metadata={
+            "help": "Specify if you want to add oversampling. This can only be done for SLTC tasks."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})

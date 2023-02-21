@@ -9,6 +9,9 @@
     "greek_legal_code": [
       "GR"
     ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "TR"
+    ],
     "swiss_judgment_prediction": [
       "CH"
     ],
@@ -52,7 +55,8 @@
     "greek_legal_ner": "GLN",
     "legalnero": "LNR",
     "lener_br": "LNB",
-    "mapa": "MAP"
+    "mapa": "MAP",
+    "turkish_constitutional_court_decisions_judgment": "TCD"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -72,7 +76,8 @@
     "multi_eurlex_level_3": "MEU-3",
     "online_terms_of_service_clause_topics": "OTS-CT",
     "online_terms_of_service_unfairness_levels": "OTS-UL",
-    "swiss_judgment_prediction": "SJP"
+    "swiss_judgment_prediction": "SJP",
+    "turkish_constitutional_court_decisions_judgment": "TCD"
   },
   "task_requires_hierarchical_per_default": {
     "brazilian_court_decisions_judgment": "yes",
@@ -92,7 +97,8 @@
     "legalnero": "no",
     "lener_br": "no",
     "mapa_coarse": "no",
-    "mapa_fine": "no"
+    "mapa_fine": "no",
+    "turkish_constitutional_court_decisions_judgment": "yes"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -102,6 +108,7 @@
     "greek_legal_code_subject": "SLTC",
     "greek_legal_code_volume": "SLTC",
     "swiss_judgment_prediction": "SLTC",
+    "turkish_constitutional_court_decisions_judgment": "SLTC",
     "online_terms_of_service_unfairness_levels": "SLTC",
     "online_terms_of_service_clause_topics": "MLTC",
     "covid19_emergency_event": "MLTC",
@@ -288,6 +295,9 @@
       "da",
       "cs",
       "sv"
+    ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "tr"
     ]
   },
   "config_to_dataset": {
@@ -308,7 +318,8 @@
     "legalnero": "legalnero",
     "lener_br": "lener_br",
     "mapa_coarse": "mapa",
-    "mapa_fine": "mapa"
+    "mapa_fine": "mapa",
+    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -350,6 +361,9 @@
     "mapa": [
       "mapa_coarse",
       "mapa_fine"
+    ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "turkish_constitutional_court_decisions_judgment"
     ]
   },
   "task_default_arguments": {
@@ -397,7 +411,8 @@
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 8,
-        "max_seg_length": 128
+        "max_seg_length": 128,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": true
@@ -407,7 +422,8 @@
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 8,
-        "max_seg_length": 128
+        "max_seg_length": 128,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": true
@@ -415,7 +431,8 @@
     },
     "german_argument_mining": {
       "DataTrainingArguments": {
-        "max_seq_length": 256
+        "max_seq_length": 256,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": false
@@ -455,7 +472,8 @@
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
-        "max_seg_length": 128
+        "max_seg_length": 128,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": true
@@ -463,7 +481,8 @@
     },
     "online_terms_of_service_unfairness_levels": {
       "DataTrainingArguments": {
-        "max_seq_length": 256
+        "max_seq_length": 256,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": false
@@ -510,6 +529,17 @@
         "max_seq_length": 512,
         "max_segments": 32,
         "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "turkish_constitutional_court_decisions_judgment": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128,
+        "add_oversampling": true
       },
       "ModelArguments": {
         "hierarchical": true

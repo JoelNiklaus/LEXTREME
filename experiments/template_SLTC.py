@@ -135,7 +135,7 @@ def main():
         id2label[n] = l
 
     # NOTE: This is not optimized for multiclass classification
-    if training_args.do_train:
+    if not (not (training_args.do_train == True) or not data_args.add_oversampling):
         logger.info("Oversampling the minority class")
         train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset, id2label=id2label,
                                                                data_args=data_args)
