@@ -167,16 +167,28 @@ def get_data(training_args, data_args):
 
 
 def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
+
     label_list = sorted(list(set(
         train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
         predict_dataset.features['labels'].feature.names)))
+
     return label_list
 
 
 def get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset):
-    label_list = sorted(list(set(
-        train_dataset.features['label'].feature.names + eval_dataset.features['label'].feature.names +
-        predict_dataset.features['label'].feature.names)))
+    try:
+        label_list = sorted(list(set(
+            train_dataset.features['label'].feature.names + eval_dataset.features['label'].feature.names +
+            predict_dataset.features['label'].feature.names)))
+    except:
+        # Due to some changes with pandas, it seems like there is no feature "name" anymore
+        df = pd.concat([pd.DataFrame(train_dataset), pd.DataFrame(eval_dataset), pd.DataFrame(predict_dataset)])
+        label_list = set()
+        for labels in df.label.tolist():
+            for l in labels:
+                label_list.add(l)
+        label_list = sorted(list(label_list))
+
     return label_list
 
 
