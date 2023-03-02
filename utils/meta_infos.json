@@ -79,27 +79,6 @@
     "swiss_judgment_prediction": "SJP",
     "turkish_constitutional_court_decisions_judgment": "TCD"
   },
-  "task_requires_hierarchical_per_default": {
-    "brazilian_court_decisions_judgment": "yes",
-    "brazilian_court_decisions_unanimity": "yes",
-    "german_argument_mining": "no",
-    "greek_legal_code_chapter": "yes",
-    "greek_legal_code_subject": "yes",
-    "greek_legal_code_volume": "yes",
-    "swiss_judgment_prediction": "yes",
-    "online_terms_of_service_unfairness_levels": "no",
-    "online_terms_of_service_clause_topics": "no",
-    "covid19_emergency_event": "no",
-    "multi_eurlex_level_1": "yes",
-    "multi_eurlex_level_2": "yes",
-    "multi_eurlex_level_3": "yes",
-    "greek_legal_ner": "no",
-    "legalnero": "no",
-    "lener_br": "no",
-    "mapa_coarse": "no",
-    "mapa_fine": "no",
-    "turkish_constitutional_court_decisions_judgment": "yes"
-  },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
     "brazilian_court_decisions_unanimity": "SLTC",

@@ -224,7 +224,6 @@ The following instructions will suffice only if
  - `dataset_jurisdiction`: Not important for the code. Nevertheless, important to assess the jurisdictional coverage of LEXTREME.
  - `dataset_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables.
  - `task_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables. 
- - `task_requires_hierarchical_per_default`: Important for the code. Specify whether your dataset needs hierarchical models ("yes") or not ("no"). This depends on the length of your inputs. If the majority of the inputs exceed 512 word pieces, setting it to "yes" is recommended. Note that our code supports hierarchical models only for text classification tasks!
  - `task_type_mapping`: Important for the code. Specify to which type of task your dataset, e.g. the respective finetuning task, belongs to. Choose one of the following abbreviations: 
    - NER (token classification/ named entity recognition) 
    - SLTC (single-label text classification)

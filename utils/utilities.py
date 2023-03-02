@@ -49,6 +49,16 @@ def get_meta_infos():
 
     meta_infos["code_task_mapping"] = code_task_mapping
 
+    task_requires_hierarchical_per_default = dict()
+    for task, infos in meta_infos["task_default_arguments"].items():
+        if infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "yes"
+        if not infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "no"
+
+    meta_infos[
+        "task_requires_hierarchical_per_default"] = task_requires_hierarchical_per_default
+
     return meta_infos
 
 
