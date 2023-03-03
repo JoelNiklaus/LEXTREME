@@ -1,8 +1,8 @@
-# LEXTREME: A Multlingual Benchmark Dataset for Legal Language Understanding
+# LEXTREME: A Multi-Lingual Benchmark Dataset for Legal Language Understanding
 
 ## Setup 
 
-It works best with python 3.9 and torch==1.10.0+cu113. Otherwise we experienced problems with fp16 training and evaluation.
+It works best with python 3.9 and torch==1.10.0+cu113. Otherwise, we experienced problems with fp16 training and evaluation.
 
 ```bash
 # install torch like this to avoid fp16 problems
@@ -22,22 +22,23 @@ In order to log the training results, we used [Weights & Biases](https://wandb.a
 ```
 wandb login {WANDB_API_KEY}
 ```
+You can find WANDB_API_KEY in your profile setting on [Weights & Biases](https://wandb.ai/site/) after signing up or login.
 
 ## Dataset Summary
 
-[LEXTREME](https://huggingface.co/datasets/joelito/lextreme) constist of three classification task types:
+[LEXTREME](https://huggingface.co/datasets/joelito/lextreme) consist of three classification task types:
 
 - Single Label Text Classification (SLTC)
 - Multi Label Text Classification (MLTC)
 - Named Entity Recognition (NER)
 
-The dataset consists of 11 diverse multilingual legal NLU datasets. 6 datasets have one single configuration and 5 datasets have two or three configurations. This leads to a total of 18 tasks (8 SLTC, 5 MLTC and 5 NER).
+The dataset consists of 11 diverse multilingual legal NLU (natural language understanding) datasets. Six datasets have one single configuration and five datasets have two or three configurations. This leads to a total of 18 tasks (8 SLTC, 5 MLTC and 5 NER).
 
 We use the existing train, validation, and test splits if present. In the other cases we split the data ourselves (80\% train, 10\% validation and test each).
 
 ## Supported Tasks
 
-For a detailed description of each task and dataset see [Niklaus et al. (2023)](https://arxiv.org/abs/2301.13126). Datasets are abbreviated by three capital letters. Configurations of datasets, in case they exist, are indicated by an additional letter seperated by a hyphen.
+For a detailed description of each task and dataset, see [Niklaus et al. (2023)](https://arxiv.org/abs/2301.13126). Datasets are abbreviated by three capital letters. Configurations of datasets, in case they exist, are indicated by an additional letter separated by a hyphen.
 
 | Task                                               | Type                             | Train / Dev / Test Examples | Train / Dev / Test Labels |
 | -------------------------------------------------- | -------------------------------- | --------------------------- | ------------------------- |
@@ -72,9 +73,13 @@ We evaluated multilingual models as well as monolingual models. The multilingual
 | [XLM-R base](https://huggingface.co/xlm-roberta-base)                   | [Conneau et al. (2020)](https://aclanthology.org/2020.acl-main.747.pdf)                                | 278M           | 250K                | 1.5M steps / BS 8192  | 2.5T CC100 data         | 100                       |
 | [XLM-R large](https://huggingface.co/xlm-roberta-large)                 | [Conneau et al. (2020)](https://aclanthology.org/2020.acl-main.747.pdf)                                | 560M           | 250K                | 1.5M steps / BS 8192  | 2.5T CC100 data         | 100                       |
 
-In the following we will provide the results on the basis of the multilingual models.
+In the following, we will provide the results on the basis of the multilingual models.
 
-The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score. We compute the dataset aggregate score by taking the successive harmonic mean of (1.) the languages inside the configurations (e.g., de,fr,it within SJP), (2.) the configurations inside the datasets (e.g., OTS-UL, OTS-CT within OTS), and (3.) the datasets inside LEXTREME (BCD, GAM, etc.).
+The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score. 
+
+### Dataset aggregate scores for multilingual models. The best scores are in bold.
+
+We compute the dataset aggregate score by taking the successive harmonic mean of (1.) the languages inside the configurations (e.g., de,fr,it within SJP), (2.) the configurations inside the datasets (e.g., OTS-UL, OTS-CT within OTS), and (3.) the datasets inside LEXTREME (BCD, GAM, etc.).
 
 | **Model**   | **BCD**  | **GAM**  | **GLC**  | **SJP**  | **OTS**  | **C19**  | **MEU**  | **GLN**  | **LNR**  | **LNB**  | **MAP**  | **Agg.** |
 | ----------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
@@ -84,9 +89,10 @@ The final LEXTREME score is computed using the harmonic mean of the dataset and 
 | XLM-R base  | **63.5** | 72.0     | 56.8     | **69.3** | 67.8     | 26.4     | 65.6     | 47.0     | 47.7     | 86.0     | 56.1     | 59.9     |
 | XLM-R large | 58.7     | 73.1     | 57.4     | 69.0     | **75.0** | **29.0** | **68.1** | **48.0** | **49.5** | **88.2** | 58.5     | **61.3** |
 
-We compute the language aggregate score by taking the successive harmonic mean of (1.) the configurations inside the datasets, (2.) the datasets for the given language (e.g., MAP and MEU for lv), and (3.) the languages inside LEXTREME (bg,cs, etc.).
 
 ### Language aggregate scores for multilingual models. The best scores are in bold.
+
+We compute the language aggregate score by taking the successive harmonic mean of (1.) the configurations inside the datasets, (2.) the datasets for the given language (e.g., MAP and MEU for lv), and (3.) the languages inside LEXTREME (bg,cs, etc.).
 
 | **Model**   | **bg**   | **cs**   | **da**   | **de**   | **el**   | **en**   | **es**   | **et**   | **fi**   | **fr**   | **ga**   | **hr**   | **hu**   | **it**   | **lt**   | **lv**   | **mt**   | **nl**   | **pl**   | **pt**   | **ro**   | **sk**   | **sl**   | **sv**   | **Agg.** |
 | ----------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
@@ -102,7 +108,7 @@ We compute the language aggregate score by taking the successive harmonic mean o
 
 We provide access to LEXTREME at https://huggingface.co/datasets/joelito/lextreme.
 
-For example, to load the swiss_judgment_prediction ([Niklaus et al. 2021](https://aclanthology.org/2021.nllp-1.3/)) dataset, you first simply install the datasets python library and then make the following call:
+For example, to load the swiss_judgment_prediction ([Niklaus et al. 2021](https://aclanthology.org/2021.nllp-1.3/)) dataset, you first simply install the datasets' python library and then make the following call:
 
 ```python
 
@@ -114,7 +120,7 @@ dataset = load_dataset("joelito/lextreme", "swiss_judgment_prediction")
 
 ### How to run experiments?
 
-The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the finetuning for each task seperately. For example, if you want to finetune on the `swiss_judgment_prediction` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:
+The folder [experiments](https://github.com/JoelNiklaus/LEXTREME/tree/main/experiments) contains all python scripts to run the fine-tuning for each task separately. For example, if you want to finetune on the `swiss_judgment_prediction` dataset, you could do so by typing the following command and replace the curly brackets and the content therein with your variables:
 
 ```
 CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_prediction.py \
@@ -145,7 +151,7 @@ CUDA_VISIBLE_DEVICES={GPU_NUMBER} python ./experiments/run_swiss_judgment_predic
 
 ```
 
-### How reproduce the results of the paper?
+### How to reproduce the results of the paper?
 
 It is possible to reproduce the results of the paper by running the finetuning for each dataset separately. Alternatively, you can run [main.py](https://github.com/JoelNiklaus/LEXTREME/tree/main/main.py) which, in a nutshell, will generate bash scripts for each dataset with the necessary hyperparameters and run them on every available GPU in your system (if available).
 
@@ -182,7 +188,7 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
  1,2,3 --num_train_epochs 10
 ```
 
-Temporary bash files will be created and saved in the folder [temporary_scripts](https://github.com/JoelNiklaus/LEXTREME/tree/main/temporary_scripts) and they will be run immediately. These bash files will be overwritten the next time you run main.py.
+Temporary bash files will be created and saved in the folder [temporary_scripts](https://github.com/JoelNiklaus/LEXTREME/tree/main/temporary_scripts) and they will be run immediately. These bash files will be overwritten the next time you run `main.py`.
 
 If you want to finetune only on, let's say, `xlm-roberta-large`, you can type the following command.
 
@@ -198,13 +204,13 @@ python main.py --task swiss_judgment_prediction -python main.py --task swiss_jud
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
 
-Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Thefore, setting `-hierarchical` to True will cause an error.
+Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Therefore, setting `-hierarchical` to True will cause an error.
 
 ### How can I contribute a dataset to LEXTREME?
 
 If you want to extend the benchmark with your own datasets, you can do so by following the following instructions:
 
-#### *Make your code available on hugginface*
+#### *Make your dataset available on hugginface*
 
 1. Make sure your dataset is available on the huggingface hub and has a train, validation and test split.
 2. Make sure that the structure of your dataset is in compliance with the other datasets of LEXTREME.
@@ -213,14 +219,14 @@ If you want to extend the benchmark with your own datasets, you can do so by fol
    - Add your dataset to the BUILDER_CONFIGS list: `LextremeConfig(name="{your_dataset_name}", **_{YOUR_DATASET_NAME})`
    - Test that it works correctly by loading your subset with `load_dataset("lextreme", "{your_dataset_name}")` and inspecting a few examples.  
 
-#### *Github*
+#### *GitHub*
 
 The following instructions will suffice only if 
  - your dataset is in compliance with the other datasets of LEXTREME and
  - the tasks of your dataset belong to these classes: `token classification`, `single-label text classification`, `multi-label text classification`. 
 
 1. Navigate to the folder `utils` and open the file `meta_infos.json`. 
-2. The file contains several fields with important information about each dataset and finetuning task. Some of these information are essential to run the code. The fields are:
+2. The file contains several fields with important information about each dataset and finetuning task. Some of this information is essential to run the code. The fields are:
  - `dataset_jurisdiction`: Not important for the code. Nevertheless, important to assess the jurisdictional coverage of LEXTREME.
  - `dataset_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables.
  - `task_abbreviations`: Not important for the code. Nevertheless, important to add the results of the finetuning to the existing tables. 
@@ -231,10 +237,10 @@ The following instructions will suffice only if
  - `task_language_mapping`: Important for the code. Provide a list of languages that your finetuning task covers. Use only two-letter lowercase abbreviation. You can find an overview [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes).
  - `config_to_dataset`: Not important for the code. Nevertheless, this information is useful.
  - `dataset_to_config`: Not important for the code. Nevertheless, this information is useful.
- - `task_default_arguments`: Important for the code. Here you can define the arguments that will be served for finetuning. Have a look at the existing examples. Esentially, what you need to provide is `max_seq_length` and `hierarchical`. `max_segments` and `max_seg_length` are only needed if `hierarchical` is set to `true`.
+ - `task_default_arguments`: Important for the code. Here, you can define the arguments that will be served for finetuning. Have a look at the existing examples. Essentially, what you need to provide is `max_seq_length` and `hierarchical`. `max_segments` and `max_seg_length` are only needed if `hierarchical` is set to `true`.
  - `language_models`: Important for the code. If your dataset covers a new language, you might want to add a new monolingual language model for that language. Provide the name as given on huggingface.
 
-Once these steps are finished make a merge request and we merge the changes into the main branch.
+Once these steps are finished, make a merge request, and we merge the changes into the main branch.
 
 
 #### Code
