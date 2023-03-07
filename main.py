@@ -386,7 +386,7 @@ if __name__ == '__main__':
                              "eval_steps; epoch = Evaluation is done at the end of each epoch.",
                         default=None)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
-    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=None)
+    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=11)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
