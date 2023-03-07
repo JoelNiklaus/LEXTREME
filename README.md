@@ -152,7 +152,7 @@ It allows a certain degree of customizability by specifying the following argume
 For example, if you want to finetune on `swiss_judgment_prediction` with the seeds [1,2,3], 10 epochs, and all pretrained language models as described in the paper, you can type the following:
 
 ```
-python main.py --task swiss_judgment_prediction -list_of_seeds
+python main.py --task swiss_judgment_prediction --list_of_seeds
  1,2,3 --num_train_epochs 10
 ```
 
@@ -161,14 +161,14 @@ Temporary bash files will be created and saved in the folder [temporary_scripts]
 If you want to finetune only on, let's say, `xlm-roberta-large`, you can type the following command.
 
 ```
-python main.py --task swiss_judgment_prediction -list_of_seeds
+python main.py --task swiss_judgment_prediction --list_of_seeds
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large
 ```
 
 If, additionally, you don't want to make use of a hierarchical model (`swiss_judgment_prediction` makes use of hierarchical models due to the length of the input documents), you type the following.
 
 ```
-python main.py --task swiss_judgment_prediction -list_of_seeds
+python main.py --task swiss_judgment_prediction --list_of_seeds
  1,2,3 --num_train_epochs 10 --language_model_type xlm-roberta-large --hierarchical False
 ```
 
