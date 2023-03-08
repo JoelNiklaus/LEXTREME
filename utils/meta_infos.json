@@ -704,6 +704,7 @@
       "ro": {
         "small": [],
         "base": [
+          "joelito/legal-romanian-roberta-base",
           "readerbench/jurBERT-base"
         ],
         "large": []
