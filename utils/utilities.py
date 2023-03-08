@@ -5,8 +5,6 @@ import os
 from pathlib import Path
 
 
-
-
 def remove_old_files(path_to_directory, days=-7):
     # keep files for 7 days to make sure that this works also in a hpc environment
     criticalTime = arrow.now().shift().shift(days=days)
@@ -23,7 +21,6 @@ def remove_old_files(path_to_directory, days=-7):
 
 
 def get_meta_infos():
-    
     path_to_json_file = os.path.join(os.path.dirname(__file__), 'meta_infos.json')
     with open(path_to_json_file, 'r') as f:
         meta_infos = js.load(f)
@@ -40,24 +37,32 @@ def get_meta_infos():
                 for size, models in info.items():
                     for m in models:
                         model_language_lookup_table[m] = language
-    
-    meta_infos["model_language_lookup_table"] = model_language_lookup_table
 
+    meta_infos["model_language_lookup_table"] = model_language_lookup_table
 
     code_task_mapping = defaultdict(list)
 
-    for k,v in meta_infos["task_code_mapping"].items():
+    for k, v in meta_infos["task_type_mapping"].items():
         code_task_mapping[v].append(k)
 
     code_task_mapping = dict(code_task_mapping)
 
-    meta_infos["code_task_mapping"]=code_task_mapping
+    meta_infos["code_task_mapping"] = code_task_mapping
+
+    task_requires_hierarchical_per_default = dict()
+    for task, infos in meta_infos["task_default_arguments"].items():
+        if infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "yes"
+        if not infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "no"
+
+    meta_infos[
+        "task_requires_hierarchical_per_default"] = task_requires_hierarchical_per_default
 
     return meta_infos
 
+
 meta_infos = get_meta_infos()
-
-
 
 optimal_batch_sizes = {
     # e.g. RTX 2080 Ti or GTX 1080 Ti
@@ -141,28 +146,20 @@ optimal_batch_sizes = {
 # SLTC: Single Class Text Classification
 # MLTC: Multi Class Text Classification
 # NER: Named Entity Recognition
-task_code_mapping = meta_infos["task_code_mapping"]
+task_type_mapping = meta_infos["task_type_mapping"]
 
-max_sequence_lengths = {  # 256, 512, 1024, 2048, 4096
-    'brazilian_court_decisions_judgment': 8 * 128,  # 1024
-    'brazilian_court_decisions_unanimity': 8 * 128,  # 1024
-    'covid19_emergency_event': 256,
-    'german_argument_mining': 256,
-    'greek_legal_code_chapter': 32 * 128,  # 4096
-    'greek_legal_code_subject': 32 * 128,  # 4096
-    'greek_legal_code_volume': 32 * 128,  # 4096
-    'greek_legal_ner': 512,
-    'legalnero': 512,
-    'lener_br': 512,
-    'mapa_fine': 512,
-    'mapa_coarse': 512,
-    'multi_eurlex_level_1': 32 * 128,  # 4096
-    'multi_eurlex_level_2': 32 * 128,  # 4096
-    'multi_eurlex_level_3': 32 * 128,  # 4096
-    'online_terms_of_service_clause_topics': 256,
-    'online_terms_of_service_unfairness_levels': 256,
-    'swiss_judgment_prediction': 16 * 128,  # 2048
-}
+max_sequence_lengths = dict()
+for task in meta_infos["task_default_arguments"].keys():
+    if "max_segments" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"]:
+        max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_segments"] * \
+                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_seg_length"]
+    else:
+        max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+            "max_seq_length"]
 
 
 def get_hierarchical(task):
@@ -173,7 +170,12 @@ def get_hierarchical(task):
 
 
 def get_python_file_for_task(task):
-    return f"run_{task}.py"
+    if meta_infos["task_type_mapping"][task] == "NER":
+        return f"template_NER.py --finetuning_task " + task
+    elif meta_infos["task_type_mapping"][task] == "SLTC":
+        return f"template_SLTC.py --finetuning_task " + task
+    elif meta_infos["task_type_mapping"][task] == "MLTC":
+        return f"template_MLTC.py --finetuning_task " + task
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
@@ -198,17 +200,17 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
 def get_strategies():
     pass
 
-def get_default_number_of_training_epochs(task, model_name, running_mode,language=None):
-    
+
+def get_default_number_of_training_epochs(task, model_name, running_mode, language=None):
     output_dict = dict()
 
     eval_steps = None
     logging_steps = None
     save_steps = None
-    
-    if meta_infos["model_language_lookup_table"][model_name]=="all":
+
+    if meta_infos["model_language_lookup_table"][model_name] == "all":
         if 'multi_eurlex' in task:
-            if language is None and running_mode=="default":
+            if language is None and running_mode == "default":
                 # this dataset is so large, one epoch is enough to save compute
                 # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
                 num_train_epochs = 1
@@ -218,7 +220,7 @@ def get_default_number_of_training_epochs(task, model_name, running_mode,languag
                 eval_steps = 1000
                 logging_steps = 1000
                 save_steps = 1000
-            elif language in ['all', 'multilingual'] and running_mode=="default":
+            elif language in ['all', 'multilingual'] and running_mode == "default":
                 # this dataset is so large, one epoch is enough to save compute
                 # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
                 num_train_epochs = 1
@@ -248,7 +250,6 @@ def get_default_number_of_training_epochs(task, model_name, running_mode,languag
         logging_strategy = "epoch"
         save_strategy = "epoch"
 
-        
     output_dict["num_train_epochs"] = num_train_epochs
 
     output_dict["evaluation_strategy"] = evaluation_strategy
@@ -261,8 +262,3 @@ def get_default_number_of_training_epochs(task, model_name, running_mode,languag
     return output_dict
 
 # Get the evaluation_strategy, logging_strategy, save_strategy, eval_steps, logging_steps
-
-    
-
-
-    

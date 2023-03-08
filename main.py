@@ -5,15 +5,15 @@ import json as js
 import os
 import re
 import shutil
-import time
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
-from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, max_sequence_lengths, \
-    optimal_batch_sizes, get_python_file_for_task, get_optimal_batch_size, get_default_number_of_training_epochs
 
 import setproctitle
 import torch
+
+from utils.utilities import remove_old_files, get_meta_infos, get_hierarchical, get_python_file_for_task, \
+    get_optimal_batch_size, get_default_number_of_training_epochs
 
 # Empty folder with temporary scripts
 # shutil.rmtree('./temporary_scripts', ignore_errors=True) # Uncomment if you want to delete all temporary scripts
@@ -258,7 +258,7 @@ def run_experiment(
     greater_is_better = False
 
     if task == 'all':
-        all_variables = [[t for t in list(meta_infos["task_code_mapping"].keys())], models_to_be_used, list_of_seeds]
+        all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used, list_of_seeds]
     else:
         all_variables = [[task], models_to_be_used, list_of_seeds]
 
@@ -386,7 +386,7 @@ if __name__ == '__main__':
                              "eval_steps; epoch = Evaluation is done at the end of each epoch.",
                         default=None)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
-    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=None)
+    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=11)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
@@ -427,7 +427,7 @@ if __name__ == '__main__':
                              '#download-mode',
                         default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
-                        choices=sorted(list(meta_infos["task_code_mapping"].keys())))
+                        choices=sorted(list(meta_infos["task_type_mapping"].keys())))
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',

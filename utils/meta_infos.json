@@ -9,6 +9,9 @@
     "greek_legal_code": [
       "GR"
     ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "TR"
+    ],
     "swiss_judgment_prediction": [
       "CH"
     ],
@@ -52,7 +55,8 @@
     "greek_legal_ner": "GLN",
     "legalnero": "LNR",
     "lener_br": "LNB",
-    "mapa": "MAP"
+    "mapa": "MAP",
+    "turkish_constitutional_court_decisions_judgment": "TCD"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -72,29 +76,10 @@
     "multi_eurlex_level_3": "MEU-3",
     "online_terms_of_service_clause_topics": "OTS-CT",
     "online_terms_of_service_unfairness_levels": "OTS-UL",
-    "swiss_judgment_prediction": "SJP"
+    "swiss_judgment_prediction": "SJP",
+    "turkish_constitutional_court_decisions_judgment": "TCD"
   },
-  "task_requires_hierarchical_per_default": {
-    "brazilian_court_decisions_judgment": "yes",
-    "brazilian_court_decisions_unanimity": "yes",
-    "german_argument_mining": "no",
-    "greek_legal_code_chapter": "yes",
-    "greek_legal_code_subject": "yes",
-    "greek_legal_code_volume": "yes",
-    "swiss_judgment_prediction": "yes",
-    "online_terms_of_service_unfairness_levels": "no",
-    "online_terms_of_service_clause_topics": "no",
-    "covid19_emergency_event": "no",
-    "multi_eurlex_level_1": "yes",
-    "multi_eurlex_level_2": "yes",
-    "multi_eurlex_level_3": "yes",
-    "greek_legal_ner": "no",
-    "legalnero": "no",
-    "lener_br": "no",
-    "mapa_coarse": "no",
-    "mapa_fine": "no"
-  },
-  "task_code_mapping": {
+  "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
     "brazilian_court_decisions_unanimity": "SLTC",
     "german_argument_mining": "SLTC",
@@ -102,6 +87,7 @@
     "greek_legal_code_subject": "SLTC",
     "greek_legal_code_volume": "SLTC",
     "swiss_judgment_prediction": "SLTC",
+    "turkish_constitutional_court_decisions_judgment": "SLTC",
     "online_terms_of_service_unfairness_levels": "SLTC",
     "online_terms_of_service_clause_topics": "MLTC",
     "covid19_emergency_event": "MLTC",
@@ -288,6 +274,9 @@
       "da",
       "cs",
       "sv"
+    ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "tr"
     ]
   },
   "config_to_dataset": {
@@ -308,7 +297,8 @@
     "legalnero": "legalnero",
     "lener_br": "lener_br",
     "mapa_coarse": "mapa",
-    "mapa_fine": "mapa"
+    "mapa_fine": "mapa",
+    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -350,7 +340,190 @@
     "mapa": [
       "mapa_coarse",
       "mapa_fine"
+    ],
+    "turkish_constitutional_court_decisions_judgment": [
+      "turkish_constitutional_court_decisions_judgment"
     ]
+  },
+  "task_default_arguments": {
+    "greek_legal_ner": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "legalnero": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "lener_br": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "mapa_fine": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "mapa_coarse": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "brazilian_court_decisions_judgment": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 8,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "brazilian_court_decisions_unanimity": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 8,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "german_argument_mining": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "greek_legal_code_chapter": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "greek_legal_code_subject": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "greek_legal_code_volume": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_judgment_prediction": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "online_terms_of_service_unfairness_levels": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "online_terms_of_service_clause_topics": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "covid19_emergency_event": {
+      "DataTrainingArguments": {
+        "max_seq_length": 256
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "multi_eurlex_level_1": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "multi_eurlex_level_2": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "multi_eurlex_level_3": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "turkish_constitutional_court_decisions_judgment": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    }
   },
   "language_models": {
     "general": {

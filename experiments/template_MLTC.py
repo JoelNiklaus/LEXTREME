@@ -2,24 +2,16 @@
 # coding=utf-8
 
 
+import glob
 import logging
 import os
-import random
-import sys
-from dataclasses import dataclass, field
-from typing import Optional
-
-from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
-    generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset, \
-    get_data
-from datasets import utils
-import glob
 import shutil
-from models.hierbert import HierarchicalBert
-from torch import nn
-from datasets import disable_caching
+import sys
+from dataclasses import replace
 
 import transformers
+from datasets import disable_caching
+from datasets import utils
 from transformers import (
     DataCollatorWithPadding,
     HfArgumentParser,
@@ -27,170 +19,17 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
-    IntervalStrategy,
-    Trainer
+    IntervalStrategy
 )
 from transformers.trainer_utils import get_last_checkpoint
 
+from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, \
+    generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
+    get_label_list_from_mltc_tasks, model_is_multilingual
+from trainer import MultilabelTrainer
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DataTrainingArguments:
-    """
-    Arguments pertaining to what data we are going to input our model for training and eval.
-
-    Using `HfArgumentParser` we can turn this class
-    into argparse arguments to be able to specify them on
-    the command line.
-    """
-
-    max_seq_length: Optional[int] = field(
-        default=512,
-        metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-                    "than this will be truncated, sequences shorter will be padded."
-        },
-    )
-    max_segments: Optional[int] = field(
-        default=8,
-        metadata={
-            "help": "The maximum number of segments (paragraphs) to be considered. Sequences longer "
-                    "than this will be truncated, sequences shorter will be padded."
-        },
-    )
-    max_seg_length: Optional[int] = field(
-        default=128,
-        metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-                    "than this will be truncated, sequences shorter will be padded."
-        },
-    )
-    overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached preprocessed datasets or not."}
-    )
-    pad_to_max_length: bool = field(
-        default=True,
-        metadata={
-            "help": "Whether to pad all samples to `max_seq_length`. "
-                    "If False, will pad the samples dynamically when batching to the maximum length in the batch."
-        },
-    )
-    max_train_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
-                    "value if set."
-        },
-    )
-    max_eval_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of evaluation examples to this "
-                    "value if set."
-        },
-    )
-    max_predict_samples: Optional[int] = field(
-        default=None,
-        metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of prediction examples to this "
-                    "value if set."
-        },
-    )
-    language: Optional[str] = field(
-        default='pt',
-        metadata={
-            "help": "For choosin the language "
-                    "value if set."
-        },
-    )
-    running_mode: Optional[str] = field(
-        default='default',
-        metadata={
-            "help": "If set to 'experimental' only a small portion of the original dataset will be used for fast experiments"
-        },
-    )
-    finetuning_task: Optional[str] = field(
-        default='brazilian_court_decisions_judgment',
-        metadata={
-            "help": "Name of the finetuning task"
-        },
-    )
-    download_mode: Optional[str] = field(
-        default='reuse_cache_if_exists',
-        metadata={
-            "help": "Name of the finetuning task"
-        },
-    )
-    preprocessing_num_workers: Optional[int] = field(
-        default=8,
-        metadata={"help": "The number of processes to use for the preprocessing."},
-    )
-    dataset_cache_dir: str = field(
-        default=None,
-        metadata={
-            "help": "Specify the directory you want to cache your datasets."
-        },
-    )
-    log_directory: str = field(
-        default=None,
-        metadata={
-            "help": "Specify the directory where you want to save your logs."
-        },
-    )
-
-    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-
-
-@dataclass
-class ModelArguments:
-    """
-    Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
-    """
-    hierarchical: bool = field(
-        default=True, metadata={"help": "Whether to use a hierarchical variant or not"}
-    )
-    model_name_or_path: str = field(
-        default=None, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
-    )
-    config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
-    )
-    tokenizer_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
-    cache_dir: Optional[str] = field(
-        default='./datasets_cache_dir',
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
-    )
-    do_lower_case: Optional[bool] = field(
-        default=False,
-        metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
-    )
-    use_fast_tokenizer: bool = field(
-        default=True,
-        metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
-    )
-    model_revision: str = field(
-        default="main",
-        metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
-    )
-    use_auth_token: bool = field(
-        default=False,
-        metadata={
-            "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
-                    "with private models)."
-        }
-    )
-    revision: str = field(
-        default="main",
-        metadata={
-            "help": "The specific model version to use. It can be a branch name, a tag name, or a commit id, "
-                    "since we use a git-based system for storing models and other artifacts on huggingface.co, "
-                    "so revision can be any identifier allowed by git."
-        }
-    )
 
 
 def main():
@@ -200,6 +39,30 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    default_values = get_default_values()
+
+    if data_args.finetuning_task in default_values.keys():
+        for argument_type in default_values[data_args.finetuning_task].keys():
+            if argument_type == "DataTrainingArguments":
+                for field, value in default_values[data_args.finetuning_task][argument_type].items():
+                    if field == "language":
+                        if model_is_multilingual(model_args.model_name_or_path) and data_args.language is None:
+                            para = {field: value}
+                            data_args = replace(data_args, **para)
+                        elif data_args.language is None:
+                            para = {field: value}
+                            data_args = replace(data_args, **para)
+                    else:
+                        para = {field: value}
+                        data_args = replace(data_args, **para)
+            elif argument_type == "ModelArguments":
+                for field, value in default_values[data_args.finetuning_task][argument_type].items():
+                    para = {field: value}
+                    model_args = replace(model_args, **para)
+
+    if data_args.disable_caching:
+        disable_caching()
 
     config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
 
@@ -261,7 +124,9 @@ def main():
     train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
 
     # Labels
-    label_list = ["no", "partial", "yes"]
+    label_list = get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
+
+    label_list = sorted(list(label_list))
     num_labels = len(label_list)
 
     label2id = dict()
@@ -270,12 +135,6 @@ def main():
     for n, l in enumerate(label_list):
         label2id[l] = n
         id2label[n] = l
-
-    # NOTE: This is not optimized for multiclass classification
-    if training_args.do_train:
-        logger.info("Oversampling the minority class")
-        train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset, id2label=id2label,
-                                                               data_args=data_args)
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
                                                                                    data_args=data_args,
@@ -286,7 +145,7 @@ def main():
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
@@ -297,7 +156,7 @@ def main():
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
@@ -308,7 +167,7 @@ def main():
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on prediction dataset",
@@ -327,12 +186,12 @@ def main():
     training_args.evaluation_strategy = IntervalStrategy.EPOCH
     training_args.logging_strategy = IntervalStrategy.EPOCH
 
-    trainer = Trainer(
+    trainer = MultilabelTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics_multi_class,
+        compute_metrics=compute_metrics_multi_label,
         tokenizer=tokenizer,
         data_collator=data_collator,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
@@ -372,8 +231,12 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
-                                     predict_dataset=predict_dataset, id2label=id2label, name_of_input_field="input")
+
+        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+        langs = sorted(list(set(langs)))
+
+        make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                     id2label=id2label, training_args=training_args, list_of_languages=langs)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]

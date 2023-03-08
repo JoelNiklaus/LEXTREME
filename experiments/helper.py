@@ -134,6 +134,7 @@ def make_split(data_args, split_name):
                              'mapa_fine'
                              ]
 
+
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
@@ -143,6 +144,13 @@ def make_split(data_args, split_name):
         dataset = make_efficient_split(data_args, split_name, ner_tasks)
 
     return dataset
+
+
+def model_is_multilingual(model_name_or_path):
+    if len(meta_infos["model_language_lookup_table"][model_name_or_path]) == "all":
+        return True
+    else:
+        return False
 
 
 def get_data(training_args, data_args):
@@ -156,6 +164,39 @@ def get_data(training_args, data_args):
         predict_dataset = make_split(data_args=data_args, split_name="test")
 
     return train_dataset, eval_dataset, predict_dataset
+
+
+def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
+
+    label_list = sorted(list(set(
+        train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
+        predict_dataset.features['labels'].feature.names)))
+
+    return label_list
+
+
+def get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset):
+    try:
+        label_list = sorted(list(set(
+            train_dataset.features['label'].feature.names + eval_dataset.features['label'].feature.names +
+            predict_dataset.features['label'].feature.names)))
+    except:
+        # Due to some changes with pandas, it seems like there is no feature "name" anymore
+        df = pd.concat([pd.DataFrame(train_dataset), pd.DataFrame(eval_dataset), pd.DataFrame(predict_dataset)])
+        label_list = set()
+        for labels in df.label.tolist():
+            for l in labels:
+                label_list.add(l)
+        label_list = sorted(list(label_list))
+
+    return label_list
+
+
+def get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset):
+    label_list = sorted(list(set(
+        train_dataset.features['label'].names + eval_dataset.features['label'].names +
+        predict_dataset.features['label'].names)))
+    return label_list
 
 
 def append_zero_segments(case_encodings, pad_token_id, data_args):
@@ -258,6 +299,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             max_length=data_args.max_seq_length,
             truncation=True,
         )
+
 
     return tokenized
 
@@ -703,14 +745,16 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
     data_args_as_dict = dict()
     for x in dataclasses.fields(data_args):
         if x.name != "finetuning_task":
-            data_args_as_dict[x.name] = getattr(data_args, x.name)  # We will log the finetuning task later with the language_prefix
+            data_args_as_dict[x.name] = getattr(data_args,
+                                                x.name)  # We will log the finetuning task later with the language_prefix
 
     wandb.log(data_args_as_dict)
 
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     model_args_as_dict = dict()
     for x in dataclasses.fields(model_args):
-        model_args_as_dict[x.name] = getattr(model_args, x.name) # We will log the finetuning task later with the language_prefix
+        model_args_as_dict[x.name] = getattr(model_args,
+                                             x.name)  # We will log the finetuning task later with the language_prefix
 
     wandb.log(model_args_as_dict)
 
