@@ -1,5 +1,14 @@
 {
   "dataset_jurisdiction": {
+    "criticality_prediction": [
+      "CH"
+    ],
+    "citation_prediction": [
+      "CH"
+    ],
+    "tuning": [
+      "CH"
+    ],
     "brazilian_court_decisions": [
       "BR"
     ],
@@ -56,7 +65,10 @@
     "legalnero": "LNR",
     "lener_br": "LNB",
     "mapa": "MAP",
-    "turkish_constitutional_court_decisions_judgment": "TCD"
+    "turkish_constitutional_court_decisions_judgment": "TCD",
+    "criticality_prediction": "CP",
+    "citation_prediction": "CP",
+    "tuning": "tuning"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -77,7 +89,10 @@
     "online_terms_of_service_clause_topics": "OTS-CT",
     "online_terms_of_service_unfairness_levels": "OTS-UL",
     "swiss_judgment_prediction": "SJP",
-    "turkish_constitutional_court_decisions_judgment": "TCD"
+    "turkish_constitutional_court_decisions_judgment": "TCD",
+    "criticality_prediction": "CP",
+    "citation_prediction": "CITP",
+    "tuning": "tuning"
   },
   "task_requires_hierarchical_per_default": {
     "brazilian_court_decisions_judgment": "yes",
@@ -98,7 +113,11 @@
     "lener_br": "no",
     "mapa_coarse": "no",
     "mapa_fine": "no",
-    "turkish_constitutional_court_decisions_judgment": "yes"
+    "turkish_constitutional_court_decisions_judgment": "yes",
+    "criticality_prediction": "yes",
+    "citation_criticality": "yes",
+    "tuning": "yes"
+
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -119,7 +138,11 @@
     "legalnero": "NER",
     "lener_br": "NER",
     "mapa_coarse": "NER",
-    "mapa_fine": "NER"
+    "mapa_fine": "NER",
+    "criticality_prediction": "CP",
+    "citation_prediction": "CITP",
+    "tuning": "tuning"
+
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -298,6 +321,21 @@
     ],
     "turkish_constitutional_court_decisions_judgment": [
       "tr"
+    ],
+    "criticality_prediction": [
+      "de",
+      "fr",
+      "it"
+    ],
+    "citation_prediction": [
+      "de",
+      "fr",
+      "it"
+    ],
+    "tuning": [
+      "de",
+      "fr",
+      "it"
     ]
   },
   "config_to_dataset": {
@@ -319,7 +357,11 @@
     "lener_br": "lener_br",
     "mapa_coarse": "mapa",
     "mapa_fine": "mapa",
-    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment"
+    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment",
+    "criticality_prediction": "criticality_prediction",
+    "citation_prediction": "citation_prediction",
+    "tuning": "tuning"
+
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -364,6 +406,15 @@
     ],
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
+    ],
+    "criticality_prediction": [
+      "criticality_prediction"
+    ],
+    "citation_criticality": [
+      "citation_criticality"
+    ],
+    "tuning": [
+      "tuning"
     ]
   },
   "task_default_arguments": {
@@ -538,6 +589,39 @@
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 32,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "citation_prediction": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "criticality_prediction": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "tuning": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
         "max_seg_length": 128,
         "add_oversampling": true
       },

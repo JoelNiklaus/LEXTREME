@@ -134,7 +134,6 @@ def make_split(data_args, split_name):
                              'mapa_fine'
                              ]
 
-
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
