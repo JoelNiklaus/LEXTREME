@@ -379,32 +379,6 @@ class ResultAggregator:
                     item['missing_seeds'] = sorted(list(required_seeds))
                     report.append(item)
 
-            # Now we have to check cases where we finetune multilingual models on monolingual subsets
-            
-            for task, languages in self.meta_infos["task_language_mapping"].items():
-                if len(languages)>1: # Monolingual datasets are not needed
-                    for model_name, language in self.meta_infos['model_language_lookup_table'].items():
-                        if language == "all":
-                            for lang in languages:
-                                available_seeds = self.results[(self.results.finetuning_task == task) & (
-                                    self.results._name_or_path == model_name) & (self.results.language == lang)].seed.unique()
-                                
-                                available_seeds = set([str(s) for s in available_seeds])
-                            
-                                if required_seeds.intersection(available_seeds) != required_seeds:
-                                        message = "For task " + task + " in combination with the language subset" + \
-                                                lang + " we do not have any results for this model: " + model_name
-                                        logging.warn(message)
-                                        item = dict()
-                                        item['finetuning_task'] = task
-                                        item['_name_or_path'] = model_name
-                                        item['language'] = lang + '_subset'
-                                        item['missing_seeds'] = sorted([s for s in required_seeds if s not in available_seeds])
-                                        if item not in report:
-                                            report.append(item)
-
-            ######################################
-
 
             for am in available_models:
                 list_of_seeds = set(self.results[(self.results.finetuning_task == task) & (
@@ -428,9 +402,6 @@ class ResultAggregator:
         report_df['missing_seeds'] = report_df.missing_seeds.apply(lambda x: ','.join(x))
 
         report_df = report_df.drop_duplicates()
-
-        # TODO: # We will not check Joel's pretrained models yet. In the future, we need to remove this constraint.
-        report_df = report_df[report_df._name_or_path.str.contains('joelito')==False] 
 
         return report_df
 
@@ -522,7 +493,7 @@ class ResultAggregator:
         self.accuracy_normalized_overview = accuracy_normalized_overview
 
         eval_macro_f1_overview = self.create_overview_of_results_per_seed(
-            score="eval/macro-f1", only_completed_tasks=True)
+            score="eval/macro-f1", only_completed_tasks=only_completed_tasks)
 
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
@@ -900,8 +871,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    ra = ResultAggregator(wandb_api_key=args.wandb_api_key)
+    ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False)
 
     ra.get_info()
 
-    ra.get_dataset_aggregated_score()
+    ra.create_report(only_completed_tasks=False)
+
+    # ra.get_dataset_aggregated_score()
+
+    # ra.get_language_aggregated_score()
