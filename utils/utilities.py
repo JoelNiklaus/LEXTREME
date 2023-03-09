@@ -72,10 +72,10 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 1},  # untested
+        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
+        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
     },
     # TODO test sizes here
     # e.g. P100
