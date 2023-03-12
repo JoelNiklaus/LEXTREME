@@ -1,44 +1,15 @@
-import datetime
-import json as js
-import os
-import re
-from ast import literal_eval
-from pathlib import Path
-
 import datasets
 import numpy as np
 import pandas as pd
-import wandb
 from datasets import Dataset, concatenate_datasets, load_dataset, load_metric, ClassLabel, Value
-from scipy.special import expit
-from collections import defaultdict
-
-
-def get_meta_infos():
-    absolute_path = os.path.dirname(__file__)
-    relative_path = '../utils/meta_infos.json'
-    full_path = os.path.join(absolute_path, relative_path)
-    with open(full_path, 'r') as f:
-        meta_infos = js.load(f)
-
-    code_task_mapping = defaultdict(list)
-
-    for k, v in meta_infos["task_code_mapping"].items():
-        code_task_mapping[v].append(k)
-
-    code_task_mapping = dict(code_task_mapping)
-
-    meta_infos["code_task_mapping"] = code_task_mapping
-
-    return meta_infos
 
 
 def get_dataset(experimental_samples, train_arg, split, task):
-    if task == 'crit':
+    if task == 'criticality_prediction':
         dataset = "rcds/legal_criticality_prediction"
         config_name = 'full'
     else:
-        assert task == 'cit'
+        assert task == 'citation_prediction'
         dataset = "rcds/doc2doc"
         config_name = 'full'
     if train_arg:
@@ -54,9 +25,8 @@ def get_dataset(experimental_samples, train_arg, split, task):
 
 
 def remove_unused_features(dataset, feature_col, label):
-    columns_to_remove = dataset.column_names
     columns_to_keep = [feature_col, label, 'language']
-    columns_to_remove = [element for element in columns_to_remove if element not in columns_to_keep]
+    columns_to_remove = [element for element in dataset.column_names if element not in columns_to_keep]
     for column in columns_to_remove:
         if column in dataset.column_names:
             dataset = dataset.remove_columns(column)
@@ -77,17 +47,10 @@ def filter_by_length(example):
     :param example:    the example to check
     :return:
     """
-    # TODO check if this can be removed, because we want to use all cases
+    # TODO check if this can be removed
     if 10 < len(str(example["input"])):
         return True
     return False
-
-
-def get_labels(critical_only):
-    if critical_only:
-        return ['critical-1', 'critical-2', 'critical-3', 'critical-4']
-    else:
-        return ['critical-1', 'critical-2', 'critical-3', 'critical-4', 'non-critical']
 
 
 def get_laws(dataset_dict):

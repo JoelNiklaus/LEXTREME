@@ -172,7 +172,7 @@ def main():
         ds_dict[k] = rename_features(ds_dict[k], feature_col, 'cited_rulings')
         ds_dict[k] = ds_dict[k].filter(filter_by_length)
 
-    ds_dict, label_list = cast_label_to_labelclass(ds_dict, 'cited_rulings')  # Do this for all datasets at the same time
+    ds_dict, label_list = cast_label_to_labelclass(ds_dict, 'cited_rulings')  # At the same time to include all labels
 
     train_dataset = ds_dict['train']
     eval_dataset = ds_dict['validation']

@@ -31,13 +31,13 @@ conda activate scp-test
 
 # Put your code below this line
 
-# distilbert-base-multilingual-cased
-# xlm-roberta-base
-# for testing use following:
-# python main.py -as -bz -gn -gm 24 -hier True -lol -lc -lmt xlm-roberta-base -los 1 -lr -nte -rmo experimental -dmo -t criticality_prediction -ld results/test_scp -nw -cad
-python main.py -gm 24 -hier True -lmt joelito/legal-xlm-roberta-large -los 1 -rmo experimental -t tuning
+# -lmt legal,general_multilingual_base,large
+# -t criticality_prediction
+
+
+# models: "xlm-roberta-large" 'joelito/legal-xlm-roberta-large' "xlm-roberta-base" 'joelito/legal-xlm-roberta-base' 'microsoft/mdeberta-v3-base'
+python main.py -gm 24 -hier True -lmt legal,general_multilingual_base,large -los 1 -rmo experimental -t criticality_prediction
 # python main.py -gm 24 -hier True -lmt joelito/legal-xlm-roberta-large -los 1 -rmo experimental -t criticality_prediction
-# python main.py -gm 24 -hier True -lmt joelito/legal-xlm-roberta-large -los 1 -rmo experimental -t citation_prediction
 # possible args -as -bz -es -gn -gm -hier -ls -lol -lc -lmt -los -nte -rev -rmo -dmo -t -ld -nw -cad -ss -est -lst -sst
 
 # IMPORTANT:

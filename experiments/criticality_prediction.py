@@ -6,6 +6,8 @@ import logging
 import os
 import random
 import sys
+
+import wandb
 from dataclasses import dataclass, field
 from typing import Optional
 import pandas as pd
@@ -43,6 +45,8 @@ disable_caching()
 
 logger = logging.getLogger(__name__)
 
+os.environ["WANDB_API_KEY"] = "6f9fce3d2b3e41f8880b3e0b094e16ec9d030315"
+
 def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
@@ -50,9 +54,6 @@ def main():
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
-    #TODO change name
-    config_wandb(model_args=model_args, data_args=data_args, training_args=training_args, project_name='scp-test')
 
     default_values = get_default_values()
 
@@ -132,24 +133,25 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
+    config_wandb(model_args=model_args, data_args=data_args, training_args=training_args, project_name='scp-test')
+
+    # Start Changes Criticality
     ##################################################################################
-    # Changes for bge_criticality:
 
-    logger.info(f"Training arguments {training_args}")
-    logger.info(f"Model arguments {model_args}")
-    logger.info(f"Data arguments {data_args}")
+    # set up different experiments
+    feature_col = 'facts'  # must be either facts, considerations or rulings
+    label = 'citation_label'  # must be either bge_label or citation_label
+    only_critical = True  # Only for citation_label
 
-    # Set hyperparam batch_size:
+    # training_args.fp16
 
-    # models: "xlm-roberta-base","microsoft/mdeberta-v3-base" "joelito/legal-xlm-roberta-large" "joelito/legal-xlm-roberta-base"
-
-
+    # Set hyperparameter batch_size:
     if model_args.model_name_or_path == "xlm-roberta-large":
         training_args.per_device_eval_batch_size = 2
         training_args.per_device_train_batch_size = 2
     elif model_args.model_name_or_path == 'joelito/legal-xlm-roberta-large':
-        training_args.per_device_eval_batch_size = 2
-        training_args.per_device_train_batch_size = 2
+        training_args.per_device_eval_batch_size = 4
+        training_args.per_device_train_batch_size = 4
     elif model_args.model_name_or_path == "xlm-roberta-base":
         training_args.per_device_eval_batch_size = 4
         training_args.per_device_train_batch_size = 4
@@ -162,35 +164,41 @@ def main():
     else:
         exit()
 
-    if data_args.running_mode == "experimental":
-        experimental_samples = True
-    else:
-        experimental_samples = False
+    # Set hyperparameter learning_rate
 
+    # Set hyperparameter weight_decay to avoid catastrophic forgetting
 
-    feature_col = 'facts'  # must be either facts, considerations (or in future judgment)
-    # remove_non_critical = false
-    # filter_attribute_value = social_law  # must be a region (...) or a legal area (...)
+    # Set hyperparameter num_train_epochs
 
-    ds_dict = {'train': get_dataset(experimental_samples, training_args.do_train, 'train', 'crit'),
-               'validation': get_dataset(experimental_samples, training_args.do_eval, 'validation', 'crit'),
-               'test': get_dataset(experimental_samples, training_args.do_predict, 'test', 'crit')}
+    # log all arguments
+    logger.info(f"Training arguments {training_args}")
+    logger.info(f"Model arguments {model_args}")
+    logger.info(f"Data arguments {data_args}")
+
+    # get datasets
+    ds_dict = {'train': get_dataset(data_args.running_mode, training_args.do_train, 'train', data_args.finetuning_task),
+               'validation': get_dataset(data_args.running_mode, training_args.do_eval, 'validation', data_args.finetuning_task),
+               'test': get_dataset(data_args.running_mode, training_args.do_predict, 'test', data_args.finetuning_task)}
 
     for k in ds_dict:
-        ds_dict[k] = remove_unused_features(ds_dict[k], feature_col, 'bge_label')
-        ds_dict[k] = rename_features(ds_dict[k], feature_col, 'bge_label')
+        ds_dict[k] = remove_unused_features(ds_dict[k], feature_col, label)
+        ds_dict[k] = rename_features(ds_dict[k], feature_col, label)
         ds_dict[k] = ds_dict[k].filter(filter_by_length)
+        if only_critical and label == 'citation_label':  # only use critical cases
+            ds_dict[k] = ds_dict[k].filter(lambda row: row['label'].startswith("critical"))
 
-    ds_dict, label_list = cast_label_to_labelclass(ds_dict, 'bge_label')  # Do this for all datasets at the same time
+    ds_dict, label_list = cast_label_to_labelclass(ds_dict, label)  # Do this for all datasets at the same time
+    num_labels = len(label_list)
 
     train_dataset = ds_dict['train']
     eval_dataset = ds_dict['validation']
     predict_dataset = ds_dict['test']
 
     logger.info(train_dataset)
-    num_labels = len(label_list)
+    logger.info(eval_dataset)
+    logger.info(predict_dataset)
 
-    # End changes
+    # End changes Criticality
     ######################################################################################
 
     label2id = dict()
@@ -200,7 +208,6 @@ def main():
         label2id[l] = n
         id2label[n] = l
 
-    # NOTE: This is not optimized for multiclass classification
     if training_args.do_train:
         logger.info("Oversampling the minority class")
         train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset, id2label=id2label,
@@ -291,6 +298,7 @@ def main():
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
+        wandb.log("train", metrics)
 
     # Evaluation
     if training_args.do_eval:
@@ -301,6 +309,7 @@ def main():
         metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
         trainer.log_metrics("eval", metrics)
+        wandb.log("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
     # Prediction

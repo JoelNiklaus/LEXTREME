@@ -6,9 +6,6 @@
     "citation_prediction": [
       "CH"
     ],
-    "tuning": [
-      "CH"
-    ],
     "brazilian_court_decisions": [
       "BR"
     ],
@@ -67,8 +64,7 @@
     "mapa": "MAP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
     "criticality_prediction": "CP",
-    "citation_prediction": "CP",
-    "tuning": "tuning"
+    "citation_prediction": "CP"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -91,8 +87,7 @@
     "swiss_judgment_prediction": "SJP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
     "criticality_prediction": "CP",
-    "citation_prediction": "CITP",
-    "tuning": "tuning"
+    "citation_prediction": "CITP"
   },
   "task_requires_hierarchical_per_default": {
     "brazilian_court_decisions_judgment": "yes",
@@ -115,8 +110,7 @@
     "mapa_fine": "no",
     "turkish_constitutional_court_decisions_judgment": "yes",
     "criticality_prediction": "yes",
-    "citation_criticality": "yes",
-    "tuning": "yes"
+    "citation_criticality": "yes"
 
   },
   "task_type_mapping": {
@@ -140,8 +134,7 @@
     "mapa_coarse": "NER",
     "mapa_fine": "NER",
     "criticality_prediction": "CP",
-    "citation_prediction": "CITP",
-    "tuning": "tuning"
+    "citation_prediction": "CITP"
 
   },
   "task_language_mapping": {
@@ -331,11 +324,6 @@
       "de",
       "fr",
       "it"
-    ],
-    "tuning": [
-      "de",
-      "fr",
-      "it"
     ]
   },
   "config_to_dataset": {
@@ -359,9 +347,7 @@
     "mapa_fine": "mapa",
     "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment",
     "criticality_prediction": "criticality_prediction",
-    "citation_prediction": "citation_prediction",
-    "tuning": "tuning"
-
+    "citation_prediction": "citation_prediction"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -412,9 +398,6 @@
     ],
     "citation_criticality": [
       "citation_criticality"
-    ],
-    "tuning": [
-      "tuning"
     ]
   },
   "task_default_arguments": {
@@ -608,17 +591,6 @@
       }
     },
     "criticality_prediction": {
-      "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "max_segments": 16,
-        "max_seg_length": 128,
-        "add_oversampling": true
-      },
-      "ModelArguments": {
-        "hierarchical": true
-      }
-    },
-    "tuning": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
