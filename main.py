@@ -33,7 +33,6 @@ meta_infos = get_meta_infos()
 
 
 def generate_command(**data):
-
     time_now = datetime.datetime.now().isoformat()
 
     if data["hierarchical"] is None:
@@ -190,8 +189,8 @@ def run_experiment(
 
     if log_directory is None:
         log_directory = "results"
-        time_stamp = re.sub(':','_',datetime.datetime.now().isoformat())
-        log_directory = log_directory+'/logs_' + str(time_stamp)
+        time_stamp = re.sub(':', '_', datetime.datetime.now().isoformat())
+        log_directory = log_directory + '/logs_' + str(time_stamp)
     else:
         if not os.path.isdir(log_directory):
             os.mkdir(log_directory)
@@ -423,9 +422,9 @@ if __name__ == '__main__':
                         default='default')
     parser.add_argument('-dmo', '--download_mode',
                         help='Define whether you want to redownload the dataset or not. '
-                             'See the options in: https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html'
-                             '#download-mode',
-                        default='reuse_cache_if_exists')  # reuses raw downloaded files but makes dataset freshly
+                             'See the options in: '
+                             'https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html#download-mode',
+                        default='reuse_dataset_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all',
                         choices=sorted(list(meta_infos["task_type_mapping"].keys())))
     parser.add_argument('-ld', '--log_directory',

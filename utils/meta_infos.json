@@ -580,8 +580,7 @@
         "small": [],
         "base": [
           "bertin-project/bertin-roberta-base-spanish",
-          "PlanTL-GOB-ES/roberta-base-bne",
-          "BSC-TeMU/roberta-base-bne"
+          "PlanTL-GOB-ES/roberta-base-bne"
         ],
         "large": []
       },

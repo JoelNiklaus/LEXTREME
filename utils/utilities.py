@@ -183,9 +183,20 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
     try:
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
     except:
-        print("The language model ", language_model, " will be considered a monolingual model. "
-                                                     "Therefore, we revert to the default batch size.")
-        batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
+        print(f"Did not find a batch size for the language model {language_model} and the gpu memory {gpu_memory}")
+        if "joelito" in language_model:
+            if "base" in language_model:
+                print(f"We assume that the language model {language_model} is based on xlm-roberta-base.")
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-base"]
+            elif "large" in language_model:
+                print(f"We assume that the language model {language_model} is based on xlm-roberta-large.")
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-large"]
+            else:
+                raise ValueError("Did not find the language model in the dictionary.")
+        else:
+            print(f"The language model {language_model} will be considered a monolingual model. "
+                  "Therefore, we revert to the default batch size.")
+            batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
     batch_size = None
     while batch_size is None:
         try:
@@ -238,13 +249,11 @@ def get_default_number_of_training_epochs(task, model_name, running_mode, langua
 
         else:
             num_train_epochs = 50
-            num_train_epochs = 50
             evaluation_strategy = "epoch"
             logging_strategy = "epoch"
             save_strategy = "epoch"
 
     else:
-        num_train_epochs = 50
         num_train_epochs = 50
         evaluation_strategy = "epoch"
         logging_strategy = "epoch"
