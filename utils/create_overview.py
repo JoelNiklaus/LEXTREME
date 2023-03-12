@@ -84,8 +84,10 @@ class ResultAggregator:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull() == False]
-
+    
         self.results = results
+
+
 
         available_predict_scores = [col for col in self.results if bool(
             re.search(r'^\w+_predict/_' + self.score, col))]
@@ -298,6 +300,7 @@ class ResultAggregator:
 
     def edit_result_dataframe(self, results, name_editing=True):
         results = self.edit_column_names_in_df(results)
+        results = results[results._name_or_path.str.contains('BSC-TeMU/roberta-base-bne')==False] # This model was removed later because it was not available on huggingface in a later stage during the project
         # all_finetuning_tasks = results.finetuning_task
         if name_editing == True:
             results['language'] = results.finetuning_task.apply(
