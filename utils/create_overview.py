@@ -376,7 +376,7 @@ class ResultAggregator:
                     message = "For task " + task + " in combination with the language " + \
                               self.meta_infos['model_language_lookup_table'][
                                   rm] + " we do not have any results for this model: " + rm
-                    logging.warn(message)
+                    logging.warning(message)
                     item = dict()
                     item['finetuning_task'] = task
                     item['_name_or_path'] = rm
