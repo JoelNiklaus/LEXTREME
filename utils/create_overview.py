@@ -394,7 +394,7 @@ class ResultAggregator:
                     message = "There not enough seeds for task " + task + " in combination with the language model " + am + ". We have only results for the following seeds: ", ', '.join(
                         list(list_of_seeds)) + ". Results are missing for the following seeds: ", ', '.join(
                         list(missing_seeds))
-                    logging.warn(message)
+                    logging.warning(message)
                     item = dict()
                     item['finetuning_task'] = task
                     item['_name_or_path'] = am
