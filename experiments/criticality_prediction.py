@@ -140,24 +140,24 @@ def main():
 
     # set up different experiments
     feature_col = 'facts'  # must be either facts, considerations or rulings
-    label = 'citation_label'  # must be either bge_label or citation_label
+    label = 'bge_label'  # must be either bge_label or citation_label
     only_critical = True  # Only for citation_label
 
     # training_args.fp16
 
     # Set hyperparameter batch_size:
     if model_args.model_name_or_path == "xlm-roberta-large":
-        training_args.per_device_eval_batch_size = 2
-        training_args.per_device_train_batch_size = 2
+        training_args.per_device_eval_batch_size = 4
+        training_args.per_device_train_batch_size = 4
     elif model_args.model_name_or_path == 'joelito/legal-xlm-roberta-large':
-        training_args.per_device_eval_batch_size = 4
-        training_args.per_device_train_batch_size = 4
+        training_args.per_device_eval_batch_size = 8
+        training_args.per_device_train_batch_size = 8
     elif model_args.model_name_or_path == "xlm-roberta-base":
-        training_args.per_device_eval_batch_size = 4
-        training_args.per_device_train_batch_size = 4
+        training_args.per_device_eval_batch_size = 8
+        training_args.per_device_train_batch_size = 8
     elif model_args.model_name_or_path == 'joelito/legal-xlm-roberta-base':
-        training_args.per_device_eval_batch_size = 4
-        training_args.per_device_train_batch_size = 4
+        training_args.per_device_eval_batch_size = 8
+        training_args.per_device_train_batch_size = 8
     elif model_args.model_name_or_path == 'microsoft/mdeberta-v3-base':
         training_args.per_device_eval_batch_size = 8
         training_args.per_device_train_batch_size = 8
@@ -298,7 +298,7 @@ def main():
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
-        wandb.log("train", metrics)
+        wandb.log(metrics)
 
     # Evaluation
     if training_args.do_eval:
@@ -309,7 +309,7 @@ def main():
         metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
         trainer.log_metrics("eval", metrics)
-        wandb.log("eval", metrics)
+        wandb.log(metrics)
         trainer.save_metrics("eval", metrics)
 
     # Prediction
