@@ -5,7 +5,7 @@ import json as js
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 
 path_to_nlp_scripts = os.path.join(os.path.dirname(__file__), '../utils/')
 sys.path.append(path_to_nlp_scripts)
@@ -23,6 +23,20 @@ class DataTrainingArguments:
     the command line.
     """
 
+     # Only for Politmonitor
+    affair_text_scope: str = field(
+        default='ch',
+        metadata={
+            "help": "Specify which kanton you would like to include in the dataset."
+        },
+    )
+    # Only for Politmonitor
+    inputs: str = field(
+        default='title',
+        metadata={
+            "help": "Specify which text inputs you would like to include in the training data."
+        },
+    )
     max_seq_length: Optional[int] = field(
         default=512,
         metadata={
@@ -131,7 +145,7 @@ class DataTrainingArguments:
             "help": "Specify if you want to add oversampling. This can only be done for SLTC tasks."
         },
     )
-
+   
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 

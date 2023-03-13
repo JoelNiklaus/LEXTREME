@@ -58,7 +58,9 @@ def generate_command(**data):
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
                        '--hierarchical {HIERARCHICAL} ' \
-                       '--revision {REVISION} '
+                       '--revision {REVISION} ' \
+                       '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
+                       '--inputs {INPUTS} ' 
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -124,7 +126,9 @@ def generate_command(**data):
                                             EVALUATION_STRATEGY=data["evaluation_strategy"],
                                             LOGGING_STRATEGY=data["logging_strategy"],
                                             SAVE_STRATEGY=data["save_strategy"],
-                                            REVISION=data["revision"]
+                                            REVISION=data["revision"],
+                                            AFFAIR_TEXT_SCOPE=data["affair_text_scope"],
+                                            INPUTS=data["inputs"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -151,6 +155,7 @@ def run_in_parallel(commands_to_run):
 
 def run_experiment(
         accumulation_steps,
+        affair_text_scope,
         batch_size,
         dataset_cache_dir,
         download_mode,
@@ -159,6 +164,7 @@ def run_experiment(
         gpu_memory,
         gpu_number,
         hierarchical,
+        inputs,
         language_model_type,
         learning_rate,
         list_of_languages,
@@ -314,6 +320,7 @@ def run_experiment(
                 eval_steps = epoch_and_strategies["eval_steps"]
 
             script_new = generate_command(
+                affair_text_scope=affair_text_scope,
                 accumulation_steps=accumulation_steps,
                 batch_size=batch_size,
                 code=get_python_file_for_task(task),
@@ -325,6 +332,7 @@ def run_experiment(
                 gpu_number=gpu_id,
                 greater_is_better=greater_is_better,
                 hierarchical=hierarchical,
+                inputs=inputs,
                 language=lang,
                 learning_rate=learning_rate,
                 logging_strategy=logging_strategy,
@@ -377,6 +385,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-ats', '--affair_text_scope', help="Specify which kanton you would like to include in the dataset.", default='ch')
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-es', '--evaluation_strategy',
@@ -390,6 +399,9 @@ if __name__ == '__main__':
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
+    parser.add_argument('-inputs', '--inputs',
+                        help="Specify which text inputs you would like to include in the training data.",
+                        default='title')
     parser.add_argument('-ls', '--logging_strategy',
                         help="The logging strategy to adopt during training. Possible values are: no: No logging is "
                              "done during training ; epoch: Logging is done at the end of each epoch; steps: Logging "
@@ -465,6 +477,7 @@ if __name__ == '__main__':
 
     # TODO set sequence length, segment length and segments from here instead of relying on default values
     run_experiment(
+        affair_text_scope=args.affair_text_scope,
         accumulation_steps=args.accumulation_steps,
         batch_size=args.batch_size,
         dataset_cache_dir=args.dataset_cache_dir,
@@ -474,6 +487,7 @@ if __name__ == '__main__':
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
+        inputs=args.inputs,
         list_of_languages=args.list_of_languages,
         logging_strategy=args.logging_strategy,
         logging_steps=args.logging_steps,

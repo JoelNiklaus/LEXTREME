@@ -8,8 +8,10 @@ import os
 import shutil
 import sys
 from dataclasses import replace
-
+import pandas as pd
 import transformers
+import pandas as pd
+import json as js
 from datasets import disable_caching
 from datasets import utils
 from transformers import (
@@ -28,6 +30,12 @@ from helper import compute_metrics_multi_label, make_predictions_multi_label, co
     generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
     get_label_list_from_mltc_tasks, model_is_multilingual
 from trainer import MultilabelTrainer
+
+# Import the path to the training data handler for politmonitor
+code_path = os.path.join(os.path.dirname(__file__), '../politmonitor/code/')
+sys.path.append(code_path)
+
+from training_data_handler import TrainingDataHandler
 
 logger = logging.getLogger(__name__)
 
@@ -121,20 +129,50 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+    if data_args.finetuning_task == 'politmonitor':
 
-    # Labels
-    label_list = get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
+        print('*** Generating training data ***')
 
-    label_list = sorted(list(label_list))
-    num_labels = len(label_list)
+        tdh = TrainingDataHandler()
 
-    label2id = dict()
-    id2label = dict()
+        tdh.get_training_data(languages=data_args.language, affair_text_scope=data_args.affair_text_scope, inputs=data_args.inputs)
 
-    for n, l in enumerate(label_list):
-        label2id[l] = n
-        id2label[n] = l
+        ds = tdh.training_data
+
+        train_dataset, eval_dataset, predict_dataset = ds['train'], ds['validation'], ds['test']
+
+        label_list = set()
+
+        for labels in ds['train']["label"]+ds['validation']["label"]+ds['test']["label"]:
+            for l in labels:
+                label_list.add(l)
+
+        label_list = sorted(list(label_list))
+        num_labels = len(label_list)
+
+        label2id = dict()
+        id2label = dict()
+
+        for n, l in enumerate(label_list):
+            label2id[l] = n
+            id2label[n] = l
+
+    else:
+
+        train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+
+        # Labels
+        label_list = get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
+
+        label_list = sorted(list(label_list))
+        num_labels = len(label_list)
+
+        label2id = dict()
+        id2label = dict()
+
+        for n, l in enumerate(label_list):
+            label2id[l] = n
+            id2label[n] = l
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
                                                                                    data_args=data_args,
@@ -145,7 +183,7 @@ def main():
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
@@ -156,7 +194,7 @@ def main():
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
@@ -167,7 +205,7 @@ def main():
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, id2label=id2label),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on prediction dataset",

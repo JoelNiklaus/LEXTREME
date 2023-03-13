@@ -245,13 +245,19 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
-def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
+def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None, label2id=None):
     """Can be used with any task that requires hierarchical models"""
 
     if type(id2label) == dict:
         batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in
                            batch["label"]]
         del batch["label"]
+
+    if type(label2id) == dict:
+        batch["labels"] = [[1 if label in labels else 0 for label in list(label2id.keys())] for labels in
+                           batch["label"]]
+        del batch["label"]
+
 
     # Preprocessing the datasets
     # Padding strategy
