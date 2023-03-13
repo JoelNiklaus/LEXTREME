@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 
-def remove_old_files(path_to_directory, days=-7):
+def remove_old_files(path_to_directory, days=-30):
     # keep files for 7 days to make sure that this works also in a hpc environment
     criticalTime = arrow.now().shift().shift(days=days)
     print(f"Removing old temporary bash scripts (older than {days} days: before {criticalTime})")
@@ -49,6 +49,16 @@ def get_meta_infos():
 
     meta_infos["code_task_mapping"] = code_task_mapping
 
+    task_requires_hierarchical_per_default = dict()
+    for task, infos in meta_infos["task_default_arguments"].items():
+        if infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "yes"
+        if not infos["ModelArguments"]["hierarchical"]:
+            task_requires_hierarchical_per_default[task] = "no"
+
+    meta_infos[
+        "task_requires_hierarchical_per_default"] = task_requires_hierarchical_per_default
+
     return meta_infos
 
 
@@ -62,10 +72,10 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 1},  # untested
+        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
+        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
     },
     # TODO test sizes here
     # e.g. P100
@@ -179,9 +189,20 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
     try:
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
     except:
-        print("The language model ", language_model, " will be considered a monolingual model. "
-                                                     "Therefore, we revert to the default batch size.")
-        batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
+        print(f"Did not find a batch size for the language model {language_model} and the gpu memory {gpu_memory}")
+        if "joelito" in language_model:
+            if "base" in language_model:
+                print(f"We assume that the language model {language_model} is based on xlm-roberta-base.")
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-base"]
+            elif "large" in language_model:
+                print(f"We assume that the language model {language_model} is based on xlm-roberta-large.")
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-large"]
+            else:
+                raise ValueError("Did not find the language model in the dictionary.")
+        else:
+            print(f"The language model {language_model} will be considered a monolingual model. "
+                  "Therefore, we revert to the default batch size.")
+            batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
     batch_size = None
     while batch_size is None:
         try:
@@ -234,13 +255,11 @@ def get_default_number_of_training_epochs(task, model_name, running_mode, langua
 
         else:
             num_train_epochs = 50
-            num_train_epochs = 50
             evaluation_strategy = "epoch"
             logging_strategy = "epoch"
             save_strategy = "epoch"
 
     else:
-        num_train_epochs = 50
         num_train_epochs = 50
         evaluation_strategy = "epoch"
         logging_strategy = "epoch"
