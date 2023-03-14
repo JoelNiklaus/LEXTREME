@@ -60,7 +60,8 @@ def generate_command(**data):
                        '--hierarchical {HIERARCHICAL} ' \
                        '--revision {REVISION} ' \
                        '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
-                       '--inputs {INPUTS} ' 
+                       '--text {TEXT} ' \
+                       '--title {TITLE} ' 
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -128,7 +129,8 @@ def generate_command(**data):
                                             SAVE_STRATEGY=data["save_strategy"],
                                             REVISION=data["revision"],
                                             AFFAIR_TEXT_SCOPE=data["affair_text_scope"],
-                                            INPUTS=data["inputs"]
+                                            TEXT=data["text"],
+                                            TITLE=data["title"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -164,7 +166,8 @@ def run_experiment(
         gpu_memory,
         gpu_number,
         hierarchical,
-        inputs,
+        text,
+        title,
         language_model_type,
         learning_rate,
         list_of_languages,
@@ -332,7 +335,8 @@ def run_experiment(
                 gpu_number=gpu_id,
                 greater_is_better=greater_is_better,
                 hierarchical=hierarchical,
-                inputs=inputs,
+                text=text,
+                title=title,
                 language=lang,
                 learning_rate=learning_rate,
                 logging_strategy=logging_strategy,
@@ -385,7 +389,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-ats', '--affair_text_scope', help="Specify which kanton you would like to include in the dataset.", default='ch')
+    parser.add_argument('-ats', '--affair_text_scope', help="Specify which kanton you would like to include in the dataset.", default='zh,ch')
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-es', '--evaluation_strategy',
@@ -399,9 +403,16 @@ if __name__ == '__main__':
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
-    parser.add_argument('-inputs', '--inputs',
-                        help="Specify which text inputs you would like to include in the training data.",
-                        default='title')
+    parser.add_argument('-text', '--text',
+                        help="Specify if you want to include the text in the training.",
+                        default=False, 
+                        action="store_true"
+                        )
+    parser.add_argument('-title', '--title',
+                        help="Specify if you want to include the title in the training.",
+                        default=False, 
+                        action="store_true"
+                        )
     parser.add_argument('-ls', '--logging_strategy',
                         help="The logging strategy to adopt during training. Possible values are: no: No logging is "
                              "done during training ; epoch: Logging is done at the end of each epoch; steps: Logging "
@@ -487,7 +498,8 @@ if __name__ == '__main__':
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
-        inputs=args.inputs,
+        text=args.text,
+        title=args.title,
         list_of_languages=args.list_of_languages,
         logging_strategy=args.logging_strategy,
         logging_steps=args.logging_steps,

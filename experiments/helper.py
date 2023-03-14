@@ -657,13 +657,15 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
     preds = (expit(predictions) > 0.5).astype('int32')
 
     output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
-    output = pd.DataFrame(output, columns=['sentence', 'reference', 'predictions', 'logits'])
+    output = pd.DataFrame(output, columns=[name_of_input_field, 'reference', 'predictions', 'logits'])
 
     output['predictions_as_label'] = output.predictions.apply(lambda x: convert_id2label(x, id2label))
     output['reference_as_label'] = output.reference.apply(lambda x: convert_id2label(x, id2label))
 
     output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
     output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
+    predict_dataset_df_for_concatination = predict_dataset_df[[c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
+    output = pd.concat([output, predict_dataset_df_for_concatination], axis = 1)
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
@@ -763,6 +765,8 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
                                              x.name)  # We will log the finetuning task later with the language_prefix
 
     wandb.log(model_args_as_dict)
+
+    return wandb
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):

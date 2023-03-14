@@ -72,7 +72,7 @@ def main():
     if data_args.disable_caching:
         disable_caching()
 
-    config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
+    wandb = config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
@@ -135,7 +135,9 @@ def main():
 
         tdh = TrainingDataHandler()
 
-        tdh.get_training_data(languages=data_args.language, affair_text_scope=data_args.affair_text_scope, inputs=data_args.inputs)
+        tdh.get_training_data(language=data_args.language, affair_text_scope=data_args.affair_text_scope, text=data_args.text, title=data_args.title)
+
+        print(tdh.training_data_df[['title','language','split']].groupby(['language','split']).count())
 
         ds = tdh.training_data
 
@@ -173,6 +175,18 @@ def main():
         for n, l in enumerate(label_list):
             label2id[l] = n
             id2label[n] = l
+
+
+    # Logging the number of train, eval and test examples
+    wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0], "predict_samples": predict_dataset.shape[0]})
+
+    for lang in ["de", "fr", "it"]:
+        wandb.log({lang+"_train_samples": train_dataset.filter(lambda x: x['language']==lang).shape[0]})
+        wandb.log({lang+"_eval_samples": eval_dataset.filter(lambda x: x['language']==lang).shape[0]})
+        wandb.log({lang+"_predict_samples": predict_dataset.filter(lambda x: x['language']==lang).shape[0]})
+
+
+    
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
                                                                                    data_args=data_args,

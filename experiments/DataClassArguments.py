@@ -25,16 +25,23 @@ class DataTrainingArguments:
 
      # Only for Politmonitor
     affair_text_scope: str = field(
-        default='ch',
+        #default='ch',
         metadata={
             "help": "Specify which kanton you would like to include in the dataset."
         },
     )
     # Only for Politmonitor
-    inputs: str = field(
-        default='title',
+    title: bool = field(
+        #default=True,
         metadata={
-            "help": "Specify which text inputs you would like to include in the training data."
+            "help": "Specify if you want to include the title in the training."
+        },
+    )
+    # Only for Politmonitor
+    text: bool = field(
+        #default=True,
+        metadata={
+            "help": "Specify if you want to include the text in the training."
         },
     )
     max_seq_length: Optional[int] = field(

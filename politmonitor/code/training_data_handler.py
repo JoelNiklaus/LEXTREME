@@ -47,9 +47,9 @@ class TrainingDataHandler:
         return language
 
     def get_training_data(self, language: Literal['de', 'it', 'fr', 'all'],
-                            title: bool = True,
-                            text: bool = True,
-                            affair_text_scope=['all']):
+                            title: bool,
+                            text: bool,
+                            affair_text_scope):
 
         self.training_data_df = self.filter_training_data(language=language, 
                                                           title=title,
@@ -63,10 +63,10 @@ class TrainingDataHandler:
 
         inputs = list()
 
-        if title:
+        if type(title)==bool and title:
             inputs.append('title')
 
-        if text:
+        if type(text)==bool and text:
             inputs.append('text')
 
         self.training_data = self.convert_dataframe_to_dataset(self.training_data_df, inputs,
@@ -93,10 +93,10 @@ class TrainingDataHandler:
 
         return dataset
 
-    def filter_training_data(self, language: Literal['de', 'it', 'fr', 'all'],
+    def filter_training_data(self, language,
                              title: bool,
                              text: bool,
-                             affair_text_scope=['all'],
+                             affair_text_scope,
                              same_items_for_each_language=True
                              ):
         
@@ -115,12 +115,14 @@ class TrainingDataHandler:
 
         inputs = list()
 
-        if title:
+        if type(title)==bool and title:
             inputs.append('title')
+            print('Title is ', title, type(title))
             training_data = training_data[training_data.title!='']
 
-        if text:
+        if type(text)==bool and text:
             inputs.append('text')
+            print('Text is ', text, type(text))
             training_data = training_data[training_data.text!='']
 
         # TODO: Add a function to remove cases where the translations seems not correct
