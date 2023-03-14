@@ -176,12 +176,6 @@ def get_python_file_for_task(task):
         return f"template_SLTC.py --finetuning_task " + task
     elif meta_infos["task_type_mapping"][task] == "MLTC":
         return f"template_MLTC.py --finetuning_task " + task
-    elif meta_infos["task_type_mapping"][task] == "CP":
-        return f"criticality_prediction.py --finetuning_task " + task
-    elif meta_infos["task_type_mapping"][task] == "CITP":
-        return f"citation_prediction.py --finetuning_task " + task
-    elif meta_infos["task_type_mapping"][task] == "tuning":
-        return f"tuning.py --finetuning_task " + task
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):

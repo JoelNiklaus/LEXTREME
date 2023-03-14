@@ -283,6 +283,8 @@ def run_experiment(
             if accumulation_steps is None:
                 accumulation_steps = 1
 
+    # TODO this causes errors because model_language_mapping is not in mate_info
+        """
         if list_of_languages is None:
             if model_name in meta_infos["model_language_lookup_table"].keys():
                 # all means just the entire dataset, so that we take the default value
@@ -290,6 +292,8 @@ def run_experiment(
                     list_of_languages = [meta_infos["model_language_lookup_table"][model_name]]
                 else:
                     list_of_languages = [None]
+        """
+        list_of_languages = ['all']
 
         for lang in list_of_languages:
 

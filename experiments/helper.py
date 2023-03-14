@@ -84,6 +84,29 @@ def make_efficient_split(data_args, split_name, ner_tasks):
     return dataset
 
 
+def preprocess_datasets(dataset, taskname):
+    if 'citation' in taskname:
+        label = 'citation_label'
+        dataset = dataset.filter(lambda row: row['label'].startswith("critical"))
+    else:
+        label = 'bge_label'
+    # ClassLabel
+    dataset = dataset.class_encode_column(label)
+    # Filter
+    dataset = dataset.filter(filter_by_length)
+    return dataset
+
+
+def filter_by_length(row):
+    """
+    Removes examples that are too short
+    :param example:    the example to check
+    :return:
+    """
+    if 10 < len(str(row["input"])):
+        return True
+    return False
+
 def make_split_with_postfiltering(data_args, split_name, ner_tasks):
     if data_args.dataset_cache_dir is None:
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
@@ -124,6 +147,10 @@ def make_split(data_args, split_name):
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     multilingual_datasets = ['swiss_judgment_prediction',
+                             'swiss_criticality_prediction_bge_facts',
+                             'swiss_criticality_prediction_bge_considerations',
+                             'swiss_criticality_prediction_citation_facts',
+                             'swiss_criticality_prediction_citation_considerations',
                              'online_terms_of_service_unfairness_level',
                              'online_terms_of_service_unfairness_category',
                              'covid19_emergency_event',

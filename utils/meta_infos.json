@@ -1,9 +1,15 @@
 {
   "dataset_jurisdiction": {
-    "criticality_prediction": [
+    "swiss_criticality_prediction_bge_facts": [
       "CH"
     ],
-    "citation_prediction": [
+    "swiss_criticality_prediction_bge_considerations": [
+      "CH"
+    ],
+    "swiss_criticality_prediction_citation_facts": [
+      "CH"
+    ],
+    "swiss_criticality_prediction_citation_considerations": [
       "CH"
     ],
     "brazilian_court_decisions": [
@@ -64,7 +70,10 @@
     "mapa": "MAP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
     "criticality_prediction": "CP",
-    "citation_prediction": "CP"
+    "swiss_criticality_prediction_bge_facts": "SCP-BF",
+    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
+    "swiss_criticality_prediction_citation_facts": "SCP-CF",
+    "swiss_criticality_prediction_citation_considerations": "SCP-CC"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -86,8 +95,10 @@
     "online_terms_of_service_unfairness_levels": "OTS-UL",
     "swiss_judgment_prediction": "SJP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
-    "criticality_prediction": "CP",
-    "citation_prediction": "CITP"
+    "swiss_criticality_prediction_bge_facts": "SCP-BF",
+    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
+    "swiss_criticality_prediction_citation_facts": "SCP-CF",
+    "swiss_criticality_prediction_citation_considerations": "SCP-CC"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -109,9 +120,10 @@
     "lener_br": "NER",
     "mapa_coarse": "NER",
     "mapa_fine": "NER",
-    "criticality_prediction": "CP",
-    "citation_prediction": "CITP"
-
+    "swiss_criticality_prediction_bge_facts": "SLTC",
+    "swiss_criticality_prediction_bge_considerations": "SLTC",
+    "swiss_criticality_prediction_citation_facts": "SLTC",
+    "swiss_criticality_prediction_citation_considerations": "SLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -291,12 +303,18 @@
     "turkish_constitutional_court_decisions_judgment": [
       "tr"
     ],
-    "criticality_prediction": [
+    "swiss_criticality_prediction_bge_facts": [
+      "all"
+    ],
+    "swiss_criticality_prediction_bge_considerations": [
+      "all"
+    ],
+    "swiss_criticality_prediction_citation_facts": [
       "de",
       "fr",
       "it"
     ],
-    "citation_prediction": [
+    "swiss_criticality_prediction_citation_considerations": [
       "de",
       "fr",
       "it"
@@ -322,8 +340,10 @@
     "mapa_coarse": "mapa",
     "mapa_fine": "mapa",
     "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment",
-    "criticality_prediction": "criticality_prediction",
-    "citation_prediction": "citation_prediction"
+    "swiss_criticality_prediction_bge_facts": "swiss_criticality_prediction_bge_facts",
+    "swiss_criticality_prediction_bge_considerations": "swiss_criticality_prediction_bge_considerations",
+    "swiss_criticality_prediction_citation_facts": "swiss_criticality_prediction_citation_facts",
+    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction_citation_considerations"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -369,11 +389,17 @@
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
     ],
-    "criticality_prediction": [
-      "criticality_prediction"
+   "swiss_criticality_prediction_bge_facts": [
+     "swiss_criticality_prediction_bge_facts"
+  ],
+    "swiss_criticality_prediction_bge_considerations": [
+      "swiss_criticality_prediction_bge_considerations"
     ],
-    "citation_criticality": [
-      "citation_criticality"
+    "swiss_criticality_prediction_citation_facts": [
+      "swiss_criticality_prediction_citation_facts"
+    ],
+    "swiss_criticality_prediction_citation_considerations": [
+      "swiss_criticality_prediction_citation_considerations"
     ]
   },
   "task_default_arguments": {
@@ -555,7 +581,7 @@
         "hierarchical": true
       }
     },
-    "citation_prediction": {
+    "swiss_criticality_prediction_bge_facts": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
@@ -566,7 +592,29 @@
         "hierarchical": true
       }
     },
-    "criticality_prediction": {
+    "swiss_criticality_prediction_bge_considerations": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_citation_facts": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_citation_considerations": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
