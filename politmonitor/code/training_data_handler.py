@@ -39,19 +39,18 @@ class TrainingDataHandler:
 
         if 'all' in language:
             language = ['de', 'it', 'fr']
-        elif type(language)==str and language!='all':
+        elif type(language) == str and language != 'all':
             language = language.split(',')
             language = [l.strip() for l in language]
-     
 
         return language
 
     def get_training_data(self, language: Literal['de', 'it', 'fr', 'all'],
-                            title: bool,
-                            text: bool,
-                            affair_text_scope):
+                          title: bool,
+                          text: bool,
+                          affair_text_scope):
 
-        self.training_data_df = self.filter_training_data(language=language, 
+        self.training_data_df = self.filter_training_data(language=language,
                                                           title=title,
                                                           text=text,
                                                           affair_text_scope=affair_text_scope
@@ -63,10 +62,10 @@ class TrainingDataHandler:
 
         inputs = list()
 
-        if type(title)==bool and title:
+        if type(title) == bool and title:
             inputs.append('title')
 
-        if type(text)==bool and text:
+        if type(text) == bool and text:
             inputs.append('text')
 
         self.training_data = self.convert_dataframe_to_dataset(self.training_data_df, inputs,
@@ -99,7 +98,7 @@ class TrainingDataHandler:
                              affair_text_scope,
                              same_items_for_each_language=True
                              ):
-        
+
         training_data = deepcopy(self.raw_data_for_training)
 
         if affair_text_scope == 'all':
@@ -115,32 +114,63 @@ class TrainingDataHandler:
 
         inputs = list()
 
-        if type(title)==bool and title:
+        if type(title) == bool and title:
             inputs.append('title')
-            print('Title is ', title, type(title))
-            training_data = training_data[training_data.title!='']
+            training_data = training_data[training_data.title != '']
 
-        if type(text)==bool and text:
+        if type(text) == bool and text:
             inputs.append('text')
-            print('Text is ', text, type(text))
-            training_data = training_data[training_data.text!='']
+            training_data = training_data[training_data.text != '']
 
         # TODO: Add a function to remove cases where the translations seems not correct
 
         # If someone chooses only title as input, that only unique entries for tile + affair_text_srcid will remain
-        # If someone chooses only title and text as input, that only unique entries for tile + text + affair_text_srcid will remain
-        training_data = training_data.drop_duplicates(inputs + ['affair_text_srcid','language'])
+        # If someone chooses only title and text as input, that only unique entries for tile + text +
+        # affair_text_srcid will remain
+        training_data = training_data.drop_duplicates(inputs + ['affair_text_srcid', 'language'])
 
-        # same_items_for_each_language: If this is set to True, it will make sure that for each affair_text_srcid we have a version for each chosen language
+        # same_items_for_each_language: If this is set to True, it will make sure that for each affair_text_srcid we
+        # have a version for each chosen language
         if same_items_for_each_language:
-            affair_text_srcid_lists = [training_data[training_data.language==lang].affair_text_srcid.tolist() for lang in language]
-            print('affair_text_srcid_lists', sum([len(x) for x in affair_text_srcid_lists]))
-            affair_text_srcid_in_all_languages = set.intersection(*map(set,affair_text_srcid_lists))
-            print('affair_text_srcid_in_all_languages', len(affair_text_srcid_in_all_languages))
+            affair_text_srcid_lists = [training_data[training_data.language == lang].affair_text_srcid.tolist() for lang
+                                       in language]
+            affair_text_srcid_in_all_languages = set.intersection(*map(set, affair_text_srcid_lists))
+            training_data = training_data[
+                training_data.affair_text_srcid.isin(list(affair_text_srcid_in_all_languages))]
 
-            training_data = training_data[training_data.affair_text_srcid.isin(list(affair_text_srcid_in_all_languages))]
+        training_data = self.merge_texts(training_data, inputs)
 
         return training_data
+
+    def take_first_if_only_1_item(self, item):
+        if type(item) == list:
+            item_with_unique_values = list()
+            for i in item:
+                if i not in item_with_unique_values:
+                    item_with_unique_values.append(i)
+            if len(item_with_unique_values) == 1:
+                return item_with_unique_values[0]
+            else:
+                return "; ".join(item_with_unique_values)
+        else:
+            return str(item)
+
+    def merge_texts(self, dataframe, input_columns, key_to_group_by='affair_text_srcid'):
+
+        dataframe_grouped = dataframe.groupby(['language', key_to_group_by], as_index=False).agg(list)
+
+        columns = dataframe.columns.tolist()
+
+        for c in columns:
+            if c in input_columns:
+                dataframe_grouped[c] = dataframe_grouped[c].apply(lambda items: ' '.join(list(dict.fromkeys(items))))
+            else:
+                dataframe_grouped[c] = dataframe_grouped[c].apply(lambda x: self.take_first_if_only_1_item(x))
+
+        # dataframe_grouped = dataframe_grouped.applymap(lambda x: self.take_first_if_only_1_item(x))
+
+        dataframe_grouped = dataframe_grouped.fillna('')
+        return dataframe_grouped
 
     def create_df_for_split(self, initial_df):
 
@@ -151,7 +181,7 @@ class TrainingDataHandler:
         for item in initial_df.to_dict(orient='records'):
             # item = dict()
             # affair_text_srcid = r['affair_text_srcid']
-            affair_topic_codes_as_labels = item['affair_topic_codes']
+            affair_topic_codes_as_labels = item['affair_topic_codes_as_labels']
             # affair_topic_codes = r['affair_topic_codes']
             # item['affair_text_srcid'] = affair_text_srcid
             # item['affair_topic_codes_as_labels'] = affair_topic_codes_as_labels
@@ -185,8 +215,8 @@ class TrainingDataHandler:
                 item_copy = deepcopy(item)
                 text = item['text_' + lang]
                 title = item['title_' + lang]
-                if title == text: # In these cases, the text field is just a copy of the title field, therefore we set text to empty string
-                    text= ""
+                if title == text:  # In these cases, the text field is just a copy of the title field, therefore we set text to empty string
+                    text = ""
                 del item_copy['text_' + lang]
                 del item_copy['title_' + lang]
                 item_copy['text'] = text
@@ -210,26 +240,32 @@ class TrainingDataHandler:
         msss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=0)
 
         for train_index, other_index in msss.split(X, y):
-            dataframe_unique_affair_text_srcid.loc[(dataframe_unique_affair_text_srcid.index.isin(train_index)), 'split'] = 'train'
-            dataframe_unique_affair_text_srcid.loc[(dataframe_unique_affair_text_srcid.index.isin(other_index)), 'split'] = 'other'
+            dataframe_unique_affair_text_srcid.loc[
+                (dataframe_unique_affair_text_srcid.index.isin(train_index)), 'split'] = 'train'
+            dataframe_unique_affair_text_srcid.loc[
+                (dataframe_unique_affair_text_srcid.index.isin(other_index)), 'split'] = 'other'
 
-            dataframe_filtered = dataframe_unique_affair_text_srcid[dataframe_unique_affair_text_srcid.split == 'other'].reset_index(drop=False)
+            dataframe_filtered = dataframe_unique_affair_text_srcid[
+                dataframe_unique_affair_text_srcid.split == 'other'].reset_index(drop=False)
             X = dataframe_filtered.affair_text_srcid.values
             y = np.array(dataframe_filtered.one_hot_affair_topic_codes.tolist())
 
             msss = MultilabelStratifiedShuffleSplit(n_splits=1, test_size=0.5, random_state=0)
 
             for validation_index, test_index in msss.split(X, y):
-                validation_affair_text_srcid = dataframe_filtered[dataframe_filtered.index.isin(validation_index)].affair_text_srcid.tolist()
-                test_affair_text_srcid = dataframe_filtered[dataframe_filtered.index.isin(test_index)].affair_text_srcid.tolist()
-                dataframe_unique_affair_text_srcid.loc[dataframe_unique_affair_text_srcid.affair_text_srcid.isin(validation_affair_text_srcid), 'split'] = 'validation'
-                dataframe_unique_affair_text_srcid.loc[dataframe_unique_affair_text_srcid.affair_text_srcid.isin(test_affair_text_srcid), 'split'] = 'test'
-                
+                validation_affair_text_srcid = dataframe_filtered[
+                    dataframe_filtered.index.isin(validation_index)].affair_text_srcid.tolist()
+                test_affair_text_srcid = dataframe_filtered[
+                    dataframe_filtered.index.isin(test_index)].affair_text_srcid.tolist()
+                dataframe_unique_affair_text_srcid.loc[dataframe_unique_affair_text_srcid.affair_text_srcid.isin(
+                    validation_affair_text_srcid), 'split'] = 'validation'
+                dataframe_unique_affair_text_srcid.loc[
+                    dataframe_unique_affair_text_srcid.affair_text_srcid.isin(test_affair_text_srcid), 'split'] = 'test'
 
         look_up_dict = dict()
 
         for r in dataframe_unique_affair_text_srcid.to_dict(orient="records"):
-            look_up_dict[r["affair_text_srcid"]]=r["split"]
+            look_up_dict[r["affair_text_srcid"]] = r["split"]
 
         dataframe['split'] = dataframe.affair_text_srcid.apply(lambda x: look_up_dict[x])
 
