@@ -33,7 +33,7 @@ meta_infos = get_meta_infos()
 def insert_responsibilities(df):
 
     respons = pd.read_excel(os.path.join(os.path.dirname(__file__), 'run_responsibility.xlsx'))
-    respons = respons[['finetuning_task','_name_or_path','responsible']]
+    respons = respons[['finetuning_task','_name_or_path','responsible','gpu']]
     df_merged = pd.merge(df, respons,  how='left', right_on=['finetuning_task','_name_or_path'], left_on=['finetuning_task','_name_or_path'])
     return df_merged
 
@@ -902,8 +902,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False, only_completed_tasks=True)
-    # ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
+    # ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False, only_completed_tasks=True)
+    ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
 
     ra.get_info()
 
