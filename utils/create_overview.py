@@ -14,7 +14,8 @@ import wandb
 from traceback import print_exc
 from utilities import get_meta_infos
 
-joels_models = pd.read_excel('joels_models.xlsx')
+
+joels_models = pd.read_excel(os.path.join(os.path.dirname(__file__), 'joels_models.xlsx'))
 models_currently_to_be_ignored = joels_models[
     joels_models.need_to_be_run == "no"]._name_or_path.tolist()
 
@@ -27,6 +28,14 @@ def insert_revision(_name_or_path):
 
 
 meta_infos = get_meta_infos()
+
+
+def insert_responsibilities(df):
+
+    respons = pd.read_excel(os.path.join(os.path.dirname(__file__), 'run_responsibility.xlsx'))
+    respons = respons[['finetuning_task','_name_or_path','responsible']]
+    df_merged = pd.merge(df, respons,  how='left', right_on=['finetuning_task','_name_or_path'], left_on=['finetuning_task','_name_or_path'])
+    return df_merged
 
 
 class ResultAggregator:
@@ -413,6 +422,7 @@ class ResultAggregator:
         report_df = report_df[report_df.finetuning_task != "turkish_constitutional_court_decisions_judgment"]
         report_df['revision'] = report_df._name_or_path.apply(insert_revision)
 
+        report_df = insert_responsibilities(report_df)
         return report_df
 
     def mark_incomplete_tasks(self):
