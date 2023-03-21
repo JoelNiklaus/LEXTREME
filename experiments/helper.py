@@ -84,19 +84,6 @@ def make_efficient_split(data_args, split_name, ner_tasks):
     return dataset
 
 
-def preprocess_datasets(dataset, taskname):
-    if 'citation' in taskname:
-        label = 'citation_label'
-        dataset = dataset.filter(lambda row: row['label'].startswith("critical"))
-    else:
-        label = 'bge_label'
-    # ClassLabel
-    dataset = dataset.class_encode_column(label)
-    # Filter
-    dataset = dataset.filter(filter_by_length)
-    return dataset
-
-
 def filter_by_length(row):
     """
     Removes examples that are too short
@@ -148,8 +135,8 @@ def make_split(data_args, split_name):
 
     multilingual_datasets = ['swiss_judgment_prediction',
                              'swiss_criticality_prediction_bge_facts',
-                             'swiss_criticality_prediction_bge_considerations',
                              'swiss_criticality_prediction_citation_facts',
+                             'swiss_criticality_prediction_bge_considerations',
                              'swiss_criticality_prediction_citation_considerations',
                              'online_terms_of_service_unfairness_level',
                              'online_terms_of_service_unfairness_category',

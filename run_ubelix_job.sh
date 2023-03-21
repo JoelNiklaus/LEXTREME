@@ -36,7 +36,7 @@ conda activate scp-test
 
 
 # models: "xlm-roberta-large" 'joelito/legal-xlm-roberta-large' "xlm-roberta-base" 'joelito/legal-xlm-roberta-base' 'microsoft/mdeberta-v3-base'
-python main.py -gm 24 -hier True -lmt legal,general_multilingual_base,large -los 1 -rmo experimental -t swiss_criticality_prediction_bge_facts
+python main.py -gm 24 -hier True -lmt legal,general_multilingual_base,large -los 1 -t swiss_criticality_prediction_bge_facts
 # python main.py -gm 24 -hier True -lmt joelito/legal-xlm-roberta-large -los 1 -rmo experimental -t criticality_prediction
 # possible args -as -bz -es -gn -gm -hier -ls -lol -lc -lmt -los -nte -rev -rmo -dmo -t -ld -nw -cad -ss -est -lst -sst
 

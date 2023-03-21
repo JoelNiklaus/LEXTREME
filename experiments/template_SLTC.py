@@ -28,7 +28,7 @@ from transformers.trainer_utils import get_last_checkpoint
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
     generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset, \
-    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, preprocess_datasets
+    get_data, get_label_list_from_sltc_tasks, model_is_multilingual
 
 logger = logging.getLogger(__name__)
 
@@ -130,13 +130,14 @@ def main():
 
     train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
 
-    if data_args.finetuning_task in ["swiss_criticality_prediction_bge_facts",
-                                     "swiss_criticality_prediction_bge_considerations",
-                                     "swiss_criticality_prediction_citation_facts",
-                                     "swiss_criticality_prediction_citation_considerations"]:
-        train_dataset = preprocess_datasets(train_dataset, data_args.finetuning_task)
-        eval_dataset = preprocess_datasets(eval_dataset, data_args.finetuning_task)
-        predict_dataset = preprocess_datasets(predict_dataset, data_args.finetuning_task)
+    if 'citation' in data_args.finetuning_task:
+        train_dataset = train_dataset.filter(lambda row: row['label'].startswith("critical"))
+        eval_dataset = eval_dataset.filter(lambda row: row['label'].startswith("critical"))
+        predict_dataset = predict_dataset.filter(lambda row: row['label'].startswith("critical"))
+
+        print(train_dataset)
+        print(eval_dataset)
+        print(predict_dataset)
 
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
@@ -235,7 +236,6 @@ def main():
         trainer.log_metrics("train", metrics)
         trainer.save_metrics("train", metrics)
         trainer.save_state()
-        wandb.log(metrics)
 
     # Evaluation
     if training_args.do_eval:
@@ -247,7 +247,6 @@ def main():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
-        wandb.log(metrics)
 
     # Prediction
     if training_args.do_predict:
