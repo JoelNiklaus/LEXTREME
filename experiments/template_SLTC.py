@@ -135,10 +135,6 @@ def main():
         eval_dataset = eval_dataset.filter(lambda row: row['label'].startswith("critical"))
         predict_dataset = predict_dataset.filter(lambda row: row['label'].startswith("critical"))
 
-        print(train_dataset)
-        print(eval_dataset)
-        print(predict_dataset)
-
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
     num_labels = len(label_list)
