@@ -902,8 +902,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False, only_completed_tasks=True)
-    ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
+    ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False, only_completed_tasks=True)
+    # ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
 
     ra.get_info()
 
