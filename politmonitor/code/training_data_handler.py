@@ -48,7 +48,8 @@ class TrainingDataHandler:
     def get_training_data(self, language: Literal['de', 'it', 'fr', 'all'],
                           title: bool,
                           text: bool,
-                          affair_text_scope):
+                          affair_text_scope,
+                          test_size=0.4):
 
         self.training_data_df = self.filter_training_data(language=language,
                                                           title=title,
@@ -56,7 +57,7 @@ class TrainingDataHandler:
                                                           affair_text_scope=affair_text_scope
                                                           )
         self.training_data_df = self.create_df_for_split(self.training_data_df)
-        self.training_data_df = self.create_split(self.training_data_df)
+        self.training_data_df = self.create_split(self.training_data_df, test_size=test_size)
 
         language = self.process_language(language)
 
