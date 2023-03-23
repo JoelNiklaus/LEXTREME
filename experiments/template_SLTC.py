@@ -129,6 +129,9 @@ def main():
     set_seed(training_args.seed)
 
     train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+    train_dataset = train_dataset.filter(lambda example: len(example['input']) > 0)
+    eval_dataset = eval_dataset.filter(lambda example: len(example['input']) > 0)
+    predict_dataset = predict_dataset.filter(lambda example: len(example['input']) > 0)
 
     if 'citation' in data_args.finetuning_task:
         train_dataset = train_dataset.filter(lambda row: row['label'].startswith("critical"))
