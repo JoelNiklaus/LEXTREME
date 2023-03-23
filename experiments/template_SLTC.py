@@ -9,6 +9,7 @@ import shutil
 import sys
 from dataclasses import replace
 import wandb
+from datasets import ClassLabel
 
 import transformers
 from datasets import disable_caching
@@ -133,10 +134,7 @@ def main():
     eval_dataset = eval_dataset.filter(lambda example: len(example['input']) > 0)
     predict_dataset = predict_dataset.filter(lambda example: len(example['input']) > 0)
 
-    if 'citation' in data_args.finetuning_task:
-        train_dataset = train_dataset.filter(lambda row: row['label'].startswith("critical"))
-        eval_dataset = eval_dataset.filter(lambda row: row['label'].startswith("critical"))
-        predict_dataset = predict_dataset.filter(lambda row: row['label'].startswith("critical"))
+    print(train_dataset['label'])
 
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
@@ -148,6 +146,11 @@ def main():
     for n, l in enumerate(label_list):
         label2id[l] = n
         id2label[n] = l
+
+    if 'citation' in data_args.finetuning_task:
+        train_dataset = train_dataset.filter(lambda row: str(id2label[row['label']]).startswith("critical"))
+        eval_dataset = eval_dataset.filter(lambda row: id2label[row['label']].startswith("critical"))
+        predict_dataset = predict_dataset.filter(lambda row: id2label[row['label']].startswith("critical"))
 
     # NOTE: This is not optimized for multiclass classification
     if not (not (training_args.do_train == True) or not data_args.add_oversampling):
