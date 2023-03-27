@@ -1,15 +1,6 @@
 {
   "dataset_jurisdiction": {
-    "swiss_criticality_prediction_bge_facts": [
-      "CH"
-    ],
-    "swiss_criticality_prediction_bge_considerations": [
-      "CH"
-    ],
-    "swiss_criticality_prediction_citation_facts": [
-      "CH"
-    ],
-    "swiss_criticality_prediction_citation_considerations": [
+    "swiss_criticality_prediction": [
       "CH"
     ],
     "brazilian_court_decisions": [
@@ -389,12 +380,12 @@
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
     ],
-   "swiss_criticality_prediction": [
+    "swiss_criticality_prediction": [
      "swiss_criticality_prediction_bge_facts",
      "swiss_criticality_prediction_bge_considerations",
      "swiss_criticality_prediction_citation_facts",
      "swiss_criticality_prediction_citation_considerations"
-  ]
+    ]
   },
   "task_default_arguments": {
     "greek_legal_ner": {
