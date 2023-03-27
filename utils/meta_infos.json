@@ -69,12 +69,8 @@
     "lener_br": "LNB",
     "mapa": "MAP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
-    "criticality_prediction": "CP",
-    "swiss_criticality_prediction_bge_facts": "SCP-BF",
-    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
-    "swiss_criticality_prediction_citation_facts": "SCP-CF",
-    "swiss_criticality_prediction_citation_considerations": "SCP-CC"
-  },
+    "swiss_criticality_prediction": "SCP"
+    },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
     "brazilian_court_decisions_unanimity": "BCD-U",
@@ -344,10 +340,10 @@
     "mapa_coarse": "mapa",
     "mapa_fine": "mapa",
     "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment",
-    "swiss_criticality_prediction_bge_facts": "swiss_criticality_prediction_bge_facts",
-    "swiss_criticality_prediction_bge_considerations": "swiss_criticality_prediction_bge_considerations",
-    "swiss_criticality_prediction_citation_facts": "swiss_criticality_prediction_citation_facts",
-    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction_citation_considerations"
+    "swiss_criticality_prediction_bge_facts": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_bge_considerations": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_citation_facts": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -393,18 +389,12 @@
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
     ],
-   "swiss_criticality_prediction_bge_facts": [
-     "swiss_criticality_prediction_bge_facts"
-  ],
-    "swiss_criticality_prediction_bge_considerations": [
-      "swiss_criticality_prediction_bge_considerations"
-    ],
-    "swiss_criticality_prediction_citation_facts": [
-      "swiss_criticality_prediction_citation_facts"
-    ],
-    "swiss_criticality_prediction_citation_considerations": [
-      "swiss_criticality_prediction_citation_considerations"
-    ]
+   "swiss_criticality_prediction": [
+     "swiss_criticality_prediction_bge_facts",
+     "swiss_criticality_prediction_bge_considerations",
+     "swiss_criticality_prediction_citation_facts",
+     "swiss_criticality_prediction_citation_considerations"
+  ]
   },
   "task_default_arguments": {
     "greek_legal_ner": {
