@@ -66,12 +66,6 @@ def main():
     if data_args.disable_caching:
         disable_caching()
 
-    if data_args.finetuning_task in ["swiss_criticality_prediction_bge_facts",
-                                     "swiss_criticality_prediction_bge_considerations",
-                                     "swiss_criticality_prediction_citation_facts",
-                                     "swiss_criticality_prediction_citation_considerations"]:
-        os.environ["WANDB_API_KEY"] = "6f9fce3d2b3e41f8880b3e0b094e16ec9d030315"  # wandb rstern token
-
     config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
 
     # Setup distant debugging if needed
@@ -133,8 +127,6 @@ def main():
     train_dataset = train_dataset.filter(lambda example: len(example['input']) > 0)
     eval_dataset = eval_dataset.filter(lambda example: len(example['input']) > 0)
     predict_dataset = predict_dataset.filter(lambda example: len(example['input']) > 0)
-
-    print(train_dataset['label'])
 
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)

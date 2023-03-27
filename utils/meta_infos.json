@@ -304,10 +304,14 @@
       "tr"
     ],
     "swiss_criticality_prediction_bge_facts": [
-      "all"
+      "de",
+      "fr",
+      "it"
     ],
     "swiss_criticality_prediction_bge_considerations": [
-      "all"
+      "de",
+      "fr",
+      "it"
     ],
     "swiss_criticality_prediction_citation_facts": [
       "de",

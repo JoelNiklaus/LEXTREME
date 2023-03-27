@@ -84,16 +84,6 @@ def make_efficient_split(data_args, split_name, ner_tasks):
     return dataset
 
 
-def filter_by_length(row):
-    """
-    Removes examples that are too short
-    :param example:    the example to check
-    :return:
-    """
-    if 10 < len(str(row["input"])):
-        return True
-    return False
-
 def make_split_with_postfiltering(data_args, split_name, ner_tasks):
     if data_args.dataset_cache_dir is None:
         dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
