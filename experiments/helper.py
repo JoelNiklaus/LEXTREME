@@ -124,6 +124,10 @@ def make_split(data_args, split_name):
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     multilingual_datasets = ['swiss_judgment_prediction',
+                             'swiss_criticality_prediction_bge_facts',
+                             'swiss_criticality_prediction_citation_facts',
+                             'swiss_criticality_prediction_bge_considerations',
+                             'swiss_criticality_prediction_citation_considerations',
                              'online_terms_of_service_unfairness_level',
                              'online_terms_of_service_unfairness_category',
                              'covid19_emergency_event',
@@ -133,7 +137,6 @@ def make_split(data_args, split_name):
                              'mapa_coarse',
                              'mapa_fine'
                              ]
-
 
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 

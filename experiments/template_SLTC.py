@@ -8,6 +8,8 @@ import os
 import shutil
 import sys
 from dataclasses import replace
+import wandb
+from datasets import ClassLabel
 
 import transformers
 from datasets import disable_caching
@@ -122,6 +124,11 @@ def main():
     set_seed(training_args.seed)
 
     train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+    train_dataset = train_dataset.filter(lambda example: len(example['input']) > 0)
+    eval_dataset = eval_dataset.filter(lambda example: len(example['input']) > 0)
+    predict_dataset = predict_dataset.filter(lambda example: len(example['input']) > 0)
+
+    logger.info(f"This is a singel lable classification task, labels for this dataset are: \n{train_dataset['label']}")
 
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)

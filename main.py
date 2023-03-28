@@ -5,9 +5,11 @@ import json as js
 import os
 import re
 import shutil
+import time
 from collections import defaultdict
 from itertools import cycle
 from multiprocessing import Pool
+from utils.utilities import remove_old_files
 
 import setproctitle
 import torch
@@ -206,7 +208,9 @@ def run_experiment(
             gpu_number = gpu_number
 
     # Tagging my Python scripts
+    # TODO remove this for criticality_prediction
     setproctitle.setproctitle('Veton Matoshi - LEXTREME')
+
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(x) for x in gpu_number])
 
