@@ -3,6 +3,12 @@
     "swiss_criticality_prediction": [
       "CH"
     ],
+    "swiss_legal_area_prediction": [
+      "CH"
+    ],
+    "swiss_judgments_prediction_XL": [
+      "CH"
+    ],
     "brazilian_court_decisions": [
       "BR"
     ],
@@ -60,7 +66,9 @@
     "lener_br": "LNB",
     "mapa": "MAP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
-    "swiss_criticality_prediction": "SCP"
+    "swiss_criticality_prediction": "SCP",
+    "swiss_legal_area_prediction": "SLAP",
+    "swiss_judgments_prediction_XL": "SJPXL"
     },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -85,7 +93,11 @@
     "swiss_criticality_prediction_bge_facts": "SCP-BF",
     "swiss_criticality_prediction_bge_considerations": "SCP-BC",
     "swiss_criticality_prediction_citation_facts": "SCP-CF",
-    "swiss_criticality_prediction_citation_considerations": "SCP-CC"
+    "swiss_criticality_prediction_citation_considerations": "SCP-CC",
+    "swiss_legal_area_prediction_facts": "SLAP-F",
+    "swiss_legal_area_prediction_considerations": "SLAP-C",
+    "swiss_judgments_prediction_XL_facts": "SJPXL-F",
+    "swiss_judgments_prediction_XL_considerations": "SJPXL-C"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -110,7 +122,11 @@
     "swiss_criticality_prediction_bge_facts": "SLTC",
     "swiss_criticality_prediction_bge_considerations": "SLTC",
     "swiss_criticality_prediction_citation_facts": "SLTC",
-    "swiss_criticality_prediction_citation_considerations": "SLTC"
+    "swiss_criticality_prediction_citation_considerations": "SLTC",
+    "swiss_legal_area_prediction_facts": "SLTC",
+    "swiss_legal_area_prediction_considerations": "SLTC",
+    "swiss_judgments_prediction_XL_facts": "SLTC",
+    "swiss_judgments_prediction_XL_considerations": "SLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -309,6 +325,26 @@
       "de",
       "fr",
       "it"
+    ],
+    "swiss_legal_area_prediction_facts":  [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_legal_area_prediction_considerations":  [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_judgments_prediction_XL_facts":  [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_judgments_prediction_XL_considerations": [
+      "de",
+      "fr",
+      "it"
     ]
   },
   "config_to_dataset": {
@@ -334,7 +370,11 @@
     "swiss_criticality_prediction_bge_facts": "swiss_criticality_prediction",
     "swiss_criticality_prediction_bge_considerations": "swiss_criticality_prediction",
     "swiss_criticality_prediction_citation_facts": "swiss_criticality_prediction",
-    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction"
+    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction",
+    "swiss_legal_area_prediction_facts": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_considerations": "swiss_legal_area_prediction",
+    "swiss_judgments_prediction_XL_facts": "swiss_judgments_prediction_XL",
+    "swiss_judgments_prediction_XL_considerations": "swiss_judgments_prediction_XL"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -385,6 +425,14 @@
      "swiss_criticality_prediction_bge_considerations",
      "swiss_criticality_prediction_citation_facts",
      "swiss_criticality_prediction_citation_considerations"
+    ],
+    "swiss_legal_area_prediction": [
+      "swiss_legal_area_prediction_facts",
+      "swiss_legal_area_prediction_considerations"
+    ],
+    "swiss_judgments_prediction_XL":[
+      "swiss_judgments_prediction_XL_facts",
+      "swiss_judgments_prediction_XL_considerations"
     ]
   },
   "task_default_arguments": {
@@ -600,6 +648,50 @@
       }
     },
     "swiss_criticality_prediction_citation_considerations": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_legal_area_prediction_facts":  {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_legal_area_prediction_considerations":  {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_judgments_prediction_XL_facts":  {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_judgments_prediction_XL_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
