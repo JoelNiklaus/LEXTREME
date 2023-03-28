@@ -4,9 +4,6 @@ import re
 import os
 from tqdm import tqdm
 import json as js
-from collections import Counter
-import fasttext
-
 tqdm.pandas()
 
 # Define all necessary functions and classes
@@ -124,7 +121,8 @@ for x in all_textual_data_df.to_dict(orient="records"):
 
 # Remove all content where, for example, the field is text_de, but the actual text is not German
 for language in ['de', 'fr', 'it']:
-    all_textual_data_df['text_'+language]=all_textual_data_df['text_'+language].progress_apply(lambda x: remove_if_not_required_language(x,language))
+    all_textual_data_df['text_' + language] = all_textual_data_df['text_' + language].progress_apply(
+        lambda x: remove_if_not_required_language(x, language))
 
 # Create a column to merge the df created from the csv with the df for the affairs
 # The column will be created by concatinating
@@ -132,22 +130,23 @@ for language in ['de', 'fr', 'it']:
 #     affair_scope with affair_text_scope with affair_text_srcid (for csv data)
 
 column_name_for_merge = 'id_for_merge'
-#affairs[column_name_for_merge] = affairs['affair_scope']+'_'+affairs['affair_srcid'].apply(lambda x: str(x))
-#all_textual_data_df[column_name_for_merge] = all_textual_data_df['affair_text_scope']+'_'+all_textual_data_df['affair_text_srcid'].apply(lambda x: str(x))
+# affairs[column_name_for_merge] = affairs['affair_scope']+'_'+affairs['affair_srcid'].apply(lambda x: str(x))
+# all_textual_data_df[column_name_for_merge] = all_textual_data_df['affair_text_scope']+'_'+all_textual_data_df['affair_text_srcid'].apply(lambda x: str(x))
 
 affairs[column_name_for_merge] = affairs['affair_srcid']
 all_textual_data_df[column_name_for_merge] = all_textual_data_df['affair_text_srcid']
 
 # Then, in the dataframe for the csv data, we keep only those columns that do not occur in the affairs dataframe
 
-columns_not_in_affairs = [c for c in all_textual_data_df.columns.tolist() if c not in affairs.columns.tolist()] + [column_name_for_merge]
+columns_not_in_affairs = [c for c in all_textual_data_df.columns.tolist() if c not in affairs.columns.tolist()] + [
+    column_name_for_merge]
 
 all_textual_data_df_for_merge = all_textual_data_df[columns_not_in_affairs]
 
-df_merged = all_textual_data_df_for_merge.merge(affairs,on=column_name_for_merge)
+df_merged = all_textual_data_df_for_merge.merge(affairs, on=column_name_for_merge)
 
-df_merged['affair_topic_codes_as_labels'] = df_merged.affair_topic_codes.apply(lambda label_list: [id2label[int(x)] for x in label_list])
-
+df_merged['affair_topic_codes_as_labels'] = df_merged.affair_topic_codes.apply(
+    lambda label_list: [id2label[int(x)] for x in label_list])
 
 # Saving
 df_merged.to_json('../data/raw_data_for_training.jsonl', lines=True, orient="records", force_ascii=False)

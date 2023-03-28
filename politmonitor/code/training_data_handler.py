@@ -216,14 +216,13 @@ class TrainingDataHandler:
                 item_copy = deepcopy(item)
                 text = item['text_' + lang]
                 title = item['title_' + lang]
-                if title == text:  # In these cases, the text field is just a copy of the title field, therefore we set text to empty string
-                    text = ""
                 del item_copy['text_' + lang]
                 del item_copy['title_' + lang]
-                item_copy['text'] = text
-                item_copy['title'] = title
-                item_copy['language'] = lang
-                dataset_new.append(item_copy)
+                if text:
+                    item_copy['text'] = text
+                    item_copy['title'] = title
+                    item_copy['language'] = lang
+                    dataset_new.append(item_copy)
 
         dataset_new = pd.DataFrame(dataset_new)
 
