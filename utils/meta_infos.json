@@ -96,8 +96,6 @@
     "swiss_criticality_prediction_citation_considerations": "SCP-CC",
     "swiss_legal_area_prediction_facts": "SLAP-F",
     "swiss_legal_area_prediction_considerations": "SLAP-C",
-    "swiss_legal_area_prediction_social_facts": "SLAP-SF",
-    "swiss_legal_area_prediction_social_considerations": "SLAP-SC",
     "swiss_legal_area_prediction_public_facts": "SLAP-PF",
     "swiss_legal_area_prediction_public_considerations": "SLAP-PC",
     "swiss_legal_area_prediction_civil_facts": "SLAP-CIF",
@@ -133,8 +131,6 @@
     "swiss_criticality_prediction_citation_considerations": "SLTC",
     "swiss_legal_area_prediction_facts": "SLTC",
     "swiss_legal_area_prediction_considerations": "SLTC",
-    "swiss_legal_area_prediction_social_facts": "SLTC",
-    "swiss_legal_area_prediction_social_considerations": "SLTC",
     "swiss_legal_area_prediction_public_facts": "SLTC",
     "swiss_legal_area_prediction_public_considerations": "SLTC",
     "swiss_legal_area_prediction_civil_facts": "SLTC",
@@ -352,16 +348,6 @@
       "fr",
       "it"
     ],
-    "swiss_legal_area_prediction_social_facts":  [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_legal_area_prediction_social_considerations":  [
-      "de",
-      "fr",
-      "it"
-    ],
     "swiss_legal_area_prediction_public_facts":  [
       "de",
       "fr",
@@ -429,6 +415,12 @@
     "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction",
     "swiss_legal_area_prediction_facts": "swiss_legal_area_prediction",
     "swiss_legal_area_prediction_considerations": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_public_facts": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_public_considerations": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_civil_facts": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_civil_considerations": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_criminal_facts": "swiss_legal_area_prediction",
+    "swiss_legal_area_prediction_criminal_considerations": "swiss_legal_area_prediction",
     "swiss_judgment_prediction_xl_facts": "swiss_judgment_prediction_xl",
     "swiss_judgment_prediction_xl_considerations": "swiss_judgment_prediction_xl"
   },
@@ -485,8 +477,6 @@
     "swiss_legal_area_prediction": [
       "swiss_legal_area_prediction_facts",
       "swiss_legal_area_prediction_considerations",
-      "swiss_legal_area_prediction_social_facts",
-      "swiss_legal_area_prediction_social_considerations",
       "swiss_legal_area_prediction_public_facts",
       "swiss_legal_area_prediction_public_considerations",
       "swiss_legal_area_prediction_civil_facts",
@@ -733,17 +723,6 @@
         "hierarchical": true
       }
     },
-    "swiss_legal_area_prediction_social_facts":  {
-      "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "max_segments": 16,
-        "max_seg_length": 128,
-        "add_oversampling": true
-      },
-      "ModelArguments": {
-        "hierarchical": true
-      }
-    },
     "swiss_legal_area_prediction_public_facts":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
@@ -778,17 +757,6 @@
       }
     },
     "swiss_legal_area_prediction_considerations":  {
-      "DataTrainingArguments": {
-        "max_seq_length": 512,
-        "max_segments": 16,
-        "max_seg_length": 128,
-        "add_oversampling": true
-      },
-      "ModelArguments": {
-        "hierarchical": true
-      }
-    },
-    "swiss_legal_area_prediction_social_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
