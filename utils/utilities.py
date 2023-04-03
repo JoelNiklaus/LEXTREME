@@ -81,7 +81,6 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # untested
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
@@ -95,7 +94,6 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # untested
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
         'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
         'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
         'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
@@ -108,7 +106,6 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
@@ -121,7 +118,6 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
         'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
         'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
@@ -150,7 +146,7 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 26},
         'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
