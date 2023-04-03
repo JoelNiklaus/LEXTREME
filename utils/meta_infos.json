@@ -821,12 +821,10 @@
       "de": {
         "small": [],
         "base": [
-          "joelito/legal-german-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-german-roberta-base"
         ],
         "large": [
-          "joelito/legal-german-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-german-roberta-large"
         ]
       },
       "el": {
@@ -874,12 +872,10 @@
       "fr": {
         "small": [],
         "base": [
-          "joelito/legal-french-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-french-roberta-base"
         ],
         "large": [
-          "joelito/legal-french-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-french-roberta-large"
         ]
       },
       "ga": {
@@ -907,12 +903,10 @@
         "small": [],
         "base": [
           "dlicari/Italian-Legal-BERT",
-          "joelito/legal-italian-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-italian-roberta-base"
         ],
         "large": [
-          "joelito/legal-italian-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-italian-roberta-large"
         ]
       },
       "lt": {
@@ -991,10 +985,12 @@
       "multilingual": {
         "small": [],
         "base": [
-          "joelito/legal-xlm-roberta-base"
+          "joelito/legal-xlm-roberta-base",
+          "joelito/legal-swiss-roberta-base"
         ],
         "large": [
-          "joelito/legal-xlm-roberta-large"
+          "joelito/legal-xlm-roberta-large",
+          "joelito/legal-swiss-roberta-large"
         ]
       }
     }
