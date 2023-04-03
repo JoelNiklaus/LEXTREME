@@ -59,6 +59,16 @@ def get_meta_infos():
     meta_infos[
         "task_requires_hierarchical_per_default"] = task_requires_hierarchical_per_default
 
+    model_size_mapping = dict()
+
+    for model_type, model_info in meta_infos['language_models'].items():
+        for language, info in model_info.items():
+            for size, models in info.items():
+                for m in models:
+                    model_size_mapping[m] = size
+
+    meta_infos["model_size_mapping"] = model_size_mapping
+
     return meta_infos
 
 
@@ -72,6 +82,8 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
@@ -84,6 +96,8 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
+        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
         'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
@@ -95,10 +109,12 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2}
     },
     # e.g. V100
     32: {
@@ -106,6 +122,8 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
+        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
+        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
@@ -117,7 +135,8 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
@@ -132,6 +151,7 @@ optimal_batch_sizes = {
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
         'monolingual': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
@@ -196,7 +216,12 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
         else:
             print(f"The language model {language_model} will be considered a monolingual model. "
                   "Therefore, we revert to the default batch size.")
-            batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual"]
+            if language_model not in meta_infos['model_size_mapping'].keys():
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_base"]
+            elif meta_infos['model_size_mapping'][language_model] != 'large':
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_base"]
+            else:
+                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_large"]
     batch_size = None
     while batch_size is None:
         try:
