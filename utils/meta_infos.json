@@ -61,7 +61,7 @@
     "mapa": "MAP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
     "swiss_criticality_prediction": "SCP"
-    },
+  },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
     "brazilian_court_decisions_unanimity": "BCD-U",
@@ -381,10 +381,10 @@
       "turkish_constitutional_court_decisions_judgment"
     ],
     "swiss_criticality_prediction": [
-     "swiss_criticality_prediction_bge_facts",
-     "swiss_criticality_prediction_bge_considerations",
-     "swiss_criticality_prediction_citation_facts",
-     "swiss_criticality_prediction_citation_considerations"
+      "swiss_criticality_prediction_bge_facts",
+      "swiss_criticality_prediction_bge_considerations",
+      "swiss_criticality_prediction_citation_facts",
+      "swiss_criticality_prediction_citation_considerations"
     ]
   },
   "task_default_arguments": {
