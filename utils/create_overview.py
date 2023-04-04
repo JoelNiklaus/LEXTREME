@@ -44,7 +44,8 @@ def insert_responsibilities(df):
 class ResultAggregator:
     meta_infos = meta_infos
 
-    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
+    def __init__(self, wandb_api_key=None, project_name=None,
+                 path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
                  split="predict", score='macro-f1'):
 
         # Create the result directory if not existent
@@ -91,7 +92,7 @@ class ResultAggregator:
 
         self._path = name_of_log_file
         if path_to_csv_export is None:
-            results = self.get_wandb_overview()
+            results = self.get_wandb_overview(project_name)
             results.to_csv(
                 "current_wandb_results_unprocessed.csv", index=False)
         else:
@@ -243,8 +244,9 @@ class ResultAggregator:
                 for i in indices:
                     dataframe.at[i, column_name] = dataframe.at[i, score]
 
-        monolingual_models = [_model_name for _model_name,
-        _language in self.meta_infos['model_language_lookup_table'].items() if _language != "all"]
+        monolingual_models = [_model_name for _model_name, _language in
+                              self.meta_infos['model_language_lookup_table'].items()
+                              if _language != "all"]
 
         for config in multilingual_configs:
             languages = self.meta_infos['task_language_mapping'][config]
@@ -649,8 +651,7 @@ class ResultAggregator:
 
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(
                 all_mean_macro_f1_scores_cleaned)
-            dataframe.at[_name_or_path,
-            column_name] = all_mean_macro_f1_scores_mean
+            dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
         first_column = [column_name]
@@ -673,8 +674,7 @@ class ResultAggregator:
                 for finetuning_task in self.results.finetuning_task.unique():
                     mean_macro_f1_score = self.get_average_score(
                         finetuning_task, _name_or_path)
-                    overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         elif average_over_language == True:
             for _name_or_path in self.results._name_or_path.unique():
@@ -733,8 +733,7 @@ class ResultAggregator:
                         else:
                             mean_macro_f1_score = ""
 
-                    overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
@@ -899,8 +898,7 @@ class ResultAggregator:
             lookup_table = self.get_aggregated_score_for_language(
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
-                self.language_aggregated_score.at[language_model,
-                language] = score
+                self.language_aggregated_score.at[language_model, language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -917,8 +915,11 @@ if __name__ == "__main__":
 
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
+    parser.add_argument('-pn', '--project_name', help='Insert the wandb project name',
+                        default=None)
     parser.add_argument('-wak', '--wandb_api_key',
-                        help='To be able to fetch the right results, you can insert the wand api key. Alternatively, set the WANDB_API_KEY environment variable to your API key.',
+                        help='To be able to fetch the right results, you can insert the wand api key. '
+                             'Alternatively, set the WANDB_API_KEY environment variable to your API key.',
                         default=None)
 
     args = parser.parse_args()

@@ -1,5 +1,8 @@
 {
   "dataset_jurisdiction": {
+    "swiss_criticality_prediction": [
+      "CH"
+    ],
     "brazilian_court_decisions": [
       "BR"
     ],
@@ -56,7 +59,8 @@
     "legalnero": "LNR",
     "lener_br": "LNB",
     "mapa": "MAP",
-    "turkish_constitutional_court_decisions_judgment": "TCD"
+    "turkish_constitutional_court_decisions_judgment": "TCD",
+    "swiss_criticality_prediction": "SCP"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -77,7 +81,11 @@
     "online_terms_of_service_clause_topics": "OTS-CT",
     "online_terms_of_service_unfairness_levels": "OTS-UL",
     "swiss_judgment_prediction": "SJP",
-    "turkish_constitutional_court_decisions_judgment": "TCD"
+    "turkish_constitutional_court_decisions_judgment": "TCD",
+    "swiss_criticality_prediction_bge_facts": "SCP-BF",
+    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
+    "swiss_criticality_prediction_citation_facts": "SCP-CF",
+    "swiss_criticality_prediction_citation_considerations": "SCP-CC"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -98,7 +106,11 @@
     "legalnero": "NER",
     "lener_br": "NER",
     "mapa_coarse": "NER",
-    "mapa_fine": "NER"
+    "mapa_fine": "NER",
+    "swiss_criticality_prediction_bge_facts": "SLTC",
+    "swiss_criticality_prediction_bge_considerations": "SLTC",
+    "swiss_criticality_prediction_citation_facts": "SLTC",
+    "swiss_criticality_prediction_citation_considerations": "SLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -277,6 +289,26 @@
     ],
     "turkish_constitutional_court_decisions_judgment": [
       "tr"
+    ],
+    "swiss_criticality_prediction_bge_facts": [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_criticality_prediction_bge_considerations": [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_criticality_prediction_citation_facts": [
+      "de",
+      "fr",
+      "it"
+    ],
+    "swiss_criticality_prediction_citation_considerations": [
+      "de",
+      "fr",
+      "it"
     ]
   },
   "config_to_dataset": {
@@ -298,7 +330,11 @@
     "lener_br": "lener_br",
     "mapa_coarse": "mapa",
     "mapa_fine": "mapa",
-    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment"
+    "turkish_constitutional_court_decisions_judgment": "turkish_constitutional_court_decisions_judgment",
+    "swiss_criticality_prediction_bge_facts": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_bge_considerations": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_citation_facts": "swiss_criticality_prediction",
+    "swiss_criticality_prediction_citation_considerations": "swiss_criticality_prediction"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -343,6 +379,12 @@
     ],
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
+    ],
+    "swiss_criticality_prediction": [
+      "swiss_criticality_prediction_bge_facts",
+      "swiss_criticality_prediction_bge_considerations",
+      "swiss_criticality_prediction_citation_facts",
+      "swiss_criticality_prediction_citation_considerations"
     ]
   },
   "task_default_arguments": {
@@ -514,6 +556,50 @@
       }
     },
     "turkish_constitutional_court_decisions_judgment": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_bge_facts": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_bge_considerations": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_citation_facts": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 16,
+        "max_seg_length": 128,
+        "add_oversampling": true
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "swiss_criticality_prediction_citation_considerations": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 32,
@@ -735,12 +821,10 @@
       "de": {
         "small": [],
         "base": [
-          "joelito/legal-german-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-german-roberta-base"
         ],
         "large": [
-          "joelito/legal-german-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-german-roberta-large"
         ]
       },
       "el": {
@@ -788,12 +872,10 @@
       "fr": {
         "small": [],
         "base": [
-          "joelito/legal-french-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-french-roberta-base"
         ],
         "large": [
-          "joelito/legal-french-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-french-roberta-large"
         ]
       },
       "ga": {
@@ -821,12 +903,10 @@
         "small": [],
         "base": [
           "dlicari/Italian-Legal-BERT",
-          "joelito/legal-italian-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-italian-roberta-base"
         ],
         "large": [
-          "joelito/legal-italian-roberta-large",
-          "joelito/legal-swiss-roberta-large"
+          "joelito/legal-italian-roberta-large"
         ]
       },
       "lt": {
@@ -905,10 +985,12 @@
       "multilingual": {
         "small": [],
         "base": [
-          "joelito/legal-xlm-roberta-base"
+          "joelito/legal-xlm-roberta-base",
+          "joelito/legal-swiss-roberta-base"
         ],
         "large": [
-          "joelito/legal-xlm-roberta-large"
+          "joelito/legal-xlm-roberta-large",
+          "joelito/legal-swiss-roberta-large"
         ]
       }
     }
