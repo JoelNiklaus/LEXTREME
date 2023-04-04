@@ -2,7 +2,7 @@ import json as js
 import os
 from collections import Counter
 from copy import deepcopy
-from typing import Literal
+from typing import Literal, Union
 
 import numpy as np
 import pandas as pd
@@ -35,44 +35,35 @@ class TrainingDataHandler:
     def get_relative_path(self, path):
         return os.path.join(os.path.dirname(__file__), path)
 
-    def process_language(self, language):
+    def process_argument(self, language, default_values):
 
         if 'all' in language:
-            language = ['de', 'it', 'fr']
+            language = default_values
         elif type(language) == str and language != 'all':
             language = language.split(',')
             language = [l.strip() for l in language]
-
         return language
 
-    def get_training_data(self, language: Literal['de', 'it', 'fr', 'all'],
-                          title: bool,
-                          text: bool,
-                          affair_text_scope,
+    def get_training_data(self,
+                          language: Union[list, str],
+                          affair_attachment_category: Union[list, str],
+                          affair_text_scope: Union[list, str],
+                          same_items_for_each_language=True,
                           test_size=0.4):
 
         self.training_data_df = self.filter_training_data(language=language,
-                                                          title=title,
-                                                          text=text,
-                                                          affair_text_scope=affair_text_scope
+                                                          affair_text_scope=affair_text_scope,
+                                                          affair_attachment_category=affair_attachment_category,
+                                                          same_items_for_each_language=same_items_for_each_language
                                                           )
+
         self.training_data_df = self.create_df_for_split(self.training_data_df)
         self.training_data_df = self.create_split(self.training_data_df, test_size=test_size)
 
-        language = self.process_language(language)
-
-        inputs = list()
-
-        if type(title) == bool and title:
-            inputs.append('title')
-
-        if type(text) == bool and text:
-            inputs.append('text')
-
-        self.training_data = self.convert_dataframe_to_dataset(self.training_data_df, inputs,
+        self.training_data = self.convert_dataframe_to_dataset(self.training_data_df,
                                                                'affair_topic_codes_as_labels')
 
-    def convert_dataframe_to_dataset(self, dataframe, input_columns, label_column):
+    def convert_dataframe_to_dataset(self, dataframe, label_column):
 
         dataset = DatasetDict()
         for split in ['train', 'validation', 'test']:
@@ -80,7 +71,7 @@ class TrainingDataHandler:
             df_split = dataframe[dataframe.split == split]
             df_split = df_split.applymap(lambda x: convert_to_string(x))
             for r in df_split.to_dict(orient="records"):
-                _input = ' '.join([value for key, value in r.items() if key in input_columns])
+                _input = r['text']
                 label = r[label_column]
                 r['input'] = _input
                 r['label'] = label
@@ -93,10 +84,10 @@ class TrainingDataHandler:
 
         return dataset
 
-    def filter_training_data(self, language,
-                             title: bool,
-                             text: bool,
-                             affair_text_scope,
+    def filter_training_data(self,
+                             language: Union[list, str],
+                             affair_attachment_category: Union[list, str],
+                             affair_text_scope: Union[list, str],
                              same_items_for_each_language=True
                              ):
 
@@ -109,29 +100,18 @@ class TrainingDataHandler:
                 affair_text_scope = affair_text_scope.split(',')
             training_data = training_data[training_data.affair_text_scope.isin(affair_text_scope)]
 
-        language = self.process_language(language)
-
+        language = self.process_argument(language, ['de', 'it', 'fr'])
         training_data = training_data[training_data.language.isin(language)]
 
-        inputs = list()
-
-        if type(title) == bool and title:
-            inputs.append('title')
-            training_data = training_data[training_data.title != '']
-
-        if type(text) == bool and text:
-            inputs.append('text')
-            training_data = training_data[training_data.text != '']
+        affair_attachment_category = self.process_argument(affair_attachment_category,
+                                                           ['Titel', 'Text 1', 'Text 2', 'Text 3'])
+        training_data = training_data[training_data.affair_attachment_category.isin(affair_attachment_category)]
 
         # TODO: Add a function to remove cases where the translations seems not correct
-
-        # If someone chooses only title as input, that only unique entries for tile + affair_text_srcid will remain
-        # If someone chooses only title and text as input, that only unique entries for tile + text +
-        # affair_text_srcid will remain
-        training_data = training_data.drop_duplicates(inputs + ['affair_text_srcid', 'language'])
+        training_data = training_data.drop_duplicates(['text', 'title', 'affair_text_srcid', 'language'])
 
         # same_items_for_each_language: If this is set to True, it will make sure that for each affair_text_srcid we
-        # have a version for each chosen language
+        # have a version of the text for each chosen language
         if same_items_for_each_language:
             affair_text_srcid_lists = [training_data[training_data.language == lang].affair_text_srcid.tolist() for lang
                                        in language]
@@ -139,7 +119,8 @@ class TrainingDataHandler:
             training_data = training_data[
                 training_data.affair_text_srcid.isin(list(affair_text_srcid_in_all_languages))]
 
-        training_data = self.merge_texts(training_data, inputs)
+        # We decided that we will note merge texts that belong to the same affair_text_srcid
+        # training_data = self.merge_texts(training_data, inputs)
 
         return training_data
 
