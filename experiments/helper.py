@@ -134,7 +134,6 @@ def make_split(data_args, split_name):
                              'mapa_fine'
                              ]
 
-
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
         dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
@@ -167,7 +166,6 @@ def get_data(training_args, data_args):
 
 
 def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
-
     label_list = sorted(list(set(
         train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
         predict_dataset.features['labels'].feature.names)))
@@ -258,7 +256,6 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None, 
                            batch["label"]]
         del batch["label"]
 
-
     # Preprocessing the datasets
     # Padding strategy
     if data_args.pad_to_max_length:
@@ -305,7 +302,6 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None, 
             max_length=data_args.max_seq_length,
             truncation=True,
         )
-
 
     return tokenized
 
@@ -664,8 +660,73 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 
     output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
     output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    predict_dataset_df_for_concatination = predict_dataset_df[[c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
-    output = pd.concat([output, predict_dataset_df_for_concatination], axis = 1)
+    predict_dataset_df_for_concatination = predict_dataset_df[
+        [c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
+    output = pd.concat([output, predict_dataset_df_for_concatination], axis=1)
+    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output.to_csv(output_predict_file_new_csv)
+
+
+def make_predictions_multi_label_politmonitor(trainer, data_args, predict_dataset, id2label, training_args,
+                                              list_of_languages=[],
+                                              name_of_input_field='input'):
+    affair_attachment_category = ['Titel', 'Text 1', 'Text 2', 'Text 3']
+
+    language_specific_metrics = list()
+
+    if "language" in list(predict_dataset.features.keys()):
+        if data_args.language == 'all':
+            if not list_of_languages:
+                list_of_languages = sorted(list(set(predict_dataset['language'])))
+
+            for l in list_of_languages:
+                for aac in affair_attachment_category:
+
+                    predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
+
+                    predict_dataset_filtered = predict_dataset.filter(
+                        lambda example: example['affair_attachment_category'] == aac)
+
+                    if len(predict_dataset_filtered['language']) > 0:
+                        metric_prefix = l + re.sub(' ', '_', aac) + "_predict/"
+                        predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                                       metric_key_prefix=metric_prefix)
+                        wandb.log(metrics)
+
+                        language_specific_metrics.append(metrics)
+
+    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+
+    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
+
+    max_predict_samples = (
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+    )
+    metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
+
+    language_specific_metrics.append(metrics)
+
+    language_specific_metrics = merge_dicts(language_specific_metrics)
+
+    trainer.log_metrics("predict", language_specific_metrics)
+    trainer.save_metrics("predict", language_specific_metrics)
+    wandb.log(language_specific_metrics)
+
+    predict_dataset_df = pd.DataFrame(predict_dataset)
+
+    preds = (expit(predictions) > 0.5).astype('int32')
+
+    output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
+    output = pd.DataFrame(output, columns=[name_of_input_field, 'reference', 'predictions', 'logits'])
+
+    output['predictions_as_label'] = output.predictions.apply(lambda x: convert_id2label(x, id2label))
+    output['reference_as_label'] = output.reference.apply(lambda x: convert_id2label(x, id2label))
+
+    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
+    predict_dataset_df_for_concatination = predict_dataset_df[
+        [c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
+    output = pd.concat([output, predict_dataset_df_for_concatination], axis=1)
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
@@ -794,6 +855,26 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
     return model, tokenizer, config
+
+
+def model_init_for_SequenceClassification(model_args, data_args, num_labels):
+    config = AutoConfig.from_pretrained(
+        model_args.model_name_or_path,
+        num_labels=num_labels,
+        finetuning_task=return_language_prefix(data_args.language,
+                                               data_args.finetuning_task) + '_' + data_args.finetuning_task,
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
+    )
+
+    model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
+
+    return model_class.from_pretrained(
+        model_args.model_name_or_path,
+        config=config,
+        use_auth_token=True if model_args.use_auth_token else None,
+        revision=model_args.revision
+    )
 
 
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):

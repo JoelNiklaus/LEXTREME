@@ -28,7 +28,7 @@ from transformers.trainer_utils import get_last_checkpoint
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, \
     generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
-    get_label_list_from_mltc_tasks, model_is_multilingual
+    get_label_list_from_mltc_tasks, model_is_multilingual, make_predictions_multi_label_politmonitor
 from trainer import MultilabelTrainer
 
 # Import the path to the training data handler for politmonitor
@@ -135,9 +135,10 @@ def main():
 
         tdh = TrainingDataHandler()
 
-        tdh.get_training_data(language=data_args.language, affair_text_scope=data_args.affair_text_scope, text=data_args.text, title=data_args.title)
+        tdh.get_training_data(language=data_args.language, affair_text_scope=data_args.affair_text_scope,
+                              affair_attachment_category='all')
 
-        print(tdh.training_data_df[['title','language','split']].groupby(['language','split']).count())
+        print(tdh.training_data_df[['title', 'language', 'split']].groupby(['language', 'split']).count())
 
         ds = tdh.training_data
 
@@ -145,7 +146,7 @@ def main():
 
         label_list = set()
 
-        for labels in ds['train']["label"]+ds['validation']["label"]+ds['test']["label"]:
+        for labels in ds['train']["label"] + ds['validation']["label"] + ds['test']["label"]:
             for l in labels:
                 label_list.add(l)
 
@@ -176,17 +177,14 @@ def main():
             label2id[l] = n
             id2label[n] = l
 
-
     # Logging the number of train, eval and test examples
-    wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0], "predict_samples": predict_dataset.shape[0]})
+    wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0],
+               "predict_samples": predict_dataset.shape[0]})
 
     for lang in ["de", "fr", "it"]:
-        wandb.log({lang+"_train_samples": train_dataset.filter(lambda x: x['language']==lang).shape[0]})
-        wandb.log({lang+"_eval_samples": eval_dataset.filter(lambda x: x['language']==lang).shape[0]})
-        wandb.log({lang+"_predict_samples": predict_dataset.filter(lambda x: x['language']==lang).shape[0]})
-
-
-    
+        wandb.log({lang + "_train_samples": train_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+        wandb.log({lang + "_eval_samples": eval_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+        wandb.log({lang + "_predict_samples": predict_dataset.filter(lambda x: x['language'] == lang).shape[0]})
 
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
                                                                                    data_args=data_args,
@@ -249,7 +247,6 @@ def main():
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
     )
 
-    # Training
     if training_args.do_train:
         checkpoint = None
         if training_args.resume_from_checkpoint is not None:
@@ -287,8 +284,13 @@ def main():
         langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
         langs = sorted(list(set(langs)))
 
-        make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
-                                     id2label=id2label, training_args=training_args, list_of_languages=langs)
+        if data_args.finetuning_task == 'politmonitor':
+            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
+
+        if not data_args.finetuning_task == 'politmonitor':
+            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
