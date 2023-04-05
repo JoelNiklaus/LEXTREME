@@ -136,7 +136,7 @@ def main():
         tdh = TrainingDataHandler()
 
         tdh.get_training_data(language=data_args.language, affair_text_scope=data_args.affair_text_scope,
-                              affair_attachment_category='all')
+                              affair_attachment_category='all', running_mode=data_args.running_mode)
 
         print(tdh.training_data_df[['title', 'language', 'split']].groupby(['language', 'split']).count())
 
@@ -161,7 +161,6 @@ def main():
             id2label[n] = l
 
     else:
-
         train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
 
         # Labels
@@ -284,13 +283,15 @@ def main():
         langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
         langs = sorted(list(set(langs)))
 
-        if data_args.finetuning_task == 'politmonitor':
+        if data_args.finetuning_task != 'politmonitor':
             make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
                                          id2label=id2label, training_args=training_args, list_of_languages=langs)
 
-        if not data_args.finetuning_task == 'politmonitor':
-            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
-                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
+        else:
+            make_predictions_multi_label_politmonitor(trainer=trainer, data_args=data_args,
+                                                      predict_dataset=predict_dataset,
+                                                      id2label=id2label, training_args=training_args,
+                                                      list_of_languages=langs)
 
     # Clean up checkpoints
     checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]

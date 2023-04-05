@@ -679,16 +679,38 @@ def make_predictions_multi_label_politmonitor(trainer, data_args, predict_datase
             if not list_of_languages:
                 list_of_languages = sorted(list(set(predict_dataset['language'])))
 
+            # First only languages
+            for l in list_of_languages:
+                predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
+                if len(predict_dataset_filtered['language']) > 0:
+                    metric_prefix = l + "_predict/"
+                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                                   metric_key_prefix=metric_prefix)
+                    wandb.log(metrics)
+
+                    language_specific_metrics.append(metrics)
+
+            # Second only languages
+            for aac in affair_attachment_category:
+                predict_dataset_filtered = predict_dataset.filter(
+                    lambda example: example['affair_attachment_category'] == aac)
+                if len(predict_dataset_filtered['affair_attachment_category']) > 0:
+                    metric_prefix = aac + "_predict/"
+                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                                   metric_key_prefix=metric_prefix)
+                    wandb.log(metrics)
+
+                    language_specific_metrics.append(metrics)
+
+            # Third languages and Text Types
             for l in list_of_languages:
                 for aac in affair_attachment_category:
-
                     predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
-
-                    predict_dataset_filtered = predict_dataset.filter(
+                    predict_dataset_filtered = predict_dataset_filtered.filter(
                         lambda example: example['affair_attachment_category'] == aac)
-
-                    if len(predict_dataset_filtered['language']) > 0:
-                        metric_prefix = l + re.sub(' ', '_', aac) + "_predict/"
+                    if len(predict_dataset_filtered['language']) > 0 and len(
+                            predict_dataset_filtered['affair_attachment_category']) > 0:
+                        metric_prefix = l + '_' + re.sub(' ', '_', aac) + "_predict/"
                         predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
                                                                        metric_key_prefix=metric_prefix)
                         wandb.log(metrics)
@@ -869,12 +891,19 @@ def model_init_for_SequenceClassification(model_args, data_args, num_labels):
 
     model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
 
-    return model_class.from_pretrained(
+    model = model_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=True if model_args.use_auth_token else None,
         revision=model_args.revision
     )
+
+    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
+
+    if model_args.hierarchical:
+        model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
+
+    return model
 
 
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):

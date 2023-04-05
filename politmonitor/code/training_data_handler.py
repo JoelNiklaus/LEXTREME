@@ -3,7 +3,7 @@ import os
 from collections import Counter
 from copy import deepcopy
 from typing import Literal, Union
-
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
@@ -49,7 +49,8 @@ class TrainingDataHandler:
                           affair_attachment_category: Union[list, str],
                           affair_text_scope: Union[list, str],
                           same_items_for_each_language=True,
-                          test_size=0.4):
+                          test_size=0.4,
+                          running_mode="default"):
 
         self.training_data_df = self.filter_training_data(language=language,
                                                           affair_text_scope=affair_text_scope,
@@ -58,7 +59,41 @@ class TrainingDataHandler:
                                                           )
 
         self.training_data_df = self.create_df_for_split(self.training_data_df)
+
         self.training_data_df = self.create_split(self.training_data_df, test_size=test_size)
+
+        if running_mode in {'experimental', 'debug'}:
+            # We keep the all validation and test examples
+            indices_to_keep = self.training_data_df[
+                self.training_data_df.split.isin([])].index.tolist() #['validation', 'test']
+            counter_dict = defaultdict(list)
+            # We just filter the training examples
+            #for i, r in self.training_data_df[self.training_data_df.split.isin(['train'])].iterrows():
+            for i, r in self.training_data_df.iterrows():
+                language = self.training_data_df.at[i, 'language']
+                '''_key = self.training_data_df.at[i, 'one_hot_affair_topic_codes']
+                _key = [str(x) for x in _key]
+                _key = '_'.join(_key)'''
+                affair_topic_codes_as_labels = self.training_data_df.at[i, 'affair_topic_codes_as_labels']
+                affair_attachment_category = self.training_data_df.at[i, 'affair_attachment_category']
+                labels_for_checking = list(zip(affair_attachment_category, affair_topic_codes_as_labels))
+                labels_for_checking = ['_'.join(list(x)) for x in labels_for_checking]
+                for _key in labels_for_checking:
+                    _key = _key + '_' + language
+                    if _key not in counter_dict.keys():
+                        counter_dict[_key].append(i)
+                        indices_to_keep.append(i)
+                    else:
+                        if running_mode == 'experimental':
+                            maximum = 40
+                        elif running_mode == 'debug':
+                            maximum = 6
+                        if len(counter_dict[_key]) < maximum:
+                            counter_dict[_key].append(i)
+                            indices_to_keep.append(i)
+
+            self.training_data_df = self.training_data_df.iloc[indices_to_keep]
+
 
         self.training_data = self.convert_dataframe_to_dataset(self.training_data_df,
                                                                'affair_topic_codes_as_labels')
