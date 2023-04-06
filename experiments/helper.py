@@ -153,14 +153,14 @@ def model_is_multilingual(model_name_or_path):
 
 
 def get_data(training_args, data_args):
-    if training_args.do_train:
-        train_dataset = make_split(data_args=data_args, split_name="train")
+    #if training_args.do_train:
+    train_dataset = make_split(data_args=data_args, split_name="train")
 
-    if training_args.do_eval:
-        eval_dataset = make_split(data_args=data_args, split_name="validation")
+    #if training_args.do_eval:
+    eval_dataset = make_split(data_args=data_args, split_name="validation")
 
-    if training_args.do_predict:
-        predict_dataset = make_split(data_args=data_args, split_name="test")
+    #if training_args.do_predict:
+    predict_dataset = make_split(data_args=data_args, split_name="test")
 
     return train_dataset, eval_dataset, predict_dataset
 

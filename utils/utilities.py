@@ -3,6 +3,8 @@ from collections import defaultdict
 import json as js
 import os
 from pathlib import Path
+import datetime
+import re
 
 
 def remove_old_files(path_to_directory, days=-30):
@@ -269,5 +271,144 @@ def get_default_number_of_training_epochs(task, model_name, running_mode, langua
     output_dict["save_steps"] = save_steps
 
     return output_dict
+
+
+def generate_command(**data):
+    time_now = datetime.datetime.now().isoformat()
+
+    if data["hierarchical"] is None:
+        data["hierarchical"] = get_hierarchical(data["task"])
+
+    command_template_general = 'python3 ./experiments/{CODE} ' \
+                               '--model_name_or_path {MODEL_NAME} ' \
+                               '--log_directory {LOG_DIRECTORY} ' \
+                               '--do_train ' \
+                               '--do_eval ' \
+                               '--do_predict ' \
+                               '--overwrite_output_dir ' \
+                               '--load_best_model_at_end ' \
+                               '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
+                               '--greater_is_better {GREATER_IS_BETTER} ' \
+                               '--evaluation_strategy {EVALUATION_STRATEGY} ' \
+                               '--logging_strategy {LOGGING_STRATEGY} ' \
+                               '--save_strategy {SAVE_STRATEGY} ' \
+                               '--save_total_limit 6 ' \
+                               '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
+                               '--learning_rate {LEARNING_RATE} ' \
+                               '--per_device_train_batch_size {BATCH_SIZE} ' \
+                               '--per_device_eval_batch_size {BATCH_SIZE} ' \
+                               '--seed {SEED} ' \
+                               '--gradient_accumulation_steps {ACCUMULATION_STEPS} ' \
+                               '--eval_accumulation_steps {ACCUMULATION_STEPS} ' \
+                               '--running_mode {RUNNING_MODE} ' \
+                               '--download_mode {DOWNLOAD_MODE} ' \
+                               '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                               '--hierarchical {HIERARCHICAL} ' \
+                               '--revision {REVISION} ' \
+                               '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
+                               '--text {TEXT} ' \
+                               '--title {TITLE} '
+
+    command_template_for_hyperparameter_search = 'python3 ./experiments/{CODE} ' \
+                                                 '--model_name_or_path {MODEL_NAME} ' \
+                                                 '--log_directory {LOG_DIRECTORY} ' \
+                                                 '--overwrite_output_dir ' \
+                                                 '--seed {SEED} ' \
+                                                 '--running_mode {RUNNING_MODE} ' \
+                                                 '--download_mode {DOWNLOAD_MODE} ' \
+                                                 '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                                                 '--hierarchical {HIERARCHICAL} ' \
+                                                 '--revision {REVISION} ' \
+                                                 '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
+                                                 '--text {TEXT} ' \
+                                                 '--title {TITLE} '
+
+    if "do_hyperparameter_search" in data.keys() and data["do_hyperparameter_search"] == True:
+        command_template = command_template_for_hyperparameter_search
+        command_template += ' --do_hyperparameter_search'
+    else:
+        command_template = command_template_general
+
+    if data["dataset_cache_dir"] is not None:
+        command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+
+    if data["language"] is not None:
+        command_template = command_template + ' --language {LANGUAGE} '
+        command_template = command_template + '--output_dir {LOG_DIRECTORY}/{TASK}/{' \
+                                              'MODEL_NAME}/results_after_training_only_on_language_with_id__{' \
+                                              'LANGUAGE}/seed_{SEED}'
+    else:
+        command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
+
+    command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
+    run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search("\d", str(data["gpu_number"])))
+    if run_on_cpu:
+        # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
+        data["gpu_number"] = ""
+    else:  # only when we have a GPU, we can run fp16 training
+        if data["model_name"] == "microsoft/mdeberta-v3-base":
+            if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
+                command_template += ' --bf16 --bf16_full_eval'
+        else:
+            # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+            # BUT, if the environment is set up correctly, also fp16_full_eval should work
+            if str(data[
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
+                if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
+                    command_template += ' --fp16 --fp16_full_eval'
+                else:
+                    command_template += ' --fp16 '
+            else:
+                command_template += ' --fp16 --fp16_full_eval'
+
+    if "do_hyperparameter_search" in data.keys():
+        if not data["do_hyperparameter_search"]:  # For hyperparameter search we do not need this
+            if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
+                command_template += ' --logging_steps ' + str(data["logging_steps"]) + ' '
+            if 'eval_steps' in data.keys() and data['eval_steps'] is not None:
+                command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
+            if 'save_steps' in data.keys() and data['save_steps'] is not None:
+                command_template += ' --save_steps ' + str(data["save_steps"]) + ' '
+
+                # mdeberta does not work with fp16 because it was trained with bf16
+                # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
+                # For some reason microsoft/mdeberta-v3-base token classification returns eval_loss == NaN when using fp16
+
+    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
+                                            MODEL_NAME=data["model_name"],
+                                            LOWER_CASE=data["lower_case"],
+                                            TASK=data["task"], SEED=data["seed"],
+                                            NUM_TRAIN_EPOCHS=data["num_train_epochs"],
+                                            BATCH_SIZE=data["batch_size"],
+                                            ACCUMULATION_STEPS=data["accumulation_steps"],
+                                            LANGUAGE=data["language"],
+                                            RUNNING_MODE=data["running_mode"],
+                                            LEARNING_RATE=data["learning_rate"],
+                                            CODE=data["code"],
+                                            METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
+                                            GREATER_IS_BETTER=data["greater_is_better"],
+                                            DOWNLOAD_MODE=data["download_mode"],
+                                            LOG_DIRECTORY=data["log_directory"],
+                                            PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
+                                            DATASET_CACHE_DIR=data["dataset_cache_dir"],
+                                            HIERARCHICAL=data["hierarchical"],
+                                            EVALUATION_STRATEGY=data["evaluation_strategy"],
+                                            LOGGING_STRATEGY=data["logging_strategy"],
+                                            SAVE_STRATEGY=data["save_strategy"],
+                                            REVISION=data["revision"],
+                                            AFFAIR_TEXT_SCOPE=data["affair_text_scope"],
+                                            TEXT=data["text"],
+                                            TITLE=data["title"]
+                                            )
+
+
+    file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
+        data["seed"]) + "_" + str(data["model_name"]).replace('/', '_') + "_" + time_now + ".sh"
+
+    with open(file_name, "w") as f:
+        print(final_command, file=f)
+
+    return file_name
 
 # Get the evaluation_strategy, logging_strategy, save_strategy, eval_steps, logging_steps

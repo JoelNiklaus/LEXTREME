@@ -8,9 +8,8 @@ import os
 import shutil
 import sys
 from dataclasses import replace
-import pandas as pd
 import transformers
-import pandas as pd
+import wandb
 import json as js
 from datasets import disable_caching
 from datasets import utils
@@ -21,14 +20,20 @@ from transformers import (
     default_data_collator,
     set_seed,
     EarlyStoppingCallback,
-    IntervalStrategy
+    IntervalStrategy,
+    AutoConfig
 )
 from transformers.trainer_utils import get_last_checkpoint
 
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, \
     generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
-    get_label_list_from_mltc_tasks, model_is_multilingual, make_predictions_multi_label_politmonitor
+    get_label_list_from_mltc_tasks, model_is_multilingual, make_predictions_multi_label_politmonitor, \
+    return_language_prefix
+
+from models.hierbert import (build_hierarchical_model,
+                             get_model_class_for_sequence_classification)
+
 from trainer import MultilabelTrainer
 
 # Import the path to the training data handler for politmonitor
@@ -72,7 +77,8 @@ def main():
     if data_args.disable_caching:
         disable_caching()
 
-    wandb = config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
+    if not model_args.do_hyperparameter_search:
+        config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
@@ -176,20 +182,20 @@ def main():
             label2id[l] = n
             id2label[n] = l
 
-    # Logging the number of train, eval and test examples
-    wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0],
-               "predict_samples": predict_dataset.shape[0]})
-
-    for lang in ["de", "fr", "it"]:
-        wandb.log({lang + "_train_samples": train_dataset.filter(lambda x: x['language'] == lang).shape[0]})
-        wandb.log({lang + "_eval_samples": eval_dataset.filter(lambda x: x['language'] == lang).shape[0]})
-        wandb.log({lang + "_predict_samples": predict_dataset.filter(lambda x: x['language'] == lang).shape[0]})
-
     model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
                                                                                    data_args=data_args,
                                                                                    num_labels=num_labels)
 
-    if training_args.do_train:
+    if not model_args.do_hyperparameter_search:
+        # Logging the number of train, eval and test examples
+        wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0],
+                   "predict_samples": predict_dataset.shape[0]})
+        for lang in ["de", "fr", "it"]:
+            wandb.log({lang + "_train_samples": train_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+            wandb.log({lang + "_eval_samples": eval_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+            wandb.log({lang + "_predict_samples": predict_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+
+    if training_args.do_train or model_args.do_hyperparameter_search:
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
@@ -200,7 +206,7 @@ def main():
                 desc="Running tokenizer on train dataset",
             )
 
-    if training_args.do_eval:
+    if training_args.do_eval or model_args.do_hyperparameter_search:
         if data_args.max_eval_samples is not None:
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
@@ -211,7 +217,7 @@ def main():
                 desc="Running tokenizer on validation dataset",
             )
 
-    if training_args.do_predict:
+    if training_args.do_predict or model_args.do_hyperparameter_search:
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
@@ -230,73 +236,143 @@ def main():
     else:
         data_collator = None
 
-    # Initialize our Trainer
-    training_args.metric_for_best_model = "eval_loss"
-    training_args.evaluation_strategy = IntervalStrategy.EPOCH
-    training_args.logging_strategy = IntervalStrategy.EPOCH
+    # Training
+    if model_args.do_hyperparameter_search:
 
-    trainer = MultilabelTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics_multi_label,
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
-    )
+        sweep_config = {
+            'method': 'grid'
+        }
 
-    if training_args.do_train:
-        checkpoint = None
-        if training_args.resume_from_checkpoint is not None:
-            checkpoint = training_args.resume_from_checkpoint
-        elif last_checkpoint is not None:
-            checkpoint = last_checkpoint
-        train_result = trainer.train()
-        metrics = train_result.metrics
-        max_train_samples = (
-            data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+        with open('utils/hyperparameter_search_config.json', 'r') as f:
+            parameters_dict = js.load(f)
+
+        sweep_config['parameters'] = parameters_dict
+
+        # project_name = data_args.log_directory.split('/')[-1]
+        project_name = data_args.finetuning_task + '_hyperparameter_search'
+        sweep_id = wandb.sweep(sweep_config, project=project_name)
+
+        def model_init_for_SequenceClassification():
+
+            config = AutoConfig.from_pretrained(
+                model_args.model_name_or_path,
+                num_labels=num_labels,
+                finetuning_task=return_language_prefix(data_args.language,
+                                                       data_args.finetuning_task) + '_' + data_args.finetuning_task,
+                use_auth_token=True if model_args.use_auth_token else None,
+                revision=model_args.revision
+            )
+
+            model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
+
+            if model_args.hierarchical:
+                model = model_class.from_pretrained(
+                    model_args.model_name_or_path,
+                    config=config,
+                    use_auth_token=True if model_args.use_auth_token else None,
+                    revision=model_args.revision
+                )
+                return build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
+            else:
+                return model_class.from_pretrained(
+                    model_args.model_name_or_path,
+                    config=config,
+                    use_auth_token=True if model_args.use_auth_token else None,
+                    revision=model_args.revision
+                )
+
+        def train(config=None):
+
+            with wandb.init(config=config, dir=data_args.log_directory):
+                # set sweep configuration
+                config = wandb.config
+
+                training_args.report_to = ['wandb']
+
+                trainer = MultilabelTrainer(
+                    model_init=model_init_for_SequenceClassification,
+                    args=training_args,
+                    train_dataset=train_dataset,
+                    eval_dataset=eval_dataset,
+                    compute_metrics=compute_metrics_multi_label,
+                    tokenizer=tokenizer,
+                    data_collator=data_collator
+                )
+
+            trainer.train()
+
+        wandb.agent(sweep_id, train, count=20)
+
+    elif not model_args.do_hyperparameter_search:
+        # Initialize our Trainer
+        training_args.metric_for_best_model = "eval_loss"
+        training_args.evaluation_strategy = IntervalStrategy.EPOCH
+        training_args.logging_strategy = IntervalStrategy.EPOCH
+
+        trainer = MultilabelTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset if training_args.do_train else None,
+            eval_dataset=eval_dataset if training_args.do_eval else None,
+            compute_metrics=compute_metrics_multi_label,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
         )
-        metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+        if training_args.do_train:
+            checkpoint = None
+            if training_args.resume_from_checkpoint is not None:
+                checkpoint = training_args.resume_from_checkpoint
+            elif last_checkpoint is not None:
+                checkpoint = last_checkpoint
+            train_result = trainer.train()
+            metrics = train_result.metrics
+            max_train_samples = (
+                data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+            )
+            metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-        trainer.log_metrics("train", metrics)
-        trainer.save_metrics("train", metrics)
-        trainer.save_state()
+            trainer.save_model()  # Saves the tokenizer too for easy upload
 
-    # Evaluation
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate(eval_dataset=eval_dataset)
+            trainer.log_metrics("train", metrics)
+            trainer.save_metrics("train", metrics)
+            trainer.save_state()
 
-        max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_dataset)
-        metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
+        # Evaluation
+        if training_args.do_eval:
+            logger.info("*** Evaluate ***")
+            metrics = trainer.evaluate(eval_dataset=eval_dataset)
 
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+            max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
+                eval_dataset)
+            metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
-    # Prediction
-    if training_args.do_predict:
-        logger.info("*** Predict ***")
+            trainer.log_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)
 
-        langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
-        langs = sorted(list(set(langs)))
+        # Prediction
+        if training_args.do_predict:
+            logger.info("*** Predict ***")
 
-        if data_args.finetuning_task != 'politmonitor':
-            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
-                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
+            langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+            langs = sorted(list(set(langs)))
 
-        else:
-            make_predictions_multi_label_politmonitor(trainer=trainer, data_args=data_args,
-                                                      predict_dataset=predict_dataset,
-                                                      id2label=id2label, training_args=training_args,
-                                                      list_of_languages=langs)
+            if data_args.finetuning_task != 'politmonitor':
+                make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                             id2label=id2label, training_args=training_args, list_of_languages=langs)
 
-    # Clean up checkpoints
-    checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
-    for checkpoint in checkpoints:
-        shutil.rmtree(checkpoint)
+            else:
+                make_predictions_multi_label_politmonitor(trainer=trainer, data_args=data_args,
+                                                          predict_dataset=predict_dataset,
+                                                          id2label=id2label, training_args=training_args,
+                                                          list_of_languages=langs)
+
+        # Clean up checkpoints
+        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if
+                       '/checkpoint' in filepath]
+        for checkpoint in checkpoints:
+            shutil.rmtree(checkpoint)
 
 
 if __name__ == "__main__":
