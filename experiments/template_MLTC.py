@@ -240,7 +240,7 @@ def main():
     if model_args.do_hyperparameter_search:
 
         sweep_config = {
-            'method': 'grid'
+            'method': 'random'
         }
 
         with open('utils/hyperparameter_search_config.json', 'r') as f:

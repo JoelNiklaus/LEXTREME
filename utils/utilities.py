@@ -306,24 +306,19 @@ def generate_command(**data):
                                '--hierarchical {HIERARCHICAL} ' \
                                '--revision {REVISION} ' \
                                '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
-                               '--text {TEXT} ' \
-                               '--title {TITLE} '
+
 
     command_template_for_hyperparameter_search = 'python3 ./experiments/{CODE} ' \
                                                  '--model_name_or_path {MODEL_NAME} ' \
                                                  '--log_directory {LOG_DIRECTORY} ' \
-                                                 '--overwrite_output_dir ' \
-                                                 '--seed {SEED} ' \
                                                  '--running_mode {RUNNING_MODE} ' \
                                                  '--download_mode {DOWNLOAD_MODE} ' \
                                                  '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
                                                  '--hierarchical {HIERARCHICAL} ' \
                                                  '--revision {REVISION} ' \
-                                                 '--affair_text_scope {AFFAIR_TEXT_SCOPE} ' \
-                                                 '--text {TEXT} ' \
-                                                 '--title {TITLE} '
+                                                 '--affair_text_scope {AFFAIR_TEXT_SCOPE} '
 
-    if "do_hyperparameter_search" in data.keys() and data["do_hyperparameter_search"] == True:
+    if "do_hyperparameter_search" in data.keys() and data["do_hyperparameter_search"]:
         command_template = command_template_for_hyperparameter_search
         command_template += ' --do_hyperparameter_search'
     else:
@@ -397,11 +392,8 @@ def generate_command(**data):
                                             LOGGING_STRATEGY=data["logging_strategy"],
                                             SAVE_STRATEGY=data["save_strategy"],
                                             REVISION=data["revision"],
-                                            AFFAIR_TEXT_SCOPE=data["affair_text_scope"],
-                                            TEXT=data["text"],
-                                            TITLE=data["title"]
+                                            AFFAIR_TEXT_SCOPE=data["affair_text_scope"]
                                             )
-
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
         data["seed"]) + "_" + str(data["model_name"]).replace('/', '_') + "_" + time_now + ".sh"

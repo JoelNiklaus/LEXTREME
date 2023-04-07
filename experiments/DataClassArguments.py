@@ -203,9 +203,9 @@ class ModelArguments:
         }
     )
     do_hyperparameter_search: bool = field(
-        default=True,
+        default=None,
         metadata={
-            "help": "Specify if you want to apply hyperparameter tuning with ray."
+            "help": "Specify if you want to apply hyperparameter search."
         },
     )
 

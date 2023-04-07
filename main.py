@@ -56,8 +56,6 @@ def run_experiment(
         gpu_memory,
         gpu_number,
         hierarchical,
-        text,
-        title,
         language_model_type,
         learning_rate,
         list_of_languages,
@@ -71,6 +69,7 @@ def run_experiment(
         save_strategy,
         save_steps,
         task,
+        do_hyperparameter_search,
         log_directory=None,
         num_train_epochs=None
 ):
@@ -225,8 +224,6 @@ def run_experiment(
                 gpu_number=gpu_id,
                 greater_is_better=greater_is_better,
                 hierarchical=hierarchical,
-                text=text,
-                title=title,
                 language=lang,
                 learning_rate=learning_rate,
                 logging_strategy=logging_strategy,
@@ -242,7 +239,8 @@ def run_experiment(
                 save_strategy=save_strategy,
                 save_steps=save_steps,
                 seed=seed,
-                task=task
+                task=task,
+                do_hyperparameter_search=do_hyperparameter_search
             )
 
             if script_new is not None:
@@ -279,7 +277,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-ats', '--affair_text_scope', help="Specify which kanton you would like to include in the dataset.", default='zh,ch')
+    parser.add_argument('-ats', '--affair_text_scope',
+                        help="Specify which kanton you would like to include in the dataset.", default='zh,ch')
     parser.add_argument('-as', '--accumulation_steps', help='Define the number of accumulation_steps.', default=None)
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-es', '--evaluation_strategy',
@@ -293,16 +292,6 @@ if __name__ == '__main__':
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
                         default=None)
-    parser.add_argument('-text', '--text',
-                        help="Specify if you want to include the text in the training.",
-                        default=False, 
-                        action="store_true"
-                        )
-    parser.add_argument('-title', '--title',
-                        help="Specify if you want to include the title in the training.",
-                        default=False, 
-                        action="store_true"
-                        )
     parser.add_argument('-ls', '--logging_strategy',
                         help="The logging strategy to adopt during training. Possible values are: no: No logging is "
                              "done during training ; epoch: Logging is done at the end of each epoch; steps: Logging "
@@ -364,6 +353,10 @@ if __name__ == '__main__':
     parser.add_argument('-sst', '--save_steps',
                         help='Number of updates steps before two checkpoint saves if save_strategy="steps".',
                         default=None)
+    parser.add_argument('-dhps', '--do_hyperparameter_search',
+                        help="Specify if you want to apply hyperparameter search.",
+                        default=None,
+                        type=bool)
 
     args = parser.parse_args()
 
@@ -388,8 +381,6 @@ if __name__ == '__main__':
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
-        text=args.text,
-        title=args.title,
         list_of_languages=args.list_of_languages,
         logging_strategy=args.logging_strategy,
         logging_steps=args.logging_steps,
@@ -404,5 +395,6 @@ if __name__ == '__main__':
         running_mode=args.running_mode,
         save_strategy=args.save_strategy,
         save_steps=args.save_steps,
-        task=args.task
+        task=args.task,
+        do_hyperparameter_search=args.do_hyperparameter_search
     )
