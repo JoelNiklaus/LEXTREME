@@ -759,7 +759,7 @@
     "swiss_law_area_prediction_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 16,
+        "max_segments": 32,
         "max_seg_length": 128,
         "add_oversampling": true
       },
@@ -770,7 +770,7 @@
     "swiss_law_area_prediction_public_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 16,
+        "max_segments": 32,
         "max_seg_length": 128,
         "add_oversampling": true
       },
@@ -781,7 +781,7 @@
     "swiss_law_area_prediction_civil_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 16,
+        "max_segments": 32,
         "max_seg_length": 128,
         "add_oversampling": true
       },
@@ -792,7 +792,7 @@
     "swiss_law_area_prediction_criminal_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 16,
+        "max_segments": 32,
         "max_seg_length": 128,
         "add_oversampling": true
       },
@@ -814,7 +814,7 @@
     "swiss_judgment_prediction_xl_considerations":  {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 16,
+        "max_segments": 32,
         "max_seg_length": 128,
         "add_oversampling": true
       },

@@ -1,1 +1,18 @@
-{ "finetuning_task": [] }
+{
+  "finetuning_task": [
+    "swiss_criticality_prediction_bge_considerations",
+    "swiss_criticality_prediction_bge_facts",
+    "swiss_criticality_prediction_citation_considerations",
+    "swiss_criticality_prediction_citation_facts",
+    "swiss_judgment_prediction_xl_considerations",
+    "swiss_judgment_prediction_xl_facts",
+    "swiss_law_area_prediction_criminal_considerations",
+    "swiss_law_area_prediction_criminal_facts",
+    "swiss_law_area_prediction_civil_considerations",
+    "swiss_law_area_prediction_civil_facts",
+    "swiss_law_area_prediction_public_considerations",
+    "swiss_law_area_prediction_public_facts",
+    "swiss_law_area_prediction_considerations",
+    "swiss_law_area_prediction_facts"
+  ]
+}
