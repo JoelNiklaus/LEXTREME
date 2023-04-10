@@ -2,6 +2,11 @@
 # coding: utf-8
 
 
+sys.path.append('../code/')
+
+
+
+
 from utils import LabelHandler
 from training_data_handler import TrainingDataHandler
 import sys
@@ -14,7 +19,6 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-sys.path.append('../code/')
 
 
 tdh = TrainingDataHandler()
