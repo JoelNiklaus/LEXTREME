@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from statistics import mean, stdev
+from statistics import mean
 import argparse
 import logging
 import os
@@ -13,24 +13,39 @@ from copy import deepcopy
 import wandb
 from traceback import print_exc
 from utilities import get_meta_infos
+import json as js
 
-joels_models = pd.read_excel('joels_models.xlsx')
+joels_models = pd.read_excel(os.path.join(
+    os.path.dirname(__file__), 'joels_models.xlsx'))
 models_currently_to_be_ignored = joels_models[
     joels_models.need_to_be_run == "no"]._name_or_path.tolist()
 
+
 def insert_revision(_name_or_path):
     if _name_or_path in joels_models._name_or_path.tolist():
-        return joels_models[joels_models._name_or_path==_name_or_path].revision.tolist()[0]
+        return joels_models[joels_models._name_or_path == _name_or_path].revision.tolist()[0]
     else:
         return 'main'
 
+
 meta_infos = get_meta_infos()
+
+
+def insert_responsibilities(df):
+    respons = pd.read_excel(os.path.join(
+        os.path.dirname(__file__), 'run_responsibility.xlsx'))
+    respons = respons[['finetuning_task',
+                       '_name_or_path', 'responsible', 'gpu']]
+    df_merged = pd.merge(df, respons, how='left', right_on=[
+        'finetuning_task', '_name_or_path'], left_on=['finetuning_task', '_name_or_path'])
+    return df_merged
 
 
 class ResultAggregator:
     meta_infos = meta_infos
 
-    def __init__(self, wandb_api_key=None, path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
+    def __init__(self, wandb_api_key=None, project_name=None,
+                 path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
                  split="predict", score='macro-f1'):
 
         # Create the result directory if not existent
@@ -77,17 +92,15 @@ class ResultAggregator:
 
         self._path = name_of_log_file
         if path_to_csv_export is None:
-            results = self.get_wandb_overview()
+            results = self.get_wandb_overview(project_name)
             results.to_csv(
                 "current_wandb_results_unprocessed.csv", index=False)
         else:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull() == False]
-    
+
         self.results = results
-
-
 
         available_predict_scores = [col for col in self.results if bool(
             re.search(r'^\w+_predict/_' + self.score, col))]
@@ -118,7 +131,8 @@ class ResultAggregator:
 
         languages = {'hu', 'en', 'sv', 'da', 'nl', 'pl', 'de', 'mt', 'it', 'cs', 'ro', 'lt',
                      'sk', 'hr', 'fi', 'nb', 'lv', 'el', 'bg', 'pt', 'et', 'sl', 'fr', 'es', 'ga'}
-        scores = ['macro-f1', 'micro-f1', 'weighted-f1', 'macro-precision', 'micro-recall', 'weighted-recall',
+        scores = ['macro-f1', 'micro-f1', 'weighted-f1', 'macro-precision', 'macro-recall', 'micro-recall',
+                  'weighted-recall',
                   'macro-precision', 'micro-precision', 'weighted-precision', 'accuracy_normalized']
         splits = ['eval/', 'predict/_']
 
@@ -230,8 +244,9 @@ class ResultAggregator:
                 for i in indices:
                     dataframe.at[i, column_name] = dataframe.at[i, score]
 
-        monolingual_models = [_model_name for _model_name,
-        _language in self.meta_infos['model_language_lookup_table'].items() if _language != "all"]
+        monolingual_models = [_model_name for _model_name, _language in
+                              self.meta_infos['model_language_lookup_table'].items()
+                              if _language != "all"]
 
         for config in multilingual_configs:
             languages = self.meta_infos['task_language_mapping'][config]
@@ -300,7 +315,8 @@ class ResultAggregator:
 
     def edit_result_dataframe(self, results, name_editing=True):
         results = self.edit_column_names_in_df(results)
-        results = results[results._name_or_path.str.contains('BSC-TeMU/roberta-base-bne')==False] # This model was removed later because it was not available on huggingface in a later stage during the project
+        results = results[results._name_or_path.str.contains(
+            'BSC-TeMU/roberta-base-bne') == False]  # This model was removed later because it was not available on huggingface in a later stage during the project
         # all_finetuning_tasks = results.finetuning_task
         if name_editing == True:
             results['language'] = results.finetuning_task.apply(
@@ -334,7 +350,12 @@ class ResultAggregator:
         elif 'state' in results.columns:
             results = results[results.state == "finished"]
 
-        results = results.drop_duplicates(["seed", "finetuning_task", "_name_or_path", "language"])
+        results = results.drop_duplicates(
+            ["seed", "finetuning_task", "_name_or_path", "language"])
+
+        # TODO: Remove this constraint in the future
+        #results = results[results._name_or_path.str.contains('joelito') == False]
+        results = results[results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
 
         return results
 
@@ -351,7 +372,7 @@ class ResultAggregator:
         self.available_predict_scores = deepcopy(
             self.available_predict_scores_original)
 
-    def check_seed_per_task(self):
+    def check_seed_per_task(self, tasks_to_filter=[]):
 
         report = list()
 
@@ -403,14 +424,23 @@ class ResultAggregator:
                     report.append(item)
 
         report_df = pd.DataFrame(report)
-        report_df['missing_seeds'] = report_df.missing_seeds.apply(lambda x: ','.join(x))
+        report_df['missing_seeds'] = report_df.missing_seeds.apply(
+            lambda x: ','.join(x))
 
         report_df = report_df.drop_duplicates()
 
         # TODO Remove that later
-        report_df = report_df[report_df._name_or_path.isin(models_currently_to_be_ignored) == False]
-        report_df = report_df[report_df.finetuning_task != "turkish_constitutional_court_decisions_judgment"]
+        report_df = report_df[report_df._name_or_path.isin(
+            models_currently_to_be_ignored) == False]
+        report_df = report_df[report_df.finetuning_task !=
+                              "turkish_constitutional_court_decisions_judgment"]
         report_df['revision'] = report_df._name_or_path.apply(insert_revision)
+
+        report_df = insert_responsibilities(report_df)
+
+        if tasks_to_filter:
+
+            report_df = report_df[report_df.finetuning_task.isin(tasks_to_filter)]
 
         return report_df
 
@@ -422,7 +452,8 @@ class ResultAggregator:
                                 seed_check["_name_or_path"] + "_" + seed_check["language"]
 
         self.results["look_up"] = self.results["finetuning_task"] + \
-                                  "_" + self.results["_name_or_path"] + "_" + self.results["language"]
+                                  "_" + self.results["_name_or_path"] + \
+                                  "_" + self.results["language"]
 
         self.results['completed_task'] = np.where(
             self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
@@ -481,12 +512,12 @@ class ResultAggregator:
 
         return df_pivot
 
-    def create_report(self, only_completed_tasks=None):
+    def create_report(self, only_completed_tasks=None, tasks_to_filter=[]):
 
         if only_completed_tasks is None:
             only_completed_tasks = self.only_completed_tasks
 
-        seed_check = self.check_seed_per_task()
+        seed_check = self.check_seed_per_task(tasks_to_filter=tasks_to_filter)
         self.seed_check = seed_check
         macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1",
                                                                      only_completed_tasks=only_completed_tasks)
@@ -563,15 +594,16 @@ class ResultAggregator:
             logging.info('It seems you have duplicate seeds task ' + finetuning_task +
                          ' with the model ' + _name_or_path + " has no meaningful results.")
             return ""  # There is nothing to be calculated
-        # else:
-        mean_value = results_filtered[score].mean()
+        else:
 
-        mean_value = self.convert_numpy_float_to_python_float(mean_value)
+            mean_value = pd.to_numeric(results_filtered[score]).mean()
 
-        if mean_value in ["", np.nan]:
-            print('There is an error for ',
-                  finetuning_task, _name_or_path, score)
-            print(results_filtered[score].tolist())
+            mean_value = self.convert_numpy_float_to_python_float(mean_value)
+
+            if mean_value in ["", np.nan]:
+                print('There is an error for ',
+                      finetuning_task, _name_or_path, score)
+                print(results_filtered[score].tolist())
 
         return mean_value
 
@@ -619,8 +651,7 @@ class ResultAggregator:
 
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(
                 all_mean_macro_f1_scores_cleaned)
-            dataframe.at[_name_or_path,
-            column_name] = all_mean_macro_f1_scores_mean
+            dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
         first_column = [column_name]
@@ -643,8 +674,7 @@ class ResultAggregator:
                 for finetuning_task in self.results.finetuning_task.unique():
                     mean_macro_f1_score = self.get_average_score(
                         finetuning_task, _name_or_path)
-                    overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         elif average_over_language == True:
             for _name_or_path in self.results._name_or_path.unique():
@@ -668,6 +698,7 @@ class ResultAggregator:
                             if language in self.meta_infos["task_language_mapping"][finetuning_task]:
                                 if self.meta_infos["model_language_lookup_table"][_name_or_path] == language or \
                                         self.meta_infos["model_language_lookup_table"][_name_or_path] == 'all':
+                                    # print(finetuning_task, _name_or_path, aps)
                                     predict_language_mean = self.get_average_score(
                                         finetuning_task, _name_or_path, aps)
                                     # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
@@ -702,8 +733,7 @@ class ResultAggregator:
                         else:
                             mean_macro_f1_score = ""
 
-                    overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
@@ -747,33 +777,35 @@ class ResultAggregator:
 
         for _name_or_path in self.results._name_or_path.unique():
             for dataset, configs in self.meta_infos["dataset_to_config"].items():
-                if task_constraint is not None:
-                    configs = [
-                        conf for conf in configs if conf in task_constraint]
+                # TODO: Remove this constraint in the future
+                if dataset != "turkish_constitutional_court_decisions_judgment":
+                    if task_constraint is not None:
+                        configs = [
+                            conf for conf in configs if conf in task_constraint]
 
-                dataset_mean = list()
-                for conf in configs:
-                    config_mean = self.config_aggregated_score.at[_name_or_path, conf]
-                    if config_mean == "":  # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
-                        logging.info(
-                            "There is no config mean for config " + conf + " with language model " + _name_or_path)
-                    elif type(config_mean) == float:
-                        dataset_mean.append(config_mean)
+                    dataset_mean = list()
+                    for conf in configs:
+                        config_mean = self.config_aggregated_score.at[_name_or_path, conf]
+                        if config_mean == "":  # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
+                            logging.info(
+                                "There is no config mean for config " + conf + " with language model " + _name_or_path)
+                        elif type(config_mean) == float:
+                            dataset_mean.append(config_mean)
+                        else:
+                            logging.error(
+                                "Processed interrupted due to wrong mean value that is not a float. The mean value is: " + str(
+                                    config_mean))
+                            break
+                    if len(dataset_mean) > 0:
+                        if len(dataset_mean) != len(configs):
+                            logging.error(
+                                'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
+                        dataset_mean = self.get_mean_from_list_of_values(
+                            dataset_mean)
                     else:
-                        logging.error(
-                            "Processed interrupted due to wrong mean value that is not a float. The mean value is: " + str(
-                                config_mean))
-                        break
-                if len(dataset_mean) > 0:
-                    if len(dataset_mean) != len(configs):
-                        logging.error(
-                            'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
-                    dataset_mean = self.get_mean_from_list_of_values(
-                        dataset_mean)
-                else:
-                    dataset_mean = ''
-                self.dataset_aggregated_score.at[_name_or_path,
-                dataset] = dataset_mean
+                        dataset_mean = ''
+                    self.dataset_aggregated_score.at[_name_or_path,
+                    dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -815,6 +847,7 @@ class ResultAggregator:
         language_model_config_score_dict = defaultdict(dict)
         for ft in tasks_relevant_for_language:
             for lm in languge_models_relevant_for_language:
+                # print(ft, lm, score_type)
                 result = self.get_average_score(ft, lm, score_type)
                 if result not in ["", np.nan]:
                     dataset_for_finetuning_task = self.meta_infos['config_to_dataset'][ft]
@@ -854,7 +887,9 @@ class ResultAggregator:
 
         for languages in self.meta_infos['task_language_mapping'].values():
             for l in languages:
-                all_languages.add(l)
+                # TODO: Remove this constraint in the future
+                if l not in ['tr', 'nb']:
+                    all_languages.add(l)
 
         self.language_aggregated_score = self.create_template(all_languages)
 
@@ -863,8 +898,7 @@ class ResultAggregator:
             lookup_table = self.get_aggregated_score_for_language(
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
-                self.language_aggregated_score.at[language_model,
-                language] = score
+                self.language_aggregated_score.at[language_model, language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -881,17 +915,25 @@ if __name__ == "__main__":
 
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
+    parser.add_argument('-pn', '--project_name', help='Insert the wandb project name',
+                        default=None)
     parser.add_argument('-wak', '--wandb_api_key',
-                        help='To be able to fetch the right results, you can insert the wand api key. Alternatively, set the WANDB_API_KEY environment variable to your API key.',
+                        help='To be able to fetch the right results, you can insert the wand api key. '
+                             'Alternatively, set the WANDB_API_KEY environment variable to your API key.',
                         default=None)
 
     args = parser.parse_args()
 
-    ra = ResultAggregator(wandb_api_key=args.wandb_api_key, verbose_logging=False)
+    with open('tasks_for_report.json', 'r') as f:
+        tasks_for_report = js.load(f)
+
+    ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
+                        verbose_logging=False, only_completed_tasks=True)
+   # ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
 
     ra.get_info()
 
-    ra.create_report(only_completed_tasks=False)
+    ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
 
     # ra.get_dataset_aggregated_score()
 

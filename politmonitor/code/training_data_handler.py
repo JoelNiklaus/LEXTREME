@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 from datasets import Dataset, DatasetDict
+from sklearn.utils import shuffle
 
 
 def convert_to_string(item):
@@ -52,30 +53,30 @@ class TrainingDataHandler:
                           test_size=0.4,
                           running_mode="default"):
 
-        self.training_data_df = self.filter_training_data(language=language,
-                                                          affair_text_scope=affair_text_scope,
-                                                          affair_attachment_category=affair_attachment_category,
-                                                          same_items_for_each_language=same_items_for_each_language
-                                                          )
+        training_data_df = self.filter_training_data(language=language,
+                                                     affair_text_scope=affair_text_scope,
+                                                     affair_attachment_category=affair_attachment_category,
+                                                     same_items_for_each_language=same_items_for_each_language
+                                                     )
 
-        self.training_data_df = self.create_df_for_split(self.training_data_df)
+        training_data_df = self.create_df_for_split(training_data_df)
 
-        self.training_data_df = self.create_split(self.training_data_df, test_size=test_size)
+        training_data_df = self.create_split(training_data_df, test_size=test_size)
 
         if running_mode in {'experimental', 'debug'}:
             # We keep the all validation and test examples
-            indices_to_keep = self.training_data_df[
-                self.training_data_df.split.isin([])].index.tolist() #['validation', 'test']
+            indices_to_keep = training_data_df[
+                training_data_df.split.isin([])].index.tolist()  # ['validation', 'test']
             counter_dict = defaultdict(list)
             # We just filter the training examples
-            #for i, r in self.training_data_df[self.training_data_df.split.isin(['train'])].iterrows():
-            for i, r in self.training_data_df.iterrows():
-                language = self.training_data_df.at[i, 'language']
+            # for i, r in self.training_data_df[self.training_data_df.split.isin(['train'])].iterrows():
+            for i, r in training_data_df.iterrows():
+                language = training_data_df.at[i, 'language']
                 '''_key = self.training_data_df.at[i, 'one_hot_affair_topic_codes']
                 _key = [str(x) for x in _key]
                 _key = '_'.join(_key)'''
-                affair_topic_codes_as_labels = self.training_data_df.at[i, 'affair_topic_codes_as_labels']
-                affair_attachment_category = self.training_data_df.at[i, 'affair_attachment_category']
+                affair_topic_codes_as_labels = training_data_df.at[i, 'affair_topic_codes_as_labels']
+                affair_attachment_category = training_data_df.at[i, 'affair_attachment_category']
                 labels_for_checking = list(zip(affair_attachment_category, affair_topic_codes_as_labels))
                 labels_for_checking = ['_'.join(list(x)) for x in labels_for_checking]
                 for _key in labels_for_checking:
@@ -92,8 +93,12 @@ class TrainingDataHandler:
                             counter_dict[_key].append(i)
                             indices_to_keep.append(i)
 
-            self.training_data_df = self.training_data_df.iloc[indices_to_keep]
+            training_data_df = training_data_df.iloc[indices_to_keep]
 
+        # Shuffle the training data randomly
+        training_data_df = shuffle(training_data_df, random_state=42)
+
+        self.training_data_df = training_data_df
 
         self.training_data = self.convert_dataframe_to_dataset(self.training_data_df,
                                                                'affair_topic_codes_as_labels')
