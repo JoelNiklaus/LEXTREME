@@ -1,14 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
-sys.path.append('../code/')
-
-
-
-
-from utils import LabelHandler
-from training_data_handler import TrainingDataHandler
 import sys
 from transformers import pipeline
 from sklearn.metrics import f1_score
@@ -16,10 +8,15 @@ import pandas as pd
 import torch
 from datasets import load_dataset
 from tqdm import tqdm
+
+
+sys.path.append('../code/')
+
+from utils import LabelHandler
+from training_data_handler import TrainingDataHandler
+
+
 tqdm.pandas()
-
-
-
 
 tdh = TrainingDataHandler()
 lh = LabelHandler()
