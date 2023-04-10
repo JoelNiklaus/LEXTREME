@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+from utilities import get_meta_infos
 import json as js
 import os
 import sys
@@ -9,8 +10,6 @@ from typing import Optional, List
 
 path_to_nlp_scripts = os.path.join(os.path.dirname(__file__), '../utils/')
 sys.path.append(path_to_nlp_scripts)
-
-from utilities import get_meta_infos
 
 
 @dataclass
@@ -153,8 +152,10 @@ class DataTrainingArguments:
         },
     )
 
-    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+    server_ip: Optional[str] = field(
+        default=None, metadata={"help": "For distant debugging."})
+    server_port: Optional[str] = field(
+        default=None, metadata={"help": "For distant debugging."})
 
 
 @dataclass
@@ -177,15 +178,18 @@ class ModelArguments:
     )
     cache_dir: Optional[str] = field(
         default='./datasets_cache_dir',
-        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+        metadata={
+            "help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
         default=False,
-        metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
+        metadata={
+            "help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
         default=True,
-        metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
+        metadata={
+            "help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
     )
     use_auth_token: bool = field(
         default=False,
@@ -203,7 +207,7 @@ class ModelArguments:
         }
     )
     do_hyperparameter_search: bool = field(
-        default=None,
+        default=False,
         metadata={
             "help": "Specify if you want to apply hyperparameter search."
         },

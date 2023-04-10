@@ -2,6 +2,15 @@
 # coding=utf-8
 
 
+
+from trainer import MultilabelTrainer
+from models.hierbert import (build_hierarchical_model,
+                             get_model_class_for_sequence_classification)
+from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, \
+    generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
+    get_label_list_from_mltc_tasks, model_is_multilingual, make_predictions_multi_label_politmonitor, \
+    return_language_prefix
+from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 import glob
 import logging
 import os
@@ -25,17 +34,6 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint
 
-from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
-from helper import compute_metrics_multi_label, make_predictions_multi_label, config_wandb, \
-    generate_Model_Tokenizer_for_SequenceClassification, get_data, preprocess_function, \
-    get_label_list_from_mltc_tasks, model_is_multilingual, make_predictions_multi_label_politmonitor, \
-    return_language_prefix
-
-from models.hierbert import (build_hierarchical_model,
-                             get_model_class_for_sequence_classification)
-
-from trainer import MultilabelTrainer
-
 # Import the path to the training data handler for politmonitor
 code_path = os.path.join(os.path.dirname(__file__), '../politmonitor/code/')
 sys.path.append(code_path)
@@ -50,7 +48,8 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+    parser = HfArgumentParser(
+        (ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     default_values = get_default_values()
@@ -78,7 +77,8 @@ def main():
         disable_caching()
 
     if not model_args.do_hyperparameter_search:
-        config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
+        config_wandb(model_args=model_args, data_args=data_args,
+                     training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
@@ -86,7 +86,8 @@ def main():
         import ptvsd
 
         print("Waiting for debugger attach")
-        ptvsd.enable_attach(address=(data_args.server_ip, data_args.server_port), redirect_output=True)
+        ptvsd.enable_attach(address=(data_args.server_ip,
+                            data_args.server_port), redirect_output=True)
         ptvsd.wait_for_attach()
 
     # Fix boolean parameter
@@ -144,7 +145,8 @@ def main():
         tdh.get_training_data(language=data_args.language, affair_text_scope=data_args.affair_text_scope,
                               affair_attachment_category='all', running_mode=data_args.running_mode)
 
-        print(tdh.training_data_df[['title', 'language', 'split']].groupby(['language', 'split']).count())
+        print(tdh.training_data_df[['title', 'language', 'split']].groupby(
+            ['language', 'split']).count())
 
         ds = tdh.training_data
 
@@ -167,10 +169,12 @@ def main():
             id2label[n] = l
 
     else:
-        train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+        train_dataset, eval_dataset, predict_dataset = get_data(
+            training_args, data_args)
 
         # Labels
-        label_list = get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
+        label_list = get_label_list_from_mltc_tasks(
+            train_dataset, eval_dataset, predict_dataset)
 
         label_list = sorted(list(label_list))
         num_labels = len(label_list)
@@ -191,16 +195,21 @@ def main():
         wandb.log({"train_samples": train_dataset.shape[0], "eval_samples": eval_dataset.shape[0],
                    "predict_samples": predict_dataset.shape[0]})
         for lang in ["de", "fr", "it"]:
-            wandb.log({lang + "_train_samples": train_dataset.filter(lambda x: x['language'] == lang).shape[0]})
-            wandb.log({lang + "_eval_samples": eval_dataset.filter(lambda x: x['language'] == lang).shape[0]})
-            wandb.log({lang + "_predict_samples": predict_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+            wandb.log(
+                {lang + "_train_samples": train_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+            wandb.log(
+                {lang + "_eval_samples": eval_dataset.filter(lambda x: x['language'] == lang).shape[0]})
+            wandb.log(
+                {lang + "_predict_samples": predict_dataset.filter(lambda x: x['language'] == lang).shape[0]})
 
     if training_args.do_train or model_args.do_hyperparameter_search:
         if data_args.max_train_samples is not None:
-            train_dataset = train_dataset.select(range(data_args.max_train_samples))
+            train_dataset = train_dataset.select(
+                range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
+                lambda x: preprocess_function(
+                    x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
@@ -208,10 +217,12 @@ def main():
 
     if training_args.do_eval or model_args.do_hyperparameter_search:
         if data_args.max_eval_samples is not None:
-            eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
+            eval_dataset = eval_dataset.select(
+                range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
+                lambda x: preprocess_function(
+                    x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
@@ -219,10 +230,12 @@ def main():
 
     if training_args.do_predict or model_args.do_hyperparameter_search:
         if data_args.max_predict_samples is not None:
-            predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+            predict_dataset = predict_dataset.select(
+                range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                lambda x: preprocess_function(x, tokenizer, model_args, data_args, label2id=label2id),
+                lambda x: preprocess_function(
+                    x, tokenizer, model_args, data_args, label2id=label2id),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on prediction dataset",
@@ -232,7 +245,8 @@ def main():
     if data_args.pad_to_max_length:
         data_collator = default_data_collator
     elif training_args.fp16:
-        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8)
+        data_collator = DataCollatorWithPadding(
+            tokenizer, pad_to_multiple_of=8)
     else:
         data_collator = None
 
@@ -240,7 +254,11 @@ def main():
     if model_args.do_hyperparameter_search:
 
         sweep_config = {
-            'method': 'random'
+            'method': 'random',
+            'metric': {
+                'name': 'macro-f1',
+                'goal': 'maximize'
+            }
         }
 
         with open('utils/hyperparameter_search_config.json', 'r') as f:
@@ -263,7 +281,8 @@ def main():
                 revision=model_args.revision
             )
 
-            model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
+            model_class = get_model_class_for_sequence_classification(
+                config.model_type, model_args)
 
             if model_args.hierarchical:
                 model = model_class.from_pretrained(
@@ -272,14 +291,19 @@ def main():
                     use_auth_token=True if model_args.use_auth_token else None,
                     revision=model_args.revision
                 )
-                return build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
+                model = build_hierarchical_model(
+                    model, data_args.max_segments, data_args.max_seg_length)
+
             else:
-                return model_class.from_pretrained(
+                model = model_class.from_pretrained(
                     model_args.model_name_or_path,
                     config=config,
                     use_auth_token=True if model_args.use_auth_token else None,
                     revision=model_args.revision
                 )
+
+            model.cuda()
+            return model
 
         def train(config=None):
 
@@ -300,6 +324,16 @@ def main():
                 )
 
             trainer.train()
+
+            logger.info("*** Evaluate ***")
+            metrics = trainer.evaluate(eval_dataset=eval_dataset)
+
+            max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
+                eval_dataset)
+            metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
+
+            trainer.log_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)
 
         wandb.agent(sweep_id, train, count=20)
 
@@ -329,9 +363,11 @@ def main():
             train_result = trainer.train()
             metrics = train_result.metrics
             max_train_samples = (
-                data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+                data_args.max_train_samples if data_args.max_train_samples is not None else len(
+                    train_dataset)
             )
-            metrics["train_samples"] = min(max_train_samples, len(train_dataset))
+            metrics["train_samples"] = min(
+                max_train_samples, len(train_dataset))
 
             trainer.save_model()  # Saves the tokenizer too for easy upload
 
@@ -355,7 +391,8 @@ def main():
         if training_args.do_predict:
             logger.info("*** Predict ***")
 
-            langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+            langs = train_dataset['language'] + \
+                eval_dataset['language'] + predict_dataset['language']
             langs = sorted(list(set(langs)))
 
             if data_args.finetuning_task != 'politmonitor':
