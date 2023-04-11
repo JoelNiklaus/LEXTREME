@@ -23,7 +23,7 @@ def generate_commands(gn):
                       str(learning_rate) + '__batch_size_' + str(batch_size) + \
                       '__weight_decay_' + str(weight_decay)
         comm = 'CUDA_VISIBLE_DEVICES=' + gn + ' python3 ./experiments/template_MLTC.py --finetuning_task politmonitor --model_name_or_path xlm-roberta-base --log_directory hyperparameter_search_politmonitor --preprocessing_num_workers 1 --hierarchical False --revision main --affair_text_scope zh,ch  --output_dir hyperparameter_search_politmonitor/' + \
-               folder_name + ' --fp16 --fp16_full_eval --metric_for_best_model macro-f1 --greater_is_better true --do_train --do_eval --do_predict --num_train_epochs 20 --load_best_model_at_end --save_strategy epoch --logging_strategy epoch --evaluation_strategy epoch'
+               folder_name + ' --fp16 --fp16_full_eval --metric_for_best_model macro-f1 --greater_is_better true --do_train --do_eval --do_predict --num_train_epochs 20 --load_best_model_at_end --save_strategy epoch --logging_strategy epoch --evaluation_strategy epoch --per_device_train_batch_size '+str(batch_size) +' --per_device_eval_batch_size '+str(batch_size) +' --weight_decay '+str(weight_decay) + ' --learning_rate ' + str(learning_rate)
         commands.append(comm)
 
     return ' ; sleep 10 ; '.join(commands)
