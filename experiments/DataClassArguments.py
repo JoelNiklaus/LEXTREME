@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-from utilities import get_meta_infos
-import json as js
+
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional
 
 path_to_nlp_scripts = os.path.join(os.path.dirname(__file__), '../utils/')
 sys.path.append(path_to_nlp_scripts)
 
+from utilities import get_meta_infos
 
 @dataclass
 class DataTrainingArguments:
