@@ -332,30 +332,30 @@ def generate_command_for_experiments(**data):
         data["hierarchical"] = get_hierarchical(data["task"])
 
     command_template = 'python3 ./experiments/{CODE} ' \
-                       '--model_name_or_path {MODEL_NAME} ' \
-                       '--log_directory {LOG_DIRECTORY} ' \
-                       '--do_train ' \
                        '--do_eval ' \
                        '--do_predict ' \
-                       '--overwrite_output_dir ' \
-                       '--load_best_model_at_end ' \
-                       '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
+                       '--do_train ' \
+                       '--download_mode {DOWNLOAD_MODE} ' \
+                       '--eval_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--evaluation_strategy {EVALUATION_STRATEGY} ' \
+                       '--gradient_accumulation_steps {ACCUMULATION_STEPS} ' \
+                       '--hierarchical {HIERARCHICAL} ' \
+                       '--learning_rate {LEARNING_RATE} ' \
+                       '--load_best_model_at_end ' \
+                       '--log_directory {LOG_DIRECTORY} ' \
                        '--logging_strategy {LOGGING_STRATEGY} ' \
+                       '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
+                       '--model_name_or_path {MODEL_NAME} ' \
+                       '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
+                       '--overwrite_output_dir ' \
+                       '--per_device_eval_batch_size {BATCH_SIZE} ' \
+                       '--per_device_train_batch_size {BATCH_SIZE} ' \
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                       '--revision {REVISION} ' \
+                       '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
                        '--save_total_limit 6 ' \
-                       '--num_train_epochs {NUM_TRAIN_EPOCHS} ' \
-                       '--learning_rate {LEARNING_RATE} ' \
-                       '--per_device_train_batch_size {BATCH_SIZE} ' \
-                       '--per_device_eval_batch_size {BATCH_SIZE} ' \
-                       '--seed {SEED} ' \
-                       '--gradient_accumulation_steps {ACCUMULATION_STEPS} ' \
-                       '--eval_accumulation_steps {ACCUMULATION_STEPS} ' \
-                       '--running_mode {RUNNING_MODE} ' \
-                       '--download_mode {DOWNLOAD_MODE} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
-                       '--hierarchical {HIERARCHICAL} ' \
-                       '--revision {REVISION} '
+                       '--seed {SEED} '
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -446,23 +446,25 @@ def generate_command_for_hyperparameter_search(**data):
         data["hierarchical"] = get_hierarchical(data["task"])
 
     command_template = 'python3 ./experiments/{CODE} ' \
-                       '--model_name_or_path {MODEL_NAME} ' \
-                       '--log_directory {LOG_DIRECTORY} ' \
-                       '--do_train ' \
                        '--do_eval ' \
-                       '--do_predict ' \
-                       '--running_mode {RUNNING_MODE} ' \
-                       '--download_mode {DOWNLOAD_MODE} ' \
-                       '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
-                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
-                       '--hierarchical {HIERARCHICAL} ' \
-                       '--revision {REVISION} ' \
-                       '--overwrite_output_dir ' \
-                       '--evaluation_strategy {EVALUATION_STRATEGY} ' \
-                       '--logging_strategy {LOGGING_STRATEGY} ' \
-                       '--save_strategy {SAVE_STRATEGY} ' \
                        '--do_hyperparameter_search ' \
-                       '--output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME} '
+                       '--do_predict ' \
+                       '--do_train ' \
+                       '--download_mode {DOWNLOAD_MODE} ' \
+                       '--evaluation_strategy {EVALUATION_STRATEGY} ' \
+                       '--hierarchical {HIERARCHICAL} ' \
+                       '--learning_rate {LEARNING_RATE} ' \
+                       '--log_directory {LOG_DIRECTORY} ' \
+                       '--logging_strategy {LOGGING_STRATEGY} ' \
+                       '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
+                       '--model_name_or_path {MODEL_NAME} ' \
+                       '--output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME} ' \
+                       '--overwrite_output_dir ' \
+                       '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
+                       '--revision {REVISION} ' \
+                       '--running_mode {RUNNING_MODE} ' \
+                       '--save_strategy {SAVE_STRATEGY} ' \
+                       '--search_type_method {SEARCH_TYPE_METHOD} '
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -497,28 +499,29 @@ def generate_command_for_hyperparameter_search(**data):
             else:
                 command_template += ' --fp16 --fp16_full_eval'
 
-    final_command = command_template.format(GPU_NUMBER=data["gpu_number"],
-                                            MODEL_NAME=data["model_name"],
-                                            LOWER_CASE=data["lower_case"],
-                                            TASK=data["task"],
-                                            NUM_TRAIN_EPOCHS=data["num_train_epochs"],
+    final_command = command_template.format(ACCUMULATION_STEPS=data["accumulation_steps"],
                                             BATCH_SIZE=data["batch_size"],
-                                            ACCUMULATION_STEPS=data["accumulation_steps"],
-                                            LANGUAGE=data["language"],
-                                            RUNNING_MODE=data["running_mode"],
-                                            LEARNING_RATE=data["learning_rate"],
                                             CODE=data["code"],
-                                            METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
-                                            GREATER_IS_BETTER=data["greater_is_better"],
-                                            DOWNLOAD_MODE=data["download_mode"],
-                                            LOG_DIRECTORY=data["log_directory"],
-                                            PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
                                             DATASET_CACHE_DIR=data["dataset_cache_dir"],
-                                            HIERARCHICAL=data["hierarchical"],
+                                            DOWNLOAD_MODE=data["download_mode"],
+                                            GPU_NUMBER=data["gpu_number"],
                                             EVALUATION_STRATEGY=data["evaluation_strategy"],
+                                            GREATER_IS_BETTER=data["greater_is_better"],
+                                            HIERARCHICAL=data["hierarchical"],
+                                            LANGUAGE=data["language"],
+                                            LEARNING_RATE=data["learning_rate"],
                                             LOGGING_STRATEGY=data["logging_strategy"],
+                                            LOG_DIRECTORY=data["log_directory"],
+                                            LOWER_CASE=data["lower_case"],
+                                            METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
+                                            MODEL_NAME=data["model_name"],
+                                            NUM_TRAIN_EPOCHS=data["num_train_epochs"],
+                                            PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
+                                            REVISION=data["revision"],
+                                            RUNNING_MODE=data["running_mode"],
                                             SAVE_STRATEGY=data["save_strategy"],
-                                            REVISION=data["revision"]
+                                            SEARCH_TYPE_METHOD=data["search_type_method"],
+                                            TASK=data["task"]
                                             )
 
     file_name = './temporary_scripts/hyperparameter_search_' + data["task"] + "_" + str(
@@ -569,28 +572,29 @@ def run_experiment(
         accumulation_steps,
         batch_size,
         dataset_cache_dir,
+        do_hyperparameter_search,
         download_mode,
         eval_steps,
         evaluation_strategy,
         gpu_memory,
         gpu_number,
-        metric_for_best_model,
         greater_is_better,
         hierarchical,
         language_model_type,
         learning_rate,
         list_of_languages,
         list_of_seeds,
-        logging_strategy,
         logging_steps,
+        logging_strategy,
         lower_case,
+        metric_for_best_model,
         preprocessing_num_workers,
         revision,
         running_mode,
-        save_strategy,
         save_steps,
+        save_strategy,
+        search_type_method,
         task,
-        do_hyperparameter_search,
         log_directory=None,
         num_train_epochs=None
 ):
@@ -731,18 +735,19 @@ def run_experiment(
                     batch_size=batch_size,
                     code=get_python_file_for_task(task),
                     dataset_cache_dir=dataset_cache_dir,
+                    do_hyperparameter_search=do_hyperparameter_search,
                     download_mode=download_mode,
-                    evaluation_strategy=evaluation_strategy,
                     eval_steps=eval_steps,
+                    evaluation_strategy=evaluation_strategy,
                     gpu_memory=gpu_memory,
                     gpu_number=gpu_id,
                     greater_is_better=greater_is_better,
                     hierarchical=hierarchical,
                     language=lang,
                     learning_rate=learning_rate,
-                    logging_strategy=logging_strategy,
-                    logging_steps=logging_steps,
                     log_directory=log_directory,
+                    logging_steps=logging_steps,
+                    logging_strategy=logging_strategy,
                     lower_case=lower_case,
                     metric_for_best_model=metric_for_best_model,
                     model_name=model_name,
@@ -750,11 +755,10 @@ def run_experiment(
                     preprocessing_num_workers=preprocessing_num_workers,
                     revision=revision,
                     running_mode=running_mode,
-                    save_strategy=save_strategy,
                     save_steps=save_steps,
+                    save_strategy=save_strategy,
                     seed=seed,
-                    task=task,
-                    do_hyperparameter_search=do_hyperparameter_search
+                    task=task
                 )
 
                 if script_new is not None:
@@ -824,18 +828,19 @@ def run_experiment(
                     batch_size=batch_size,
                     code=get_python_file_for_task(task),
                     dataset_cache_dir=dataset_cache_dir,
+                    do_hyperparameter_search=do_hyperparameter_search,
                     download_mode=download_mode,
-                    evaluation_strategy=evaluation_strategy,
                     eval_steps=eval_steps,
-                    greater_is_better=greater_is_better,
+                    evaluation_strategy=evaluation_strategy,
                     gpu_memory=gpu_memory,
                     gpu_number=gpu_id,
+                    greater_is_better=greater_is_better,
                     hierarchical=hierarchical,
                     language=lang,
                     learning_rate=learning_rate,
-                    logging_strategy=logging_strategy,
-                    logging_steps=logging_steps,
                     log_directory=log_directory,
+                    logging_steps=logging_steps,
+                    logging_strategy=logging_strategy,
                     lower_case=lower_case,
                     metric_for_best_model=metric_for_best_model,
                     model_name=model_name,
@@ -843,10 +848,10 @@ def run_experiment(
                     preprocessing_num_workers=preprocessing_num_workers,
                     revision=revision,
                     running_mode=running_mode,
-                    save_strategy=save_strategy,
                     save_steps=save_steps,
-                    task=task,
-                    do_hyperparameter_search=do_hyperparameter_search
+                    save_strategy=save_strategy,
+                    search_type_method=search_type_method,
+                    task=task
                 )
 
                 if script_new is not None:

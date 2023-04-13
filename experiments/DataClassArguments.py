@@ -137,6 +137,12 @@ class DataTrainingArguments:
             "help": "Specify if you want to apply hyperparameter search."
         },
     )
+    search_type_method: str = field(
+        default="grid",
+        metadata={
+            "help": "Specify the hyperparameter search method. You can choose between grid, random, bayes."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})

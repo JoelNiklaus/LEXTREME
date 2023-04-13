@@ -837,7 +837,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
 
     if data_args.do_hyperparameter_search:
         sweep_config = {
-            'method': 'bayes',
+            'method': data_args.search_type_method,
             'early_terminate': 'hyperband',
             'metric': {
                 'name': training_args.metric_for_best_model,
@@ -847,6 +847,10 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
 
     with open(utils_path + '/hyperparameter_search_config.json', 'r') as f:
         parameters_dict = js.load(f)
+
+    if data_args.search_type_method == "grid":
+    # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
+        del parameters_dict['learning_rate']
 
     sweep_config['parameters'] = parameters_dict
 
@@ -863,17 +867,19 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
 
     def train(config=None):
         with wandb.init(config=config, dir=data_args.log_directory):
-
             # set sweep configuration
             config = wandb.config
 
             training_args.report_to = ['wandb']
             training_args.num_train_epochs = config.epochs
-            training_args.learning_rate = config.learning_rate
             training_args.weight_decay = config.weight_decay
             training_args.per_device_train_batch_size = config.batch_size
             training_args.per_device_eval_batch_size = config.batch_size
             training_args.seed = config.seed
+
+            if data_args.search_type_method != "grid":
+                # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
+                training_args.learning_rate = config.learning_rate
 
             trainer = trainer_object(
                 model_init=model_init,
@@ -886,6 +892,5 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
             )
 
         trainer.train()
-
 
     wandb.agent(sweep_id, train, count=30)
