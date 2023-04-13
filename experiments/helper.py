@@ -170,7 +170,6 @@ def get_data(training_args, data_args):
 
 
 def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
-
     label_list = sorted(list(set(
         train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
         predict_dataset.features['labels'].feature.names)))
@@ -302,7 +301,6 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             max_length=data_args.max_seq_length,
             truncation=True,
         )
-
 
     return tokenized
 
@@ -732,34 +730,37 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
 
 
 def config_wandb(training_args, model_args, data_args, project_name=None):
-    time_now = datetime.datetime.now().isoformat()
-    if project_name is None:
-        project_name = data_args.log_directory.split('/')[-1]
-    wandb.init(project=project_name)
-    try:
-        run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
-            training_args.seed) + '__hierarchical_' + str(model_args.hierarchical) + '__time-' + time_now
-    except:
-        run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
-            training_args.seed) + '__time-' + time_now
-    wandb.run.name = run_name
+    if not model_args.do_hyperparameter_search:  # Hyperparameter search requires separate wandb setup
 
-    # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-    data_args_as_dict = dict()
-    for x in dataclasses.fields(data_args):
-        if x.name != "finetuning_task":
-            data_args_as_dict[x.name] = getattr(data_args,
-                                                x.name)  # We will log the finetuning task later with the language_prefix
+        time_now = datetime.datetime.now().isoformat()
 
-    wandb.log(data_args_as_dict)
+        if project_name is None:
+            project_name = data_args.log_directory.split('/')[-1]
+        wandb.init(project=project_name)
+        try:
+            run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
+                training_args.seed) + '__hierarchical_' + str(model_args.hierarchical) + '__time-' + time_now
+        except:
+            run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
+                training_args.seed) + '__time-' + time_now
+        wandb.run.name = run_name
 
-    # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-    model_args_as_dict = dict()
-    for x in dataclasses.fields(model_args):
-        model_args_as_dict[x.name] = getattr(model_args,
-                                             x.name)  # We will log the finetuning task later with the language_prefix
+        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+        data_args_as_dict = dict()
+        for x in dataclasses.fields(data_args):
+            if x.name != "finetuning_task":
+                data_args_as_dict[x.name] = getattr(data_args,
+                                                    x.name)  # We will log the finetuning task later with the language_prefix
 
-    wandb.log(model_args_as_dict)
+        wandb.log(data_args_as_dict)
+
+        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+        model_args_as_dict = dict()
+        for x in dataclasses.fields(model_args):
+            model_args_as_dict[x.name] = getattr(model_args,
+                                                 x.name)  # We will log the finetuning task later with the language_prefix
+
+        wandb.log(model_args_as_dict)
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
@@ -813,3 +814,73 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     # model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
     return model, tokenizer
+
+
+def init_hyperparameter_search(data_args, model_args, training_args, num_labels, function_for_model_generation,
+                               trainer_object, train_dataset, eval_dataset, data_collator, tokenizer):
+    # INFO: https://docs.wandb.ai/guides/sweeps
+    # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
+
+    # Training
+    if model_args.do_hyperparameter_search:
+        sweep_config = {
+            'method': 'bayes',
+            'early_terminate': 'hyperband',
+            'metric': {
+                'name': 'macro-f1',
+                'goal': 'maximize'
+            }
+        }
+
+    with open(utils_path + '/hyperparameter_search_config.json', 'r') as f:
+        parameters_dict = js.load(f)
+
+    sweep_config['parameters'] = parameters_dict
+
+    # project_name = data_args.log_directory.split('/')[-1]
+    project_name = data_args.finetuning_task + '_hyperparameter_search'
+    sweep_id = wandb.sweep(sweep_config, project=project_name)
+
+    def model_init():
+        model, _, _ = function_for_model_generation(model_args=model_args,
+                                                                 data_args=data_args,
+                                                                 num_labels=num_labels)
+        model.cuda()
+        return model
+
+    def train(config=None):
+        with wandb.init(config=config, dir=data_args.log_directory):
+            # set sweep configuration
+            config = wandb.config
+
+            training_args.report_to = ['wandb']
+            training_args.num_train_epochs = config.epochs
+            training_args.learning_rate = config.learning_rate
+            training_args.weight_decay = config.weight_decay
+            training_args.per_device_train_batch_size = config.batch_size
+            training_args.per_device_eval_batch_size = config.batch_size
+            training_args.seed = config.seed
+
+            trainer = trainer_object(
+                model_init=model_init,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                compute_metrics=compute_metrics_multi_class,
+                tokenizer=tokenizer,
+                data_collator=data_collator
+            )
+
+        trainer.train()
+
+        '''logger.info("*** Evaluate ***")
+        metrics = trainer.evaluate(eval_dataset=eval_dataset)
+
+        max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
+            eval_dataset)
+        metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
+
+        trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", metrics)'''
+
+    wandb.agent(sweep_id, train, count=30)

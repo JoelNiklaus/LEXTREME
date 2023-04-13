@@ -181,6 +181,12 @@ class ModelArguments:
                     "so revision can be any identifier allowed by git."
         }
     )
+    do_hyperparameter_search: bool = field(
+        default=False,
+        metadata={
+            "help": "Specify if you want to apply hyperparameter search."
+        },
+    )
 
 
 def get_default_values():
