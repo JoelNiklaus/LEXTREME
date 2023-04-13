@@ -730,7 +730,7 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
 
 
 def config_wandb(training_args, model_args, data_args, project_name=None):
-    if not model_args.do_hyperparameter_search:  # Hyperparameter search requires separate wandb setup
+    if not data_args.do_hyperparameter_search:  # Hyperparameter search requires separate wandb setup
 
         time_now = datetime.datetime.now().isoformat()
 
@@ -813,22 +813,35 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     # if model_args.hierarchical == True:
     # model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-    return model, tokenizer
+    return model, tokenizer, config
 
 
-def init_hyperparameter_search(data_args, model_args, training_args, num_labels, function_for_model_generation,
+def generate_model_and_tokenizer(model_args, data_args, num_labels):
+    if meta_infos['task_type_mapping'][data_args.finetuning_task] in ['SLTC', 'MLTC']:
+        function_for_generation = generate_Model_Tokenizer_for_SequenceClassification
+    elif meta_infos['task_type_mapping'][data_args.finetuning_task] == 'NER':
+        function_for_generation = generate_Model_Tokenizer_for_TokenClassification
+
+    return function_for_generation(model_args, data_args,
+                                   num_labels)
+
+
+def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                                trainer_object, train_dataset, eval_dataset, data_collator, tokenizer):
     # INFO: https://docs.wandb.ai/guides/sweeps
     # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
 
-    # Training
-    if model_args.do_hyperparameter_search:
+    goal = 'maximize'
+    if not training_args.greater_is_better:
+        goal = 'minimize'
+
+    if data_args.do_hyperparameter_search:
         sweep_config = {
             'method': 'bayes',
             'early_terminate': 'hyperband',
             'metric': {
-                'name': 'macro-f1',
-                'goal': 'maximize'
+                'name': training_args.metric_for_best_model,
+                'goal': goal
             }
         }
 
@@ -842,14 +855,15 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
     sweep_id = wandb.sweep(sweep_config, project=project_name)
 
     def model_init():
-        model, _, _ = function_for_model_generation(model_args=model_args,
-                                                                 data_args=data_args,
-                                                                 num_labels=num_labels)
+        model, _, _ = generate_model_and_tokenizer(model_args=model_args,
+                                                   data_args=data_args,
+                                                   num_labels=num_labels)
         model.cuda()
         return model
 
     def train(config=None):
         with wandb.init(config=config, dir=data_args.log_directory):
+
             # set sweep configuration
             config = wandb.config
 
@@ -873,14 +887,5 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
 
         trainer.train()
 
-        '''logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate(eval_dataset=eval_dataset)
-
-        max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
-            eval_dataset)
-        metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
-
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)'''
 
     wandb.agent(sweep_id, train, count=30)

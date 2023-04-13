@@ -8,16 +8,11 @@ from utils.utilities import remove_old_files, get_meta_infos, run_experiment, ma
 os.makedirs('./temporary_scripts', exist_ok=True)
 remove_old_files('./temporary_scripts')
 
-
 # TODO look if there are other models available that we want to run: e.g. small or large ones
 # TODO add more legal models maybe from nllpw: https://nllpw.org/workshop/program/
 # HERE many models are reported: https://arxiv.org/pdf/2109.00904.pdf
 
 meta_infos = get_meta_infos()
-
-
-
-
 
 if __name__ == '__main__':
 
@@ -33,6 +28,9 @@ if __name__ == '__main__':
                              "eval_steps; epoch = Evaluation is done at the end of each epoch.",
                         default=None)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
+    parser.add_argument('-gib', '--greater_is_better',
+                        help='Use in conjunction with load_best_model_at_end and metric_for_best_model to specify if better models should have a greater metric or not. Will default to: True if metric_for_best_model is set to a value that isn’t "loss" or "eval_loss". False if metric_for_best_model is not set, or set to "loss" or "eval_loss". ',
+                        default=None)
     parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=11)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
@@ -57,7 +55,10 @@ if __name__ == '__main__':
     parser.add_argument('-los', '--list_of_seeds',
                         help='Define the random seeds for which you want to run the experiments.',
                         default=None)
-    parser.add_argument('-lr', '--learning_rate', help='Define the learning rate', default=1e-5)
+    parser.add_argument('-lr', '--learning_rate', help='Define the learning rate.', default=1e-5)
+    parser.add_argument('-mfbm', '--metric_for_best_model',
+                        help='Use in conjunction with load_best_model_at_end to specify the metric to use to compare two different models. Must be the name of a metric returned by the evaluation with or without the prefix "eval_". Will default to "loss" if unspecified and load_best_model_at_end=True (to use the evaluation loss). If you set this value, greater_is_better will default to True. Don’t forget to set it to False if your metric is better when lower. ',
+                        default="eval_loss")
     parser.add_argument('-nte', '--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rev', '--revision', help='The specific model version to use. It can be a branch name, '
                                                    'a tag name, or a commit id, since we use a git-based system for '
@@ -116,9 +117,11 @@ if __name__ == '__main__':
         accumulation_steps=args.accumulation_steps,
         batch_size=args.batch_size,
         dataset_cache_dir=args.dataset_cache_dir,
+        do_hyperparameter_search=make_boolean(args.do_hyperparameter_search),
         download_mode=args.download_mode,
         evaluation_strategy=args.evaluation_strategy,
         eval_steps=args.eval_steps,
+        greater_is_better=args.greater_is_better,
         gpu_memory=args.gpu_memory,
         gpu_number=args.gpu_number,
         hierarchical=args.hierarchical,
@@ -129,6 +132,7 @@ if __name__ == '__main__':
         learning_rate=args.learning_rate,
         list_of_seeds=args.list_of_seeds,
         lower_case=args.lower_case,
+        metric_for_best_model=args.metric_for_best_model,
         num_train_epochs=args.num_train_epochs,
         log_directory=args.log_directory,
         preprocessing_num_workers=args.preprocessing_num_workers,
@@ -136,6 +140,5 @@ if __name__ == '__main__':
         running_mode=args.running_mode,
         save_strategy=args.save_strategy,
         save_steps=args.save_steps,
-        task=args.task,
-        do_hyperparameter_search=make_boolean(args.do_hyperparameter_search)
+        task=args.task
     )

@@ -131,6 +131,12 @@ class DataTrainingArguments:
             "help": "Specify if you want to add oversampling. This can only be done for SLTC tasks."
         },
     )
+    do_hyperparameter_search: bool = field(
+        default=False,
+        metadata={
+            "help": "Specify if you want to apply hyperparameter search."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
@@ -180,12 +186,6 @@ class ModelArguments:
                     "since we use a git-based system for storing models and other artifacts on huggingface.co, "
                     "so revision can be any identifier allowed by git."
         }
-    )
-    do_hyperparameter_search: bool = field(
-        default=False,
-        metadata={
-            "help": "Specify if you want to apply hyperparameter search."
-        },
     )
 
 

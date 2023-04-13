@@ -8,9 +8,6 @@ import os
 import shutil
 import sys
 from dataclasses import replace
-import wandb
-from datasets import ClassLabel
-import json as js
 import transformers
 from datasets import disable_caching
 from datasets import utils
@@ -29,12 +26,8 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
-    generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset, \
-    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, return_language_prefix
-
-from models.hierbert import (build_hierarchical_model,
-                             get_model_class_for_sequence_classification,
-                             get_tokenizer)
+    generate_model_and_tokenizer, preprocess_function, add_oversampling_to_multiclass_dataset, \
+    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, init_hyperparameter_search
 
 logger = logging.getLogger(__name__)
 
@@ -152,11 +145,11 @@ def main():
         train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset, id2label=id2label,
                                                                data_args=data_args)
 
-    model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
-                                                                                   data_args=data_args,
-                                                                                   num_labels=num_labels)
+    model, tokenizer, config = generate_model_and_tokenizer(model_args=model_args,
+                                                            data_args=data_args,
+                                                            num_labels=num_labels)
     # For hyperparameter search we always need the train dataset
-    if training_args.do_train or model_args.do_hyperparameter_search:
+    if training_args.do_train or data_args.do_hyperparameter_search:
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
@@ -167,7 +160,7 @@ def main():
                 desc="Running tokenizer on train dataset",
             )
     # For hyperparameter search we always need the validation dataset
-    if training_args.do_eval or model_args.do_hyperparameter_search:
+    if training_args.do_eval or data_args.do_hyperparameter_search:
         if data_args.max_eval_samples is not None:
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
@@ -178,7 +171,7 @@ def main():
                 desc="Running tokenizer on validation dataset",
             )
     # For hyperparameter search we might need the predict dataset
-    if training_args.do_predict or model_args.do_hyperparameter_search:
+    if training_args.do_predict or data_args.do_hyperparameter_search:
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
@@ -198,105 +191,14 @@ def main():
         data_collator = None
 
     # Training
-    if model_args.do_hyperparameter_search:
+    if data_args.do_hyperparameter_search:
 
-        # INFO: https://docs.wandb.ai/guides/sweeps
-        # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
+        init_hyperparameter_search(data_args=data_args, model_args=model_args, training_args=training_args,
+                                   num_labels=num_labels,
+                                   trainer_object=Trainer, train_dataset=train_dataset, eval_dataset=eval_dataset,
+                                   data_collator=data_collator, tokenizer=tokenizer)
 
-        # Training
-        if model_args.do_hyperparameter_search:
-            sweep_config = {
-                'method': 'bayes',
-                'early_terminate': 'hyperband',
-                'metric': {
-                    'name': 'macro-f1',
-                    'goal': 'maximize'
-                }
-            }
-
-        with open('utils/hyperparameter_search_config.json', 'r') as f:
-            parameters_dict = js.load(f)
-
-        sweep_config['parameters'] = parameters_dict
-
-        # project_name = data_args.log_directory.split('/')[-1]
-        project_name = data_args.finetuning_task + '_hyperparameter_search'
-        sweep_id = wandb.sweep(sweep_config, project=project_name)
-
-        def model_init_for_SequenceClassification():
-
-            config = AutoConfig.from_pretrained(
-                model_args.model_name_or_path,
-                num_labels=num_labels,
-                finetuning_task=return_language_prefix(data_args.language,
-                                                       data_args.finetuning_task) + '_' + data_args.finetuning_task,
-                use_auth_token=True if model_args.use_auth_token else None,
-                revision=model_args.revision
-            )
-
-            model_class = get_model_class_for_sequence_classification(
-                config.model_type, model_args)
-
-            if model_args.hierarchical:
-                model = model_class.from_pretrained(
-                    model_args.model_name_or_path,
-                    config=config,
-                    use_auth_token=True if model_args.use_auth_token else None,
-                    revision=model_args.revision
-                )
-                model = build_hierarchical_model(
-                    model, data_args.max_segments, data_args.max_seg_length)
-
-            else:
-                model = model_class.from_pretrained(
-                    model_args.model_name_or_path,
-                    config=config,
-                    use_auth_token=True if model_args.use_auth_token else None,
-                    revision=model_args.revision
-                )
-
-            model.cuda()
-            return model
-
-        def train(config=None):
-
-            with wandb.init(config=config, dir=data_args.log_directory):
-                # set sweep configuration
-                config = wandb.config
-
-                training_args.report_to = ['wandb']
-                training_args.num_train_epochs = config.epochs
-                training_args.learning_rate = config.learning_rate
-                training_args.weight_decay = config.weight_decay
-                training_args.per_device_train_batch_size = config.batch_size
-                training_args.per_device_eval_batch_size = config.batch_size
-                training_args.seed = config.seed
-
-                trainer = Trainer(
-                    model_init=model_init_for_SequenceClassification,
-                    args=training_args,
-                    train_dataset=train_dataset,
-                    eval_dataset=eval_dataset,
-                    compute_metrics=compute_metrics_multi_class,
-                    tokenizer=tokenizer,
-                    data_collator=data_collator
-                )
-
-            trainer.train()
-
-            '''logger.info("*** Evaluate ***")
-            metrics = trainer.evaluate(eval_dataset=eval_dataset)
-
-            max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
-                eval_dataset)
-            metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
-
-            trainer.log_metrics("eval", metrics)
-            trainer.save_metrics("eval", metrics)'''
-
-        wandb.agent(sweep_id, train, count=30)
-
-    if not model_args.do_hyperparameter_search:
+    if not data_args.do_hyperparameter_search:
 
         # Initialize our Trainer
         training_args.metric_for_best_model = "eval_loss"

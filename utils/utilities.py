@@ -340,7 +340,6 @@ def generate_command_for_experiments(**data):
                        '--overwrite_output_dir ' \
                        '--load_best_model_at_end ' \
                        '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
-                       '--greater_is_better {GREATER_IS_BETTER} ' \
                        '--evaluation_strategy {EVALUATION_STRATEGY} ' \
                        '--logging_strategy {LOGGING_STRATEGY} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
@@ -360,6 +359,9 @@ def generate_command_for_experiments(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+
+    if data['greater_is_better'] is not None:
+        command_template = command_template + ' --greater_is_better {GREATER_IS_BETTER} '
 
     if (data["language"] is not None):
         command_template = command_template + ' --language {LANGUAGE} '
@@ -451,6 +453,7 @@ def generate_command_for_hyperparameter_search(**data):
                        '--do_predict ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
+                       '--metric_for_best_model {METRIC_FOR_BEST_MODEL} ' \
                        '--preprocessing_num_workers {PREPROCESSING_NUM_WORKERS} ' \
                        '--hierarchical {HIERARCHICAL} ' \
                        '--revision {REVISION} ' \
@@ -463,6 +466,9 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+
+    if data['greater_is_better'] is not None:
+        command_template = command_template + ' --greater_is_better {GREATER_IS_BETTER} '
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
@@ -502,6 +508,8 @@ def generate_command_for_hyperparameter_search(**data):
                                             RUNNING_MODE=data["running_mode"],
                                             LEARNING_RATE=data["learning_rate"],
                                             CODE=data["code"],
+                                            METRIC_FOR_BEST_MODEL=data["metric_for_best_model"],
+                                            GREATER_IS_BETTER=data["greater_is_better"],
                                             DOWNLOAD_MODE=data["download_mode"],
                                             LOG_DIRECTORY=data["log_directory"],
                                             PREPROCESSING_NUM_WORKERS=data["preprocessing_num_workers"],
@@ -513,7 +521,8 @@ def generate_command_for_hyperparameter_search(**data):
                                             REVISION=data["revision"]
                                             )
 
-    file_name = './temporary_scripts/hyperparameter_search_' + data["task"] + "_" + str(data["gpu_number"]) + "_" + "_" + str(
+    file_name = './temporary_scripts/hyperparameter_search_' + data["task"] + "_" + str(
+        data["gpu_number"]) + "_" + "_" + str(
         data["model_name"]).replace('/', '_') + "_" + time_now + ".sh"
 
     with open(file_name, "w") as f:
@@ -565,6 +574,8 @@ def run_experiment(
         evaluation_strategy,
         gpu_memory,
         gpu_number,
+        metric_for_best_model,
+        greater_is_better,
         hierarchical,
         language_model_type,
         learning_rate,
@@ -656,9 +667,6 @@ def run_experiment(
     # Here we have to distinguish between running the experiments with our own hyperparameters and hyperparameter tuning
 
     if not do_hyperparameter_search:
-
-        metric_for_best_model = "eval_loss"
-        greater_is_better = False
 
         if task == 'all':
             all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used,
@@ -819,6 +827,7 @@ def run_experiment(
                     download_mode=download_mode,
                     evaluation_strategy=evaluation_strategy,
                     eval_steps=eval_steps,
+                    greater_is_better=greater_is_better,
                     gpu_memory=gpu_memory,
                     gpu_number=gpu_id,
                     hierarchical=hierarchical,
@@ -828,6 +837,7 @@ def run_experiment(
                     logging_steps=logging_steps,
                     log_directory=log_directory,
                     lower_case=lower_case,
+                    metric_for_best_model=metric_for_best_model,
                     model_name=model_name,
                     num_train_epochs=num_train_epochs,
                     preprocessing_num_workers=preprocessing_num_workers,
@@ -863,212 +873,3 @@ def run_experiment(
             print("\n########################################\n", file=f)
 
     run_in_parallel(commands_to_run=commands_to_run)
-
-
-'''def run_hyperparameter_search(
-        accumulation_steps,
-        batch_size,
-        dataset_cache_dir,
-        do_hyperparameter_search,
-        download_mode,
-        eval_steps,
-        evaluation_strategy,
-        gpu_memory,
-        gpu_number,
-        hierarchical,
-        language_model_type,
-        learning_rate,
-        list_of_languages,
-        list_of_seeds,
-        logging_strategy,
-        logging_steps,
-        lower_case,
-        preprocessing_num_workers,
-        revision,
-        running_mode,
-        save_strategy,
-        save_steps,
-        task,
-        log_directory=None,
-        num_train_epochs=None
-):
-    # TODO I think it would be easier to just pass the whole data dictionary to the function
-    #  so that we only have one parameter and do the same for the generate_command function
-
-    preprocessing_num_workers = int(preprocessing_num_workers)
-
-    batch_size_to_be_found = True if batch_size is None else False
-    language_to_be_found = True if list_of_languages is None else False
-
-    if list_of_languages is not None:
-        if type(list_of_languages) == str:
-            list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
-
-    if log_directory is None:
-        log_directory = "results"
-        time_stamp = re.sub(':', '_', datetime.datetime.now().isoformat())
-        log_directory = log_directory + '/logs_' + str(time_stamp)
-    else:
-        if not os.path.isdir(log_directory):
-            os.mkdir(log_directory)
-
-    if gpu_number is None:
-        gpu_number = [n for n in range(0, torch.cuda.device_count())]
-        if len(gpu_number) == 0:
-            gpu_number = [None]  # In that case we use the CPU
-        else:
-            gpu_number = ','.join(gpu_number)
-
-    # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
-    language_model_info = language_model_type.split('_')
-
-    if len(language_model_info) != 3:  # we got a direct language model just use it
-        models_to_be_used = [language_model_type]
-    else:  # find out what models we want to run
-        types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
-
-        # expand comma-separated lists
-        types = types.split(',') if ',' in types else [types]
-        languages = languages.split(',') if ',' in languages else [languages]
-        sizes = sizes.split(',') if ',' in sizes else [sizes]
-
-        # expand 'all' keywords
-        if 'all' in types:
-            types = meta_infos["_TYPES"]
-        if 'all' in languages:
-            languages = meta_infos["_LANGUAGES"]
-        if 'all' in sizes:
-            sizes = meta_infos["_SIZES"]
-
-        models_to_be_used = []
-        for t in types:
-            for l in languages:
-                for s in sizes:
-                    if l in meta_infos["language_models"][t]:
-                        models_to_be_used.extend(
-                            meta_infos["language_models"][t][l][s])  # add all models we want to run
-
-    models_to_be_used = sorted(list(set(models_to_be_used)))
-    print(models_to_be_used)
-
-    gpu_command_dict = defaultdict(list)
-
-    metric_for_best_model = "eval_loss"
-    greater_is_better = False
-
-    if task == 'all':
-        all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used, list_of_seeds]
-    else:
-        all_variables = [[task], models_to_be_used, list_of_seeds]
-
-    all_variables_perturbations = list(itertools.product(*all_variables))
-    all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]
-    all_variables_perturbations = list(zip(cycle(gpu_number), all_variables_perturbations))
-    all_variables_perturbations = [[x[0]] + x[1].split('$') for x in all_variables_perturbations]
-    print(all_variables_perturbations)
-
-    for (gpu_id, task, model_name, seed) in all_variables_perturbations:
-
-        if bool(re.search(r'\d', str(gpu_id))):
-            gpu_id = int(gpu_id)
-        seed = int(seed)
-
-        if batch_size is None:
-            batch_size, accumulation_steps = get_optimal_batch_size(model_name, task, gpu_memory)
-        else:
-            if accumulation_steps is None:
-                accumulation_steps = 1
-
-        if list_of_languages is None:
-            if model_name in meta_infos["model_language_lookup_table"].keys():
-                # all means just the entire dataset, so that we take the default value
-                if meta_infos["model_language_lookup_table"][model_name] != 'all':
-                    list_of_languages = [meta_infos["model_language_lookup_table"][model_name]]
-                else:
-                    list_of_languages = [None]
-
-        for lang in list_of_languages:
-
-            print("LANGUAGE IS: ", lang)
-
-            epoch_and_strategies = get_default_number_of_training_epochs(task=task, model_name=model_name,
-                                                                         language=lang, running_mode=running_mode)
-
-            # eval_steps = epoch_and_strategies["eval_steps"]
-            # logging_steps = epoch_and_strategies["logging_steps"]
-            # save_steps = epoch_and_strategies["save_steps"]
-
-            if num_train_epochs is None:
-                num_train_epochs = epoch_and_strategies["num_train_epochs"]
-            if evaluation_strategy is None:
-                evaluation_strategy = epoch_and_strategies["evaluation_strategy"]
-            if logging_strategy is None:
-                logging_strategy = epoch_and_strategies["logging_strategy"]
-            if save_strategy is None:
-                save_strategy = epoch_and_strategies["save_strategy"]
-            if logging_steps is None:
-                logging_steps = epoch_and_strategies["logging_steps"]
-            if save_steps is None:
-                save_steps = epoch_and_strategies["save_steps"]
-            if eval_steps is None:
-                eval_steps = epoch_and_strategies["eval_steps"]
-
-            script_new = generate_command(
-                accumulation_steps=accumulation_steps,
-                batch_size=batch_size,
-                code=get_python_file_for_task(task),
-                dataset_cache_dir=dataset_cache_dir,
-                do_hyperparameter_search=do_hyperparameter_search,
-                download_mode=download_mode,
-                evaluation_strategy=evaluation_strategy,
-                eval_steps=eval_steps,
-                gpu_memory=gpu_memory,
-                gpu_number=gpu_id,
-                greater_is_better=greater_is_better,
-                hierarchical=hierarchical,
-                language=lang,
-                learning_rate=learning_rate,
-                logging_strategy=logging_strategy,
-                logging_steps=logging_steps,
-                log_directory=log_directory,
-                lower_case=lower_case,
-                metric_for_best_model=metric_for_best_model,
-                model_name=model_name,
-                num_train_epochs=num_train_epochs,
-                preprocessing_num_workers=preprocessing_num_workers,
-                revision=revision,
-                running_mode=running_mode,
-                save_strategy=save_strategy,
-                save_steps=save_steps,
-                seed=seed,
-                task=task
-            )
-
-            if script_new is not None:
-                # sleep different time for each seed to prevent access to temporary scripts at the same time
-                command = f'sleep {seed * 10}; bash {str(script_new)}'
-                gpu_command_dict[gpu_id].append(command)
-                print(command)
-
-        if batch_size_to_be_found:
-            # Have to set batch_size back to None, otherwise it will continue to assign too high batch sizes which will cause errors
-            batch_size = None
-
-        if language_to_be_found:
-            list_of_languages = None  # Set language back to None
-
-    with open('command_dict.json', 'w') as f:
-        js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
-
-    commands_to_run = ['; sleep 10; '.join(commands) for _, commands in gpu_command_dict.items()]
-
-    with open('temporary_scripts/final_commands_run_inparallel.txt', 'w') as f:
-        for gpu_id, commands in gpu_command_dict.items():
-            print('On GPU ', gpu_id, 'this system command is applied:', file=f, end='\n')
-            print('\t', '; sleep 10; '.join(commands), file=f, end='\n')
-            print('On GPU ', gpu_id, 'the following commands are run sequentially.', file=f, end='\n')
-            for c in commands:
-                print('\t', c, file=f)
-            print("\n########################################\n", file=f)
-
-    run_in_parallel(commands_to_run=commands_to_run)'''
