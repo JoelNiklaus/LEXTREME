@@ -555,6 +555,10 @@ def process_gpu_number(gpu_number, do_hyperparameter_search):
                 gpu_number = [None]  # In that case we use the CPU
             else:
                 gpu_number = None
+        else:
+            if do_hyperparameter_search:
+                gpu_number = ','.join(gpu_number)
+
     else:
         if not do_hyperparameter_search:
             if type(gpu_number) == str:
