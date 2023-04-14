@@ -729,6 +729,25 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
     output.to_csv(output_predict_file_new_csv)
 
 
+def log_args(wand_object, data_args, model_args):
+    # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+    data_args_as_dict = dict()
+    for x in dataclasses.fields(data_args):
+        if x.name != "finetuning_task":
+            data_args_as_dict[x.name] = getattr(data_args,
+                                                x.name)  # We will log the finetuning task later with the language_prefix
+
+    wand_object.log(data_args_as_dict)
+
+    # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+    model_args_as_dict = dict()
+    for x in dataclasses.fields(model_args):
+        model_args_as_dict[x.name] = getattr(model_args,
+                                             x.name)  # We will log the finetuning task later with the language_prefix
+
+    wand_object.log(model_args_as_dict)
+
+
 def config_wandb(training_args, model_args, data_args, project_name=None):
     if not data_args.do_hyperparameter_search:  # Hyperparameter search requires separate wandb setup
 
@@ -745,22 +764,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
                 training_args.seed) + '__time-' + time_now
         wandb.run.name = run_name
 
-        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-        data_args_as_dict = dict()
-        for x in dataclasses.fields(data_args):
-            if x.name != "finetuning_task":
-                data_args_as_dict[x.name] = getattr(data_args,
-                                                    x.name)  # We will log the finetuning task later with the language_prefix
-
-        wandb.log(data_args_as_dict)
-
-        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-        model_args_as_dict = dict()
-        for x in dataclasses.fields(model_args):
-            model_args_as_dict[x.name] = getattr(model_args,
-                                                 x.name)  # We will log the finetuning task later with the language_prefix
-
-        wandb.log(model_args_as_dict)
+        log_args(wandb, data_args, model_args)
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
@@ -926,22 +930,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                                      predict_dataset=predict_dataset, id2label=id2label,
                                      name_of_input_field="input")
 
-        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-        data_args_as_dict = dict()
-        for x in dataclasses.fields(data_args):
-            if x.name != "finetuning_task":
-                data_args_as_dict[x.name] = getattr(data_args,
-                                                    x.name)  # We will log the finetuning task later with the language_prefix
-
-        wandb.log(data_args_as_dict)
-
-        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
-        model_args_as_dict = dict()
-        for x in dataclasses.fields(model_args):
-            model_args_as_dict[x.name] = getattr(model_args,
-                                                 x.name)  # We will log the finetuning task later with the language_prefix
-
-        wandb.log(model_args_as_dict)
+        log_args(wandb, data_args, model_args)
 
         # Specify the run-specific output directory with the hyperparameters chosen
         run_name = get_the_runname_for_hyperparameter_tuning(
