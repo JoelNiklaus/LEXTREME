@@ -22,13 +22,12 @@ tdh = TrainingDataHandler()
 lh = LabelHandler()
 
 
-device = 'cuda' if torch.cuda.is_available(
-) else 'mps' if torch.backends.mps.is_available() else 'cpu'
+#device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-print('Device: ', device)
+#print('Device: ', device)
 
 classifier = pipeline("zero-shot-classification",
-                      model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7", device=device)
+        model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7", device="cuda:3")
 
 
 language = 'all'
