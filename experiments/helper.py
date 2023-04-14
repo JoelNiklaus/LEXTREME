@@ -21,7 +21,7 @@ from sklearn.metrics import (accuracy_score, f1_score, matthews_corrcoef,
                              precision_score, recall_score)
 from sklearn.utils.extmath import softmax
 from transformers import (AutoConfig, AutoModelForTokenClassification,
-                          EvalPrediction)
+                          EvalPrediction, IntervalStrategy, EarlyStoppingCallback)
 
 from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
@@ -826,8 +826,20 @@ def generate_model_and_tokenizer(model_args, data_args, num_labels):
                                    num_labels)
 
 
+def get_the_runname_for_hyperparameter_tuning(training_args):
+    run_name = 'num_train_epochs_' + str(
+        training_args.num_train_epochs) + '__weight_decay_' + str(
+        training_args.weight_decay) + '__batch_size_' + str(
+        training_args.per_device_train_batch_size) + '__seed_' + str(
+        training_args.seed) + '__learning_rate_' + str(
+        training_args.learning_rate)
+
+    return run_name
+
+
 def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
-                               trainer_object, train_dataset, eval_dataset, data_collator, tokenizer):
+                               trainer_object, train_dataset, eval_dataset, predict_dataset, id2label, data_collator,
+                               tokenizer):
     # INFO: https://docs.wandb.ai/guides/sweeps
     # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
 
@@ -849,13 +861,13 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
         parameters_dict = js.load(f)
 
     if data_args.search_type_method == "grid":
-    # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
+        # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
         del parameters_dict['learning_rate']
 
     sweep_config['parameters'] = parameters_dict
 
     # project_name = data_args.log_directory.split('/')[-1]
-    project_name = data_args.finetuning_task + '_hyperparameter_search'
+    project_name = 'hyperparameter_search_for_' + data_args.finetuning_task
     sweep_id = wandb.sweep(sweep_config, project=project_name)
 
     def model_init():
@@ -871,6 +883,9 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
             config = wandb.config
 
             training_args.report_to = ['wandb']
+            training_args.push_to_hub = False
+            training_args.save_total_limit = 6
+            training_args.load_best_model_at_end = True
             training_args.num_train_epochs = config.epochs
             training_args.weight_decay = config.weight_decay
             training_args.per_device_train_batch_size = config.batch_size
@@ -881,6 +896,10 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                 # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
                 training_args.learning_rate = config.learning_rate
 
+            # Specify the run-specific output directory with the hyperparameters chosen
+            run_specific_output_directory = get_the_runname_for_hyperparameter_tuning(training_args)
+            training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
+
             trainer = trainer_object(
                 model_init=model_init,
                 args=training_args,
@@ -888,9 +907,45 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                 eval_dataset=eval_dataset,
                 compute_metrics=compute_metrics_multi_class,
                 tokenizer=tokenizer,
-                data_collator=data_collator
+                data_collator=data_collator,
+                callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
             )
 
-        trainer.train()
+        train_result = trainer.train()
+        metrics = train_result.metrics
+        metrics["train_samples"] = len(train_dataset)
+        trainer.log_metrics("train", metrics)
+        trainer.save_metrics("train", metrics)
+
+        metrics = trainer.evaluate(eval_dataset=eval_dataset)
+        metrics["eval_samples"] = len(eval_dataset)
+        trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", metrics)
+
+        make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
+                                     predict_dataset=predict_dataset, id2label=id2label,
+                                     name_of_input_field="input")
+
+        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+        data_args_as_dict = dict()
+        for x in dataclasses.fields(data_args):
+            if x.name != "finetuning_task":
+                data_args_as_dict[x.name] = getattr(data_args,
+                                                    x.name)  # We will log the finetuning task later with the language_prefix
+
+        wandb.log(data_args_as_dict)
+
+        # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
+        model_args_as_dict = dict()
+        for x in dataclasses.fields(model_args):
+            model_args_as_dict[x.name] = getattr(model_args,
+                                                 x.name)  # We will log the finetuning task later with the language_prefix
+
+        wandb.log(model_args_as_dict)
+
+        # Specify the run-specific output directory with the hyperparameters chosen
+        run_name = get_the_runname_for_hyperparameter_tuning(
+            training_args) + '__num_train_epochs_actually_trained_' + str(int(train_result.metrics["epoch"]))
+        wandb.run.name = run_name
 
     wandb.agent(sweep_id, train, count=30)

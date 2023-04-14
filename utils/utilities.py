@@ -466,6 +466,7 @@ def generate_command_for_hyperparameter_search(**data):
                        '--save_strategy {SAVE_STRATEGY} ' \
                        '--search_type_method {SEARCH_TYPE_METHOD} '
 
+
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 

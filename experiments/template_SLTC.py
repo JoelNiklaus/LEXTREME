@@ -192,10 +192,10 @@ def main():
 
     # Training
     if data_args.do_hyperparameter_search:
-
         init_hyperparameter_search(data_args=data_args, model_args=model_args, training_args=training_args,
                                    num_labels=num_labels,
                                    trainer_object=Trainer, train_dataset=train_dataset, eval_dataset=eval_dataset,
+                                   predict_dataset=predict_dataset, id2label=id2label,
                                    data_collator=data_collator, tokenizer=tokenizer)
 
     if not data_args.do_hyperparameter_search:
