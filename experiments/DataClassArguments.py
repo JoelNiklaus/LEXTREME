@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-
+import json as js
 import os
 import sys
 from dataclasses import dataclass, field
@@ -11,6 +11,7 @@ path_to_nlp_scripts = os.path.join(os.path.dirname(__file__), '../utils/')
 sys.path.append(path_to_nlp_scripts)
 
 from utilities import get_meta_infos
+
 
 @dataclass
 class DataTrainingArguments:
@@ -22,27 +23,6 @@ class DataTrainingArguments:
     the command line.
     """
 
-    # Only for Politmonitor
-    affair_text_scope: str = field(
-        # default='ch',
-        metadata={
-            "help": "Specify which kanton you would like to include in the dataset."
-        },
-    )
-    # Only for Politmonitor
-    title: bool = field(
-        # default=True,
-        metadata={
-            "help": "Specify if you want to include the title in the training."
-        },
-    )
-    # Only for Politmonitor
-    text: bool = field(
-        # default=True,
-        metadata={
-            "help": "Specify if you want to include the text in the training."
-        },
-    )
     max_seq_length: Optional[int] = field(
         default=512,
         metadata={
@@ -151,11 +131,21 @@ class DataTrainingArguments:
             "help": "Specify if you want to add oversampling. This can only be done for SLTC tasks."
         },
     )
+    do_hyperparameter_search: bool = field(
+        default=False,
+        metadata={
+            "help": "Specify if you want to apply hyperparameter search."
+        },
+    )
+    search_type_method: str = field(
+        default="grid",
+        metadata={
+            "help": "Specify the hyperparameter search method. You can choose between grid, random, bayes."
+        },
+    )
 
-    server_ip: Optional[str] = field(
-        default=None, metadata={"help": "For distant debugging."})
-    server_port: Optional[str] = field(
-        default=None, metadata={"help": "For distant debugging."})
+    server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
+    server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
 
 
 @dataclass
@@ -178,18 +168,15 @@ class ModelArguments:
     )
     cache_dir: Optional[str] = field(
         default='./datasets_cache_dir',
-        metadata={
-            "help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     do_lower_case: Optional[bool] = field(
         default=False,
-        metadata={
-            "help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
+        metadata={"help": "arg to indicate if tokenizer should do lower case in AutoTokenizer.from_pretrained()"},
     )
     use_fast_tokenizer: bool = field(
         default=True,
-        metadata={
-            "help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
+        metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
     )
     use_auth_token: bool = field(
         default=False,
@@ -205,12 +192,6 @@ class ModelArguments:
                     "since we use a git-based system for storing models and other artifacts on huggingface.co, "
                     "so revision can be any identifier allowed by git."
         }
-    )
-    do_hyperparameter_search: bool = field(
-        default=False,
-        metadata={
-            "help": "Specify if you want to apply hyperparameter search."
-        },
     )
 
 

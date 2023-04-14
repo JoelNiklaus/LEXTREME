@@ -1,17 +1,7 @@
 {
   "epochs": {
-    "values": [
-      5,
-      10,
-      15,
-      20,
-      25,
-      30,
-      35,
-      40,
-      45,
-      50
-    ]
+    "min": 1,
+    "max": 50
   },
   "batch_size": {
     "values": [
@@ -24,6 +14,10 @@
     "distribution": "log_uniform_values",
     "min": 1e-5,
     "max": 1e-3
+  },
+  "seed": {
+    "min": 1,
+    "max": 100
   },
   "weight_decay": {
     "values": [

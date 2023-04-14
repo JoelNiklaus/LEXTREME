@@ -21,7 +21,7 @@ from sklearn.metrics import (accuracy_score, f1_score, matthews_corrcoef,
                              precision_score, recall_score)
 from sklearn.utils.extmath import softmax
 from transformers import (AutoConfig, AutoModelForTokenClassification,
-                          EvalPrediction)
+                          EvalPrediction, IntervalStrategy, EarlyStoppingCallback)
 
 from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
@@ -124,6 +124,10 @@ def make_split(data_args, split_name):
     ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     multilingual_datasets = ['swiss_judgment_prediction',
+                             'swiss_criticality_prediction_bge_facts',
+                             'swiss_criticality_prediction_citation_facts',
+                             'swiss_criticality_prediction_bge_considerations',
+                             'swiss_criticality_prediction_citation_considerations',
                              'online_terms_of_service_unfairness_level',
                              'online_terms_of_service_unfairness_category',
                              'covid19_emergency_event',
@@ -153,14 +157,14 @@ def model_is_multilingual(model_name_or_path):
 
 
 def get_data(training_args, data_args):
-    #if training_args.do_train:
-    train_dataset = make_split(data_args=data_args, split_name="train")
+    if training_args.do_train:
+        train_dataset = make_split(data_args=data_args, split_name="train")
 
-    #if training_args.do_eval:
-    eval_dataset = make_split(data_args=data_args, split_name="validation")
+    if training_args.do_eval:
+        eval_dataset = make_split(data_args=data_args, split_name="validation")
 
-    #if training_args.do_predict:
-    predict_dataset = make_split(data_args=data_args, split_name="test")
+    if training_args.do_predict:
+        predict_dataset = make_split(data_args=data_args, split_name="test")
 
     return train_dataset, eval_dataset, predict_dataset
 
@@ -243,16 +247,11 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
-def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None, label2id=None):
+def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
     """Can be used with any task that requires hierarchical models"""
 
     if type(id2label) == dict:
         batch["labels"] = [[1 if label in labels else 0 for label in list(id2label.keys())] for labels in
-                           batch["label"]]
-        del batch["label"]
-
-    if type(label2id) == dict:
-        batch["labels"] = [[1 if label in labels else 0 for label in list(label2id.keys())] for labels in
                            batch["label"]]
         del batch["label"]
 
@@ -360,6 +359,10 @@ def merge_dicts(dict_args):
     for dictionary in dict_args:
         result.update(dictionary)
     return result
+
+
+def set_environment_variables():
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 
 def create_dataset(path: str, label_dict: dict, text_column: str = 'text', label_column: str = 'label'):
@@ -653,102 +656,13 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
     preds = (expit(predictions) > 0.5).astype('int32')
 
     output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
-    output = pd.DataFrame(output, columns=[name_of_input_field, 'reference', 'predictions', 'logits'])
+    output = pd.DataFrame(output, columns=['sentence', 'reference', 'predictions', 'logits'])
 
     output['predictions_as_label'] = output.predictions.apply(lambda x: convert_id2label(x, id2label))
     output['reference_as_label'] = output.reference.apply(lambda x: convert_id2label(x, id2label))
 
     output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
     output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    predict_dataset_df_for_concatination = predict_dataset_df[
-        [c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
-    output = pd.concat([output, predict_dataset_df_for_concatination], axis=1)
-    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
-    output.to_csv(output_predict_file_new_csv)
-
-
-def make_predictions_multi_label_politmonitor(trainer, data_args, predict_dataset, id2label, training_args,
-                                              list_of_languages=[],
-                                              name_of_input_field='input'):
-    affair_attachment_category = ['Titel', 'Text 1', 'Text 2', 'Text 3']
-
-    language_specific_metrics = list()
-
-    if "language" in list(predict_dataset.features.keys()):
-        if data_args.language == 'all':
-            if not list_of_languages:
-                list_of_languages = sorted(list(set(predict_dataset['language'])))
-
-            # First only languages
-            for l in list_of_languages:
-                predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
-                if len(predict_dataset_filtered['language']) > 0:
-                    metric_prefix = l + "_predict/"
-                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                                   metric_key_prefix=metric_prefix)
-                    wandb.log(metrics)
-
-                    language_specific_metrics.append(metrics)
-
-            # Second only languages
-            for aac in affair_attachment_category:
-                predict_dataset_filtered = predict_dataset.filter(
-                    lambda example: example['affair_attachment_category'] == aac)
-                if len(predict_dataset_filtered['affair_attachment_category']) > 0:
-                    metric_prefix = aac + "_predict/"
-                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                                   metric_key_prefix=metric_prefix)
-                    wandb.log(metrics)
-
-                    language_specific_metrics.append(metrics)
-
-            # Third languages and Text Types
-            for l in list_of_languages:
-                for aac in affair_attachment_category:
-                    predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
-                    predict_dataset_filtered = predict_dataset_filtered.filter(
-                        lambda example: example['affair_attachment_category'] == aac)
-                    if len(predict_dataset_filtered['language']) > 0 and len(
-                            predict_dataset_filtered['affair_attachment_category']) > 0:
-                        metric_prefix = l + '_' + re.sub(' ', '_', aac) + "_predict/"
-                        predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                                       metric_key_prefix=metric_prefix)
-                        wandb.log(metrics)
-
-                        language_specific_metrics.append(metrics)
-
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
-
-    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
-
-    max_predict_samples = (
-        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
-    )
-    metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
-
-    language_specific_metrics.append(metrics)
-
-    language_specific_metrics = merge_dicts(language_specific_metrics)
-
-    trainer.log_metrics("predict", language_specific_metrics)
-    trainer.save_metrics("predict", language_specific_metrics)
-    wandb.log(language_specific_metrics)
-
-    predict_dataset_df = pd.DataFrame(predict_dataset)
-
-    preds = (expit(predictions) > 0.5).astype('int32')
-
-    output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
-    output = pd.DataFrame(output, columns=[name_of_input_field, 'reference', 'predictions', 'logits'])
-
-    output['predictions_as_label'] = output.predictions.apply(lambda x: convert_id2label(x, id2label))
-    output['reference_as_label'] = output.reference.apply(lambda x: convert_id2label(x, id2label))
-
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    predict_dataset_df_for_concatination = predict_dataset_df[
-        [c for c in predict_dataset_df.columns.tolist() if c not in output.columns.tolist()]]
-    output = pd.concat([output, predict_dataset_df_for_concatination], axis=1)
     output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
@@ -819,19 +733,7 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
     output.to_csv(output_predict_file_new_csv)
 
 
-def config_wandb(training_args, model_args, data_args, project_name=None):
-    time_now = datetime.datetime.now().isoformat()
-    if project_name is None:
-        project_name = data_args.log_directory.split('/')[-1]
-    wandb.init(project=project_name)
-    try:
-        run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
-            training_args.seed) + '__hierarchical_' + str(model_args.hierarchical) + '__time-' + time_now
-    except:
-        run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
-            training_args.seed) + '__time-' + time_now
-    wandb.run.name = run_name
-
+def log_args(wand_object, data_args, model_args):
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     data_args_as_dict = dict()
     for x in dataclasses.fields(data_args):
@@ -839,7 +741,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
             data_args_as_dict[x.name] = getattr(data_args,
                                                 x.name)  # We will log the finetuning task later with the language_prefix
 
-    wandb.log(data_args_as_dict)
+    wand_object.log(data_args_as_dict)
 
     # We have to log the fields of data_args explicitly in wand because wand does not do that automatically
     model_args_as_dict = dict()
@@ -847,9 +749,26 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         model_args_as_dict[x.name] = getattr(model_args,
                                              x.name)  # We will log the finetuning task later with the language_prefix
 
-    wandb.log(model_args_as_dict)
+    wand_object.log(model_args_as_dict)
 
-    return wandb
+
+def config_wandb(training_args, model_args, data_args, project_name=None):
+    if not data_args.do_hyperparameter_search:  # Hyperparameter search requires separate wandb setup
+
+        time_now = datetime.datetime.now().isoformat()
+
+        if project_name is None:
+            project_name = data_args.log_directory.split('/')[-1]
+        wandb.init(project=project_name)
+        try:
+            run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
+                training_args.seed) + '__hierarchical_' + str(model_args.hierarchical) + '__time-' + time_now
+        except:
+            run_name = data_args.finetuning_task + '_' + model_args.model_name_or_path + '_seed-' + str(
+                training_args.seed) + '__time-' + time_now
+        wandb.run.name = run_name
+
+        log_args(wandb, data_args, model_args)
 
 
 def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
@@ -879,33 +798,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
     return model, tokenizer, config
 
 
-def model_init_for_SequenceClassification(model_args, data_args, num_labels):
-    config = AutoConfig.from_pretrained(
-        model_args.model_name_or_path,
-        num_labels=num_labels,
-        finetuning_task=return_language_prefix(data_args.language,
-                                               data_args.finetuning_task) + '_' + data_args.finetuning_task,
-        use_auth_token=True if model_args.use_auth_token else None,
-        revision=model_args.revision
-    )
-
-    model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
-
-    model = model_class.from_pretrained(
-        model_args.model_name_or_path,
-        config=config,
-        use_auth_token=True if model_args.use_auth_token else None,
-        revision=model_args.revision
-    )
-
-    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
-
-    if model_args.hierarchical:
-        model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
-
-    return model
-
-
 def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
@@ -929,4 +821,136 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     # if model_args.hierarchical == True:
     # model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
-    return model, tokenizer
+    return model, tokenizer, config
+
+
+def generate_model_and_tokenizer(model_args, data_args, num_labels):
+    if meta_infos['task_type_mapping'][data_args.finetuning_task] in ['SLTC', 'MLTC']:
+        function_for_generation = generate_Model_Tokenizer_for_SequenceClassification
+    elif meta_infos['task_type_mapping'][data_args.finetuning_task] == 'NER':
+        function_for_generation = generate_Model_Tokenizer_for_TokenClassification
+
+    return function_for_generation(model_args, data_args,
+                                   num_labels)
+
+
+def get_the_run_name_for_hyperparameter_tuning(data_args, training_args):
+    run_name = data_args.finetuning_task + '__num_train_epochs_' + str(
+        training_args.num_train_epochs) + '__weight_decay_' + str(
+        training_args.weight_decay) + '__batch_size_' + str(
+        training_args.per_device_train_batch_size) + '__seed_' + str(
+        training_args.seed) + '__learning_rate_' + str(
+        training_args.learning_rate)
+
+    return run_name
+
+
+def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
+                               trainer_object, train_dataset, eval_dataset, predict_dataset, id2label, data_collator,
+                               tokenizer, compute_metrics):
+    # INFO: https://docs.wandb.ai/guides/sweeps
+    # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
+
+    goal = 'maximize'
+    if not training_args.greater_is_better:
+        goal = 'minimize'
+
+    if data_args.do_hyperparameter_search:
+        sweep_config = {
+            'method': data_args.search_type_method,
+            'early_terminate': 'hyperband',
+            'metric': {
+                'name': training_args.metric_for_best_model,
+                'goal': goal
+            }
+        }
+
+    with open(utils_path + '/hyperparameter_search_config.json', 'r') as f:
+        parameters_dict = js.load(f)
+
+    if data_args.search_type_method == "grid":
+        # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
+        del parameters_dict['learning_rate']
+
+    sweep_config['parameters'] = parameters_dict
+
+    project_name = data_args.log_directory
+    sweep_id = wandb.sweep(sweep_config, project=project_name)
+
+    def model_init():
+        model, _, _ = generate_model_and_tokenizer(model_args=model_args,
+                                                   data_args=data_args,
+                                                   num_labels=num_labels)
+        model.cuda()
+        return model
+
+    def train(config=None):
+        with wandb.init(config=config, dir=data_args.log_directory):
+            # set sweep configuration
+            config = wandb.config
+
+            training_args.report_to = ['wandb']
+            training_args.push_to_hub = False
+            training_args.save_total_limit = 6
+            training_args.load_best_model_at_end = True
+            training_args.num_train_epochs = config.epochs
+            training_args.weight_decay = config.weight_decay
+            training_args.per_device_train_batch_size = config.batch_size
+            training_args.per_device_eval_batch_size = config.batch_size
+            training_args.seed = config.seed
+
+            if data_args.search_type_method != "grid":
+                # Otherwise, you will get the following error message: Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"
+                training_args.learning_rate = config.learning_rate
+
+            # Specify the run-specific output directory with the hyperparameters chosen
+            run_specific_output_directory = get_the_run_name_for_hyperparameter_tuning(data_args, training_args)
+            training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
+
+            trainer = trainer_object(
+                model_init=model_init,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                compute_metrics=compute_metrics,
+                tokenizer=tokenizer,
+                data_collator=data_collator,
+                callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
+            )
+
+        train_result = trainer.train()
+        metrics = train_result.metrics
+        metrics["train_samples"] = len(train_dataset)
+        trainer.log_metrics("train", metrics)
+        # wandb.log("train", metrics)
+        trainer.save_metrics("train", metrics)
+
+        metrics = trainer.evaluate(eval_dataset=eval_dataset)
+        metrics["eval_samples"] = len(eval_dataset)
+        trainer.log_metrics("eval", metrics)
+        # wandb.log("eval", metrics)
+        trainer.save_metrics("eval", metrics)
+
+        if meta_infos["task_type_mapping"][data_args.finetuning_task] == "SLTC":
+            make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
+                                         predict_dataset=predict_dataset, id2label=id2label,
+                                         name_of_input_field="input")
+        elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "MLTC":
+            langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+            langs = sorted(list(set(langs)))
+            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
+        elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "NER":
+            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args,
+                                 predict_dataset=predict_dataset,
+                                 id2label=id2label, training_args=training_args)
+
+        log_args(wandb, data_args, model_args)
+
+        # Specify the run-specific output directory with the hyperparameters chosen
+        run_name = get_the_run_name_for_hyperparameter_tuning(data_args,
+                                                              training_args) + '__num_train_epochs_actually_trained_' + str(
+            int(train_result.metrics["epoch"]))
+        wandb.run.name = run_name
+
+    wandb.agent(sweep_id, train, count=30)

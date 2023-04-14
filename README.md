@@ -174,6 +174,34 @@ python main.py --task swiss_judgment_prediction --list_of_seeds
 
 Not all tasks support the use of hierarchical types. For example, the code for the named entity recognition tasks has not been optimized to make use of both the non-hierarchical and the hierarchical variants. Therefore, setting `-hierarchical` to True will cause an error.
 
+### How to do hyperparameter search
+
+In case you want to perform hyperparameter search this is possible via the argument `do_hyperparameter_search`. The values for `metric_for_best_model` (and accordingly for `greater_is_better`, see [the huggingface documentation](https://huggingface.co/docs/transformers/main_classes/trainer#transformers.TrainingArguments.metric_for_best_model)) will stay the same, i.e., the hyperparameters will be searched by searching for the lowest evaluation loss. In the following, we provide the command for hyperparameter search for the finetuning task `german_argument_mining` with the model `distilbert-base-multilingual-cased`.
+
+```
+python main.py -gn 1 -gm 80 --task german_argument_mining --do_hyperparameter_search True -lmt distilbert-base-multilingual-cased -ld hyperparameter_tuning
+```
+
+Automatically, you will create a new project in wandb which is the same as the name of the logging directory, in the case above `hyperparameter_tuning`. The runs in wandb will be named according to this pattern: `finetuning task` + `__num_train_epochs_X__weight_decay_X__batch_size_X__seed_X__learning_rate_X__num_train_epochs_actually_trained_X`. `X` in this context means the actual values of hyperparameters; `num_train_epochs_actually_trained` depicts the actual number of training epochs, because the training will stop earlier if no improvements are to be detected during training.
+
+If you want to change the value for `metric_for_best_model`, add it to the bash command like this:
+
+```
+python main.py -gn 1 -gm 80 --task german_argument_mining --do_hyperparameter_search True -lmt distilbert-base-multilingual-cased -ld hyperparameter_tuning --metric_for_best_model macro-f1
+```
+
+Automatically, `greater_is_better` will change to `true`.
+
+You can choose between three types of search methods, i.e., `grid`, `random`, `bayes` (see the [wandb documentation](https://docs.wandb.ai/guides/sweeps/define-sweep-configuration)). Per default, you will use `grid`. You can change this by passing `search_type_method` to the command, like this:
+
+```
+python main.py -gn 1 -gm 80 --task german_argument_mining --do_hyperparameter_search True -lmt distilbert-base-multilingual-cased -ld hyperparameter_tuning --metric_for_best_model macro-f1 --search_type_method bayes
+```
+
+The hyperparamters to search for will be loaded from the json file [`hyperparameter_search_config.json`](https://github.com/JoelNiklaus/LEXTREME/blob/main/utils/hyperparameter_search_config.json).
+
+Note that when using the search type method `grid` you will not be able to use learning rate as an hyperparamter to tune; wandb would through this error: _\"Invalid sweep config: Parameter learning_rate is a disallowed type with grid search. Grid search requires all parameters to be categorical, constant, int_uniform, or q_uniform. Specification of probabilities for categorical parameters is disallowed in grid search"_. Therefore, if `grid` is chosen, the values for learning_rate in [`hyperparameter_search_config.json`](https://github.com/JoelNiklaus/LEXTREME/blob/main/utils/hyperparameter_search_config.json) are ignored; instead the default learning rate (1e-5) or the one that you specify will be taken.
+
 ### How can I contribute a dataset to LEXTREME?
 
 If you want to extend the benchmark with your own datasets, you can do so by following the following instructions:

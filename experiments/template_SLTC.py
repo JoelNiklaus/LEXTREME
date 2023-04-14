@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 from dataclasses import replace
-
 import transformers
 from datasets import disable_caching
 from datasets import utils
@@ -20,16 +19,20 @@ from transformers import (
     set_seed,
     EarlyStoppingCallback,
     IntervalStrategy,
-    Trainer
+    Trainer,
+    AutoConfig
 )
 from transformers.trainer_utils import get_last_checkpoint
 
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
-    generate_Model_Tokenizer_for_SequenceClassification, preprocess_function, add_oversampling_to_multiclass_dataset, \
-    get_data, get_label_list_from_sltc_tasks, model_is_multilingual
+    generate_model_and_tokenizer, preprocess_function, add_oversampling_to_multiclass_dataset, \
+    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, init_hyperparameter_search, \
+    set_environment_variables
 
 logger = logging.getLogger(__name__)
+
+set_environment_variables()
 
 
 def main():
@@ -122,6 +125,11 @@ def main():
     set_seed(training_args.seed)
 
     train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+    train_dataset = train_dataset.filter(lambda example: len(example['input']) > 0)
+    eval_dataset = eval_dataset.filter(lambda example: len(example['input']) > 0)
+    predict_dataset = predict_dataset.filter(lambda example: len(example['input']) > 0)
+
+    logger.info(f"This is a singel lable classification task, labels for this dataset are: \n{train_dataset['label']}")
 
     # Labels
     label_list = get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
@@ -140,11 +148,11 @@ def main():
         train_dataset = add_oversampling_to_multiclass_dataset(train_dataset=train_dataset, id2label=id2label,
                                                                data_args=data_args)
 
-    model, tokenizer, config = generate_Model_Tokenizer_for_SequenceClassification(model_args=model_args,
-                                                                                   data_args=data_args,
-                                                                                   num_labels=num_labels)
-
-    if training_args.do_train:
+    model, tokenizer, config = generate_model_and_tokenizer(model_args=model_args,
+                                                            data_args=data_args,
+                                                            num_labels=num_labels)
+    # For hyperparameter search we always need the train dataset
+    if training_args.do_train or data_args.do_hyperparameter_search:
         if data_args.max_train_samples is not None:
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
@@ -155,7 +163,8 @@ def main():
                 desc="Running tokenizer on train dataset",
             )
 
-    if training_args.do_eval:
+    # For hyperparameter search we always need the validation dataset
+    if training_args.do_eval or data_args.do_hyperparameter_search:
         if data_args.max_eval_samples is not None:
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
@@ -166,7 +175,8 @@ def main():
                 desc="Running tokenizer on validation dataset",
             )
 
-    if training_args.do_predict:
+    # For hyperparameter search we might need the predict dataset
+    if training_args.do_predict or data_args.do_hyperparameter_search:
         if data_args.max_predict_samples is not None:
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
@@ -185,63 +195,83 @@ def main():
     else:
         data_collator = None
 
-    # Initialize our Trainer
-    training_args.metric_for_best_model = "eval_loss"
-    training_args.evaluation_strategy = IntervalStrategy.EPOCH
-    training_args.logging_strategy = IntervalStrategy.EPOCH
-
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        compute_metrics=compute_metrics_multi_class,
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
-    )
-
     # Training
-    if training_args.do_train:
-        checkpoint = None
-        if training_args.resume_from_checkpoint is not None:
-            checkpoint = training_args.resume_from_checkpoint
-        elif last_checkpoint is not None:
-            checkpoint = last_checkpoint
-        train_result = trainer.train()
-        metrics = train_result.metrics
-        max_train_samples = (
-            data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+    if data_args.do_hyperparameter_search:
+        init_hyperparameter_search(compute_metrics=compute_metrics_multi_class,
+                                   data_collator=data_collator,
+                                   eval_dataset=eval_dataset,
+                                   id2label=id2label,
+                                   model_args=model_args,
+                                   num_labels=num_labels,
+                                   predict_dataset=predict_dataset,
+                                   tokenizer=tokenizer,
+                                   train_dataset=train_dataset,
+                                   trainer_object=Trainer,
+                                   training_args=training_args,
+                                   data_args=data_args
+                                   )
+
+    elif not data_args.do_hyperparameter_search:
+
+        # Initialize our Trainer
+        training_args.metric_for_best_model = "eval_loss"
+        training_args.evaluation_strategy = IntervalStrategy.EPOCH
+        training_args.logging_strategy = IntervalStrategy.EPOCH
+
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset if training_args.do_train else None,
+            eval_dataset=eval_dataset if training_args.do_eval else None,
+            compute_metrics=compute_metrics_multi_class,
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
         )
-        metrics["train_samples"] = min(max_train_samples, len(train_dataset))
+        # Training
+        if training_args.do_train:
+            checkpoint = None
+            if training_args.resume_from_checkpoint is not None:
+                checkpoint = training_args.resume_from_checkpoint
+            elif last_checkpoint is not None:
+                checkpoint = last_checkpoint
+            train_result = trainer.train()
+            metrics = train_result.metrics
+            max_train_samples = (
+                data_args.max_train_samples if data_args.max_train_samples is not None else len(train_dataset)
+            )
+            metrics["train_samples"] = min(max_train_samples, len(train_dataset))
 
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+            trainer.save_model()  # Saves the tokenizer too for easy upload
 
-        trainer.log_metrics("train", metrics)
-        trainer.save_metrics("train", metrics)
-        trainer.save_state()
+            trainer.log_metrics("train", metrics)
+            trainer.save_metrics("train", metrics)
+            trainer.save_state()
 
-    # Evaluation
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate(eval_dataset=eval_dataset)
+        # Evaluation
+        if training_args.do_eval:
+            logger.info("*** Evaluate ***")
+            metrics = trainer.evaluate(eval_dataset=eval_dataset)
 
-        max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(eval_dataset)
-        metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
+            max_eval_samples = data_args.max_eval_samples if data_args.max_eval_samples is not None else len(
+                eval_dataset)
+            metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+            trainer.log_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)
 
-    # Prediction
-    if training_args.do_predict:
-        logger.info("*** Predict ***")
-        make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
-                                     predict_dataset=predict_dataset, id2label=id2label, name_of_input_field="input")
+        # Prediction
+        if training_args.do_predict:
+            logger.info("*** Predict ***")
+            make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
+                                         predict_dataset=predict_dataset, id2label=id2label,
+                                         name_of_input_field="input")
 
-    # Clean up checkpoints
-    checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
-    for checkpoint in checkpoints:
-        shutil.rmtree(checkpoint)
+        # Clean up checkpoints
+        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if
+                       '/checkpoint' in filepath]
+        for checkpoint in checkpoints:
+            shutil.rmtree(checkpoint)
 
 
 if __name__ == "__main__":
