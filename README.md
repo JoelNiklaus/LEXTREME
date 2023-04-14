@@ -182,7 +182,7 @@ In case you want to perform hyperparameter search this is possible via the argum
 python main.py -gn 1 -gm 80 --task german_argument_mining --do_hyperparameter_search True -lmt distilbert-base-multilingual-cased -ld hyperparameter_tuning
 ```
 
-Automatically, you will create a new project in wandb with a name of the finetuning task, in this case `german_argument_mining`, + `_hyperparameter_search`. There you can see which hyperparamters perform best.
+Automatically, you will create a new project in wandb which is the same as the name of the logging directory, in the case above `hyperparameter_tuning`. The runs in wandb will be named according to this pattern: `finetuning task` + `__num_train_epochs_X__weight_decay_X__batch_size_X__seed_X__learning_rate_X__num_train_epochs_actually_trained_X`. `X` in this context means the actual values of hyperparameters; `num_train_epochs_actually_trained` depicts the actual number of training epochs, because the training will stop earlier if no improvements are to be detected during training.
 
 If you want to change the value for `metric_for_best_model`, add it to the bash command like this:
 
