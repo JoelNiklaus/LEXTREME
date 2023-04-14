@@ -361,6 +361,10 @@ def merge_dicts(dict_args):
     return result
 
 
+def set_environment_variables():
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
+
 def create_dataset(path: str, label_dict: dict, text_column: str = 'text', label_column: str = 'label'):
     """
     This function reads the train, validation and test dataset
@@ -830,8 +834,8 @@ def generate_model_and_tokenizer(model_args, data_args, num_labels):
                                    num_labels)
 
 
-def get_the_runname_for_hyperparameter_tuning(training_args):
-    run_name = 'num_train_epochs_' + str(
+def get_the_run_name_for_hyperparameter_tuning(data_args, training_args):
+    run_name = data_args.finetuning_task + '__num_train_epochs_' + str(
         training_args.num_train_epochs) + '__weight_decay_' + str(
         training_args.weight_decay) + '__batch_size_' + str(
         training_args.per_device_train_batch_size) + '__seed_' + str(
@@ -843,7 +847,7 @@ def get_the_runname_for_hyperparameter_tuning(training_args):
 
 def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                                trainer_object, train_dataset, eval_dataset, predict_dataset, id2label, data_collator,
-                               tokenizer):
+                               tokenizer, compute_metrics):
     # INFO: https://docs.wandb.ai/guides/sweeps
     # INFO: https://docs.wandb.ai/guides/sweeps/parallelize-agents
 
@@ -870,8 +874,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
 
     sweep_config['parameters'] = parameters_dict
 
-    # project_name = data_args.log_directory.split('/')[-1]
-    project_name = 'hyperparameter_search_for_' + data_args.finetuning_task
+    project_name = data_args.log_directory
     sweep_id = wandb.sweep(sweep_config, project=project_name)
 
     def model_init():
@@ -901,7 +904,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                 training_args.learning_rate = config.learning_rate
 
             # Specify the run-specific output directory with the hyperparameters chosen
-            run_specific_output_directory = get_the_runname_for_hyperparameter_tuning(training_args)
+            run_specific_output_directory = get_the_run_name_for_hyperparameter_tuning(data_args, training_args)
             training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
 
             trainer = trainer_object(
@@ -909,7 +912,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
-                compute_metrics=compute_metrics_multi_class,
+                compute_metrics=compute_metrics,
                 tokenizer=tokenizer,
                 data_collator=data_collator,
                 callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
@@ -919,22 +922,35 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
         metrics = train_result.metrics
         metrics["train_samples"] = len(train_dataset)
         trainer.log_metrics("train", metrics)
+        # wandb.log("train", metrics)
         trainer.save_metrics("train", metrics)
 
         metrics = trainer.evaluate(eval_dataset=eval_dataset)
         metrics["eval_samples"] = len(eval_dataset)
         trainer.log_metrics("eval", metrics)
+        # wandb.log("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-        make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
-                                     predict_dataset=predict_dataset, id2label=id2label,
-                                     name_of_input_field="input")
+        if meta_infos["task_type_mapping"][data_args.finetuning_task] == "SLTC":
+            make_predictions_multi_class(trainer=trainer, training_args=training_args, data_args=data_args,
+                                         predict_dataset=predict_dataset, id2label=id2label,
+                                         name_of_input_field="input")
+        elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "MLTC":
+            langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+            langs = sorted(list(set(langs)))
+            make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
+                                         id2label=id2label, training_args=training_args, list_of_languages=langs)
+        elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "NER":
+            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args,
+                                 predict_dataset=predict_dataset,
+                                 id2label=id2label, training_args=training_args)
 
         log_args(wandb, data_args, model_args)
 
         # Specify the run-specific output directory with the hyperparameters chosen
-        run_name = get_the_runname_for_hyperparameter_tuning(
-            training_args) + '__num_train_epochs_actually_trained_' + str(int(train_result.metrics["epoch"]))
+        run_name = get_the_run_name_for_hyperparameter_tuning(data_args,
+                                                              training_args) + '__num_train_epochs_actually_trained_' + str(
+            int(train_result.metrics["epoch"]))
         wandb.run.name = run_name
 
     wandb.agent(sweep_id, train, count=30)

@@ -27,9 +27,12 @@ from transformers.trainer_utils import get_last_checkpoint
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
     generate_model_and_tokenizer, preprocess_function, add_oversampling_to_multiclass_dataset, \
-    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, init_hyperparameter_search
+    get_data, get_label_list_from_sltc_tasks, model_is_multilingual, init_hyperparameter_search, \
+    set_environment_variables
 
 logger = logging.getLogger(__name__)
+
+set_environment_variables()
 
 
 def main():
@@ -159,6 +162,7 @@ def main():
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
             )
+
     # For hyperparameter search we always need the validation dataset
     if training_args.do_eval or data_args.do_hyperparameter_search:
         if data_args.max_eval_samples is not None:
@@ -170,6 +174,7 @@ def main():
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
             )
+
     # For hyperparameter search we might need the predict dataset
     if training_args.do_predict or data_args.do_hyperparameter_search:
         if data_args.max_predict_samples is not None:
@@ -192,13 +197,21 @@ def main():
 
     # Training
     if data_args.do_hyperparameter_search:
-        init_hyperparameter_search(data_args=data_args, model_args=model_args, training_args=training_args,
+        init_hyperparameter_search(compute_metrics=compute_metrics_multi_class,
+                                   data_collator=data_collator,
+                                   eval_dataset=eval_dataset,
+                                   id2label=id2label,
+                                   model_args=model_args,
                                    num_labels=num_labels,
-                                   trainer_object=Trainer, train_dataset=train_dataset, eval_dataset=eval_dataset,
-                                   predict_dataset=predict_dataset, id2label=id2label,
-                                   data_collator=data_collator, tokenizer=tokenizer)
+                                   predict_dataset=predict_dataset,
+                                   tokenizer=tokenizer,
+                                   train_dataset=train_dataset,
+                                   trainer_object=Trainer,
+                                   training_args=training_args,
+                                   data_args=data_args
+                                   )
 
-    if not data_args.do_hyperparameter_search:
+    elif not data_args.do_hyperparameter_search:
 
         # Initialize our Trainer
         training_args.metric_for_best_model = "eval_loss"

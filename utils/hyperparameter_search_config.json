@@ -1,11 +1,7 @@
 {
   "epochs": {
-    "values": [
-      5,
-      10,
-      15,
-      20
-    ]
+    "min": 1,
+    "max": 50
   },
   "batch_size": {
     "values": [
