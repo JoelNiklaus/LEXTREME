@@ -223,8 +223,10 @@ def get_python_file_for_task(task):
         return f"template_NER.py --finetuning_task " + task
     elif meta_infos["task_type_mapping"][task] == "SLTC":
         return f"template_SLTC.py --finetuning_task " + task
-    elif meta_infos["task_type_mapping"][task] == "MLTC":
+    elif meta_infos["task_type_mapping"][task] == "MLTC" and task != "politmonitor":
         return f"template_MLTC.py --finetuning_task " + task
+    elif task == "politmonitor":
+        return f"template_MLTC_politmonitor.py --finetuning_task " + task
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
@@ -465,7 +467,6 @@ def generate_command_for_hyperparameter_search(**data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
                        '--search_type_method {SEARCH_TYPE_METHOD} '
-
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'

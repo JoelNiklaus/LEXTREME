@@ -66,11 +66,10 @@ class TrainingDataHandler:
         if running_mode in {'experimental', 'debug'}:
             # We keep the all validation and test examples
             indices_to_keep = training_data_df[
-                training_data_df.split.isin([])].index.tolist()  # ['validation', 'test']
+                training_data_df.split.isin([['validation', 'test']])].index.tolist()  # ['validation', 'test']
             counter_dict = defaultdict(list)
             # We just filter the training examples
-            # for i, r in self.training_data_df[self.training_data_df.split.isin(['train'])].iterrows():
-            for i, r in training_data_df.iterrows():
+            for i, r in training_data_df[training_data_df.split == 'train'].iterrows():
                 language = training_data_df.at[i, 'language']
                 '''_key = self.training_data_df.at[i, 'one_hot_affair_topic_codes']
                 _key = [str(x) for x in _key]

@@ -6,8 +6,7 @@
   "batch_size": {
     "values": [
       8,
-      16,
-      32
+      4
     ]
   },
   "learning_rate": {

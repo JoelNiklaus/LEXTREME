@@ -67,7 +67,9 @@ def main():
     if data_args.disable_caching:
         disable_caching()
 
-    config_wandb(model_args=model_args, data_args=data_args, training_args=training_args)
+    if not model_args.do_hyperparameter_search:
+        config_wandb(model_args=model_args, data_args=data_args,
+                     training_args=training_args)
 
     # Setup distant debugging if needed
     if data_args.server_ip and data_args.server_port:
