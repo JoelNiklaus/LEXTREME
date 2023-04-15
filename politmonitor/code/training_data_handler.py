@@ -291,7 +291,7 @@ class TrainingDataHandler:
 
         return dataframe
 
-    def create_barplot(self, df, split='all', return_table=False):
+    def create_barplot(self, df, split='all', title='', return_table=False):
         if split != 'all':
             df = df[df.split == split]
         all_labels = list()
