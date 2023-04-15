@@ -66,7 +66,7 @@ class TrainingDataHandler:
         if running_mode in {'experimental', 'debug'}:
             # We keep the all validation and test examples
             indices_to_keep = training_data_df[
-                training_data_df.split.isin([['validation', 'test']])].index.tolist()  # ['validation', 'test']
+                training_data_df.split.isin(['validation', 'test'])].index.tolist()  # ['validation', 'test']
             counter_dict = defaultdict(list)
             # We just filter the training examples
             for i, r in training_data_df[training_data_df.split == 'train'].iterrows():
@@ -291,7 +291,9 @@ class TrainingDataHandler:
 
         return dataframe
 
-    def create_barplot(self, df, title='', return_table=False):
+    def create_barplot(self, df, split='all', return_table=False):
+        if split != 'all':
+            df = df[df.split == split]
         all_labels = list()
         for label_list in df.affair_topic_codes_as_labels:
             for label in label_list:
