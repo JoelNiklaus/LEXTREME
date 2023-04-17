@@ -44,10 +44,42 @@ def insert_responsibilities(df):
 class ResultAggregator:
     meta_infos = meta_infos
 
-    def __init__(self, wandb_api_key=None, project_name=None,
-                 path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
-                 split="predict", score='macro-f1'):
+    def __init__(self,
+                 only_completed_tasks=False,
+                 path_to_csv_export=None,
+                 project_name=None,
+                 score='macro-f1',
+                 split="predict",
+                 verbose_logging=True,
+                 wandb_api_key=None
+                 ):
+        """
+        @type only_completed_tasks: str
+        @type path_to_csv_export: str
+        @type project_name: str
+        @type score: Must be one of these: [macro-f1, macro-precision, macro-recall, micro-f1, micro-precision, micro-recall, weighted-f1, weighted-precision, weighted-recall]
+        @type split: Must be one of these: [train, validation, test]
+        @verbose_logging: bool
+        @wandb_api_key: str
 
+        project_name: Default value is None. Specify the name of the project from wand which you want to fetch your data from.
+        Do not forget to put the name of the wandb team in fron of your project name.
+        For example: if your wand team name is awesome_team and your project tame awseome_project, you need to pass awesome_team/awesome_project
+        If set to None, it will create csv file called `current_wandb_results_unprocessed.csv` in your current directory.
+        If set to None, it will presumably take the api key which you are already logged with.
+        If set to None, it will presumably take the last project that you used with the wandb api.
+
+        only_completed_tasks: Default value is False. Specify if you want to consider only tasks in the reports that are entirely completed. Entirely completed means that all predefined models have successuflly run for all seeds. It is advised to keep it False.
+        path_to_csv_export: Default value is None. Specify the path and name of the csv file where you would liek to export your wandb results to save them locally.
+
+        score: Default value is macro-f1. Specify the default score which will be used to create reports.
+
+        split: Default value is `predict`. Specify the split which want to use to create your reports.
+
+        verbose_logging: Default value is True. Specify if you want print out all logging information. If set to False, the logs will not be printed out. However, all logging information will always be saved in a new file unter the logs folder.
+
+        wandb_api_key: Default value is None. Insert the wandb api key for the project you are interested in.
+        """
         # Create the result directory if not existent
         if os.path.isdir('results') == False:
             os.mkdir('results')
@@ -485,6 +517,7 @@ class ResultAggregator:
             score_to_filter = self.split + score
 
         if only_completed_tasks == True:
+            # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
                     self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
@@ -500,6 +533,15 @@ class ResultAggregator:
         df_pivot.reset_index(inplace=True)
         df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
             lambda x: self.meta_infos["task_type_mapping"][x])
+
+        # First wee need to check if there are all seed values as columns
+        # As stated in the above comment; if there are no completed tasks, there will not be any seeds values left
+        df_pivot_columns = df_pivot.columns.tolist()
+        if df_pivot.shape[0] == 0:
+            for seed in [1, 2, 3]:
+                if seed not in df_pivot_columns:
+                    df_pivot[seed] = ''
+
         df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
                              '_name_or_path', 'language', 1, 2, 3]]
         df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
@@ -777,14 +819,15 @@ class ResultAggregator:
 
         for _name_or_path in self.results._name_or_path.unique():
             for dataset, configs in self.meta_infos["dataset_to_config"].items():
-                # TODO: Remove this constraint in the future
-                if dataset != "turkish_constitutional_court_decisions_judgment":
-                    if task_constraint is not None:
-                        configs = [
-                            conf for conf in configs if conf in task_constraint]
+                if task_constraint is not None:
+                    configs = [
+                        conf for conf in configs if conf in task_constraint]
 
-                    dataset_mean = list()
-                    for conf in configs:
+                dataset_mean = list()
+                for conf in configs:
+                    # Look if there are results for that config. If not, skip it.
+
+                    if conf in self.config_aggregated_score.columns.tolist():
                         config_mean = self.config_aggregated_score.at[_name_or_path, conf]
                         if config_mean == "":  # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
                             logging.info(
@@ -796,16 +839,19 @@ class ResultAggregator:
                                 "Processed interrupted due to wrong mean value that is not a float. The mean value is: " + str(
                                     config_mean))
                             break
-                    if len(dataset_mean) > 0:
-                        if len(dataset_mean) != len(configs):
-                            logging.error(
-                                'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
-                        dataset_mean = self.get_mean_from_list_of_values(
-                            dataset_mean)
                     else:
-                        dataset_mean = ''
-                    self.dataset_aggregated_score.at[_name_or_path,
-                                                     dataset] = dataset_mean
+                        logging.info(
+                            "There seem to be no results for the configuration " + conf + " with language model " + _name_or_path)
+                if len(dataset_mean) > 0:
+                    if len(dataset_mean) != len(configs):
+                        logging.error(
+                            'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
+                    dataset_mean = self.get_mean_from_list_of_values(
+                        dataset_mean)
+                else:
+                    dataset_mean = ''
+                self.dataset_aggregated_score.at[_name_or_path,
+                dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -933,12 +979,13 @@ if __name__ == "__main__":
                           project_name=args.project_name,
                           path_to_csv_export=args.path_to_csv_export,
                           verbose_logging=args.verbose,
-                          only_completed_tasks=True)
+                          only_completed_tasks=False)
 
     ra.get_info()
 
     ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
+    # ra.create_report()
 
-    # ra.get_dataset_aggregated_score()
+    ra.get_dataset_aggregated_score()
 
-    # ra.get_language_aggregated_score()
+    ra.get_language_aggregated_score()
