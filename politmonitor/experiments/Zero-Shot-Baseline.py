@@ -27,7 +27,7 @@ lh = LabelHandler()
 #print('Device: ', device)
 
 classifier = pipeline("zero-shot-classification",
-        model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7", device="cuda:3")
+        model="MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7", device=3)
 
 
 language = 'all'
@@ -48,7 +48,7 @@ def classify(sequence_to_classify, label_list=None):
 
     output = classifier(sequence_to_classify, label_list, multi_label=True)
     labels_scores = list(zip(output["labels"], output["scores"]))
-    labels_scores = [res[0] for res in labels_scores if res[1] > 0.5]
+    # labels_scores = [res[0] for res in labels_scores if res[1] > 0.5]
     return labels_scores
 
 
