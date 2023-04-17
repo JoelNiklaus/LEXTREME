@@ -354,8 +354,9 @@ class ResultAggregator:
             ["seed", "finetuning_task", "_name_or_path", "language"])
 
         # TODO: Remove this constraint in the future
-        #results = results[results._name_or_path.str.contains('joelito') == False]
-        results = results[results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
+        # results = results[results._name_or_path.str.contains('joelito') == False]
+        results = results[
+            results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
 
         return results
 
@@ -439,7 +440,6 @@ class ResultAggregator:
         report_df = insert_responsibilities(report_df)
 
         if tasks_to_filter:
-
             report_df = report_df[report_df.finetuning_task.isin(tasks_to_filter)]
 
         return report_df
@@ -582,7 +582,7 @@ class ResultAggregator:
         if len(results_filtered.seed.unique()) < 3:
             logging.warning(
                 "Attention. For task " + finetuning_task + " with model name " + _name_or_path + " you have " + str(
-                    len(results_filtered.seed.unique())) + " instead of 3 seeds! The mean will be calculated anway.")
+                    len(results_filtered.seed.unique())) + " instead of 3 seeds! The mean will be calculated anyway.")
 
         if len(results_filtered.seed.unique()) != len(results_filtered.seed.tolist()):
             logging.warning(
@@ -805,7 +805,7 @@ class ResultAggregator:
                     else:
                         dataset_mean = ''
                     self.dataset_aggregated_score.at[_name_or_path,
-                    dataset] = dataset_mean
+                                                     dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -913,6 +913,8 @@ class ResultAggregator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-v', '--verbose', help='Whether to enable verbose logging',
+                        action='store_true', default=False)
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
     parser.add_argument('-pn', '--project_name', help='Insert the wandb project name',
@@ -928,8 +930,10 @@ if __name__ == "__main__":
         tasks_for_report = js.load(f)
 
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
-                        verbose_logging=False, only_completed_tasks=True)
-   # ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
+                          project_name=args.project_name,
+                          path_to_csv_export=args.path_to_csv_export,
+                          verbose_logging=args.verbose,
+                          only_completed_tasks=True)
 
     ra.get_info()
 
