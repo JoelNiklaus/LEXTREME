@@ -4,6 +4,7 @@ import re
 import os
 from tqdm import tqdm
 import json as js
+
 tqdm.pandas()
 
 # Define all necessary functions and classes
@@ -63,6 +64,8 @@ id2label = dict()
 for record in label_df.to_dict(orient="record"):
     _id = int(record['keyword_id'])
     label = record['keyword_de']
+    if label == 'Grundkompetenzen_Illetrismus':
+        label = 'Europapolitik'
     label2id[label] = _id
     id2label[_id] = label
 
