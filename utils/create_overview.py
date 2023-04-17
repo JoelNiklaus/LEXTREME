@@ -579,6 +579,9 @@ class ResultAggregator:
 
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
+        # write to csv, so we can read it with a bash script
+        self.seed_check.to_csv("results/completeness_report.csv", sep="\t", index=False)
+
         with pd.ExcelWriter('results/report.xlsx') as writer:
             split_name = self.remove_slashes(self.split)
             self.seed_check.to_excel(
@@ -850,8 +853,7 @@ class ResultAggregator:
                         dataset_mean)
                 else:
                     dataset_mean = ''
-                self.dataset_aggregated_score.at[_name_or_path,
-                dataset] = dataset_mean
+                self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
