@@ -54,7 +54,7 @@ class ResultAggregator:
                  wandb_api_key=None
                  ):
         """
-        @type only_completed_tasks: str
+        @type only_completed_tasks: bool
         @type path_to_csv_export: str
         @type project_name: str
         @type score: Must be one of these: [macro-f1, macro-precision, macro-recall, micro-f1, micro-precision, micro-recall, weighted-f1, weighted-precision, weighted-recall]
