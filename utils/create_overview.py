@@ -496,7 +496,7 @@ class ResultAggregator:
 
         report_df = insert_responsibilities(report_df)
 
-        if tasks_to_filter:
+        if len(tasks_to_filter) > 0:
             report_df = report_df[report_df.finetuning_task.isin(tasks_to_filter)]
 
         return report_df
@@ -1035,7 +1035,7 @@ if __name__ == "__main__":
     ra.get_info()
 
     ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
-    ra.create_report()
+    #ra.create_report()
 
     ra.get_dataset_aggregated_score()
 
