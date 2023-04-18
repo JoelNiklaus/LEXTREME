@@ -622,7 +622,7 @@ class ResultAggregator:
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
         # write to csv, so we can read it with a bash script
-        self.seed_check.to_csv("results/completeness_report.csv", sep="\t", index=False)
+        self.seed_check.to_csv("results/completeness_report.tsv", sep="\t", index=False)
 
         with pd.ExcelWriter('results/report.xlsx') as writer:
             split_name = self.remove_slashes(self.split)
