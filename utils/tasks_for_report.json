@@ -11,8 +11,10 @@
     "swiss_law_area_prediction_civil_considerations",
     "swiss_law_area_prediction_civil_facts",
     "swiss_law_area_prediction_public_considerations",
-    "swiss_law_area_prediction_public_facts",
-    "swiss_law_area_prediction_considerations",
-    "swiss_law_area_prediction_facts"
+    "swiss_law_area_prediction_public_facts"
+  ],
+  "excluded": [
+    "swiss_law_area_prediction_facts",
+    "swiss_law_area_prediction_considerations"
   ]
 }
