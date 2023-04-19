@@ -13,9 +13,9 @@ for image in histograms.glob('**/*'):
                 relevant_images.append(image)
 relevant_images_read = [cv2.imread(str(image)) for image in relevant_images]
 
-# vertically concatenates images 
-# of same width 
+# vertically concatenates images
+# of same width
 im_v = cv2.vconcat(relevant_images_read)
-  
+
 # save output image
 cv2.imwrite('histograms/Histograms_for_datasets_with_hierarchical_models.jpg', im_v)

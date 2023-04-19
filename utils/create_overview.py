@@ -306,7 +306,7 @@ class ResultAggregator:
         '''
         For some reason, when wandb shows loss == nan, you will not get a nan value from the API.
         Instead, it returns a very low value in scientifc notation.
-        This functions tries to detect these cases. 
+        This functions tries to detect these cases.
         A manuel evaluation showed that the predictions are worse in these cases, so we need to rerun the experiments again.
 
         '''

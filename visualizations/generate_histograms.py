@@ -37,20 +37,20 @@ models_to_be_used = [
     "xlm-roberta-large"
     ]
 
-lextreme_datasets = ['brazilian_court_decisions_judgment', 
-                    'brazilian_court_decisions_unanimity', 
-                     'swiss_judgment_prediction', 
-                     'german_argument_mining', 
-                     'greek_legal_code_volume', 
-                     'greek_legal_code_chapter', 
-                     'greek_legal_code_subject', 
-                     'online_terms_of_service_unfairness_levels', 
-                     'online_terms_of_service_clause_topics', 
-                     'covid19_emergency_event', 
-                     'lener_br', 
-                     'legalnero', 
-                     'greek_legal_ner', 
-                     'mapa_coarse', 
+lextreme_datasets = ['brazilian_court_decisions_judgment',
+                    'brazilian_court_decisions_unanimity',
+                     'swiss_judgment_prediction',
+                     'german_argument_mining',
+                     'greek_legal_code_volume',
+                     'greek_legal_code_chapter',
+                     'greek_legal_code_subject',
+                     'online_terms_of_service_unfairness_levels',
+                     'online_terms_of_service_clause_topics',
+                     'covid19_emergency_event',
+                     'lener_br',
+                     'legalnero',
+                     'greek_legal_ner',
+                     'mapa_coarse',
                      'mapa_fine',
                      'multi_eurlex_level_1']
 
@@ -60,14 +60,14 @@ lextreme_datasets = ['brazilian_court_decisions_judgment',
 
 def get_tokenizers(list_of_models):
     tokenizer_dict = dict()
-    
+
     for language_model in list_of_models:
         if language_model=="microsoft/Multilingual-MiniLM-L12-H384":
             tokenizer_dict[language_model]=XLMRobertaTokenizer.from_pretrained(language_model)
         else:
             tokenizer_dict[language_model]=AutoTokenizer.from_pretrained(language_model)
 
-    
+
     return tokenizer_dict
 
 def get_tokenization_length(tokenizer, text):
@@ -101,7 +101,7 @@ def add_column_with_text_length(dataframe,models_to_be_used,is_split_into_words=
     print(dataframe_as_dataset)
 
     dataframe_processed = list()
-    
+
     for language_model_name in models_to_be_used:
         dataset = deepcopy(dataframe_as_dataset)
         tokenizer = AutoTokenizer.from_pretrained(language_model_name)
@@ -120,17 +120,17 @@ def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
 
 
     '''Some pretrained models will produce the same tokenization output. This function will group these outs together so that we have fewer histograms.'''
-    
+
     interim_dict = dict()
-    
+
     for language_model_name in models_to_be_used:
         tokenization_output = dataframe[language_model_name].values.tolist()
         interim_dict[language_model_name]=tokenization_output
-        
+
     language_model_dict = deepcopy(interim_dict)
-    
+
     language_models_that_generate_equal_outputs = set()
-    
+
     for language_model_name in models_to_be_used:
         tokenization_output = dataframe[language_model_name].values.tolist()
         for key in interim_dict.keys():
@@ -138,32 +138,32 @@ def merge_equal_tokenization_outputs(dataframe,models_to_be_used):
                 if interim_dict[key]==tokenization_output:
                     language_models_that_generate_equal_outputs.add(key)
                     language_models_that_generate_equal_outputs.add(language_model_name)
-                    
+
     language_models_that_generate_equal_outputs = list(language_models_that_generate_equal_outputs)
     print(language_models_that_generate_equal_outputs)
-    
+
     dataframe[' and '.join(sorted(list(language_models_that_generate_equal_outputs)))]=dataframe[language_models_that_generate_equal_outputs[0]]
-    
+
     for language_model_name in models_to_be_used:
         if language_model_name in language_models_that_generate_equal_outputs:
             del dataframe[language_model_name]
-    
-        
+
+
     return dataframe
 
 
 def get_percentiles(list_with_values:List[int], percentile=99):
 
     '''Gets the values that fall outs the x-th percentile which will be grouped in the last bin as outliers in the histograms'''
-    
+
     border = round(np.percentile(sorted(list_with_values),percentile))
-    
+
     outliers = [x for x in list_with_values if x > border]
-    
+
     outliers_sum = sum(outliers)
-    
+
     list_with_values_new = [x for x in list_with_values if x <= border]
-    
+
     return list_with_values_new, outliers
 
 
@@ -182,9 +182,9 @@ def split_into_languages(dataset_df):
                 item_new['input']=str(document)
                 item_new['label']=labels
                 dataset_new.append(item_new)
-    
+
     dataset_new = pd.DataFrame(dataset_new)
-    
+
     return  dataset_new
 
 
@@ -192,7 +192,7 @@ def generate_dataframe_with_tokenization(dataset_name):
 
     '''This function will fetch the dataset, convert it into a dataframe and apply tokenization'''
 
-    dataset = load_dataset("joelito/lextreme",dataset_name) 
+    dataset = load_dataset("joelito/lextreme",dataset_name)
 
     all_data_as_df = list()
 
@@ -210,7 +210,7 @@ def generate_dataframe_with_tokenization(dataset_name):
         is_split_into_words=False
     all_data_as_df = add_column_with_text_length(all_data_as_df,models_to_be_used,is_split_into_words)
     all_data_as_df = merge_equal_tokenization_outputs(all_data_as_df,models_to_be_used)
-    
+
     return all_data_as_df
 
 def processing_function_multi_eurlex(item, tokenizer_dict):
@@ -229,7 +229,7 @@ def processing_function_multi_eurlex(item, tokenizer_dict):
                     item_new[language_model_name]=length
                 elif type(length)==list:
                     item_new[language_model_name]=length[0]
-    
+
             dataset_new.append(item_new)
 
     return  dataset_new
@@ -247,17 +247,17 @@ def generate_dataframe_with_tokenization_for_multi_eurlex(dataset_name):
 
 
         for split in ["train","validation","test"]:
-            
-            dataset = load_dataset("joelito/lextreme", dataset_name, split=split) #streaming=True 
+
+            dataset = load_dataset("joelito/lextreme", dataset_name, split=split) #streaming=True
             dataset = dataset.select([n for n in range(0,100)])
-            
+
             for example in dataset:
                 example = processing_function_multi_eurlex(example, tokenizer_dict)
                 for e in example:
                     results_collected.append(e)
-        
+
         results_collected_df = pd.DataFrame(results_collected)
-        
+
         return pd.DataFrame(results_collected_df)
 
 
@@ -282,22 +282,22 @@ def draw_histogram(dataframe,dataset_name,language=None):
 
 
     bins = np.linspace(0, max_value, 50)
-    
+
     columns_with_values_keys = list(columns_with_values.keys())
-    
+
     all_values = list()
     all_labels = list()
 
     for n, key in enumerate(columns_with_values_keys):
-        
+
         values = columns_with_values[key]['values']
-        
+
         all_values.append(values)
         all_labels.append(key)
 
-            
+
     N, bins, patches = plt.hist(all_values, bins=bins, alpha=0.7, edgecolor='black', label=all_labels)
-    
+
     for n,p in enumerate(patches):
         # The last bin will contain all outliers
         p[-1].set_height(p[-1].get_height()+len(columns_with_values[columns_with_values_keys[n]]['outliers']))
@@ -310,11 +310,11 @@ def draw_histogram(dataframe,dataset_name,language=None):
         plt.title('Histogram for dataset '+dataset_name+' for input with language: '+language)
     else:
         plt.title('Histogram for dataset '+dataset_name)
-    
+
     output_directory_name = 'histograms/'+dataset_name
     if os.path.isdir(output_directory_name)==False:
         os.makedirs(output_directory_name)
-    
+
     if language is not None:
         plt.savefig(output_directory_name+'/'+dataset_name+'_language__'+language+'.jpg')
     else:
@@ -326,14 +326,14 @@ def draw_histogram(dataframe,dataset_name,language=None):
 def generate_histograms(dataset_name, less_resources=True):
 
     '''Generates histogram per dataset and language'''
-    
+
     if dataset_name.startswith("multi_eurlex_level") and less_resources==True:
         df_all = generate_dataframe_with_tokenization_for_multi_eurlex(dataset_name)
     else:
         df_all = generate_dataframe_with_tokenization(dataset_name)
 
     print(df_all.head())
-    
+
     all_languages = df_all.language.unique()
 
     if len(all_languages)>1:

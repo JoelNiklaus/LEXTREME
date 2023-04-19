@@ -159,7 +159,7 @@ class TrainingDataHandler:
                 training_data.affair_text_srcid.isin(list(affair_text_srcid_in_all_languages))]
 
         # We decided that we will note merge texts that belong to the same affair_text_srcid
-        # training_data = self.merge_texts(training_data, inputs)
+        # training_data = self.merge_texts(training_data, ['text'])
 
         return training_data
 
