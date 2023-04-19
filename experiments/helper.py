@@ -247,6 +247,20 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
+def T5_preprocess_function(batch, tokenizer, model_args, data_args):
+    inputs = ['Classify:' + text for text in batch['input']]
+    model_inputs = tokenizer(inputs, max_length=data_args.max_seq_length, truncation=True)
+
+    # Setup the tokenizer for targets
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(batch["label"], max_length=data_args.max_seq_length,
+                           truncation=True)
+
+    model_inputs["label"] = labels["input_ids"]
+
+    return model_inputs
+
+
 def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
     """Can be used with any task that requires hierarchical models"""
 

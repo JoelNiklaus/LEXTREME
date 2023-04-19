@@ -997,7 +997,8 @@
       "multilingual": {
         "small": [
           "distilbert-base-multilingual-cased",
-          "microsoft/Multilingual-MiniLM-L12-H384"
+          "microsoft/Multilingual-MiniLM-L12-H384",
+          "google/mt5-small"
         ],
         "base": [
           "xlm-roberta-base",

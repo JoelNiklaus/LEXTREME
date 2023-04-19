@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, T5ForConditionalGeneration
 from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
@@ -181,10 +181,10 @@ models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "ger
 
 
 def get_tokenizer(model_name_or_path, revision):
-    # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".   
+    # https://huggingface.co/microsoft/Multilingual-MiniLM-L12-H384: They explicitly state that "This checkpoint uses BertModel with XLMRobertaTokenizer so AutoTokenizer won't work with this checkpoint!".
     # However, after refactoring, using XLMRobertaTokenizer causes some errors: ValueError: word_ids() is not available when using non-fast tokenizers (e.g. instance of a `XxxTokenizerFast` class).
     # AutoTokenizer works anyway
-    # AutTokenizer gives the following infos: This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods. 
+    # AutTokenizer gives the following infos: This tokenizer inherits from [`PreTrainedTokenizerFast`] which contains most of the main methods.
     tokenizer_class = AutoTokenizer
     if model_name_or_path in models_that_require_add_prefix_space:
         return tokenizer_class.from_pretrained(model_name_or_path, add_prefix_space=True, revision=revision)
@@ -204,7 +204,10 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         if model_type in model_type_to_model_class.keys() and model_args.hierarchical == True:
             return model_type_to_model_class[model_type]
         else:
-            return AutoModelForSequenceClassification
+            if model_type == 'mt5':
+                return T5ForConditionalGeneration
+            else:
+                return AutoModelForSequenceClassification
     else:
         return AutoModelForSequenceClassification
 
