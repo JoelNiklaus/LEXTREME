@@ -2,7 +2,7 @@ import json as js
 import os
 from collections import Counter
 from copy import deepcopy
-from typing import Literal, Union
+from typing import Union
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -51,12 +51,14 @@ class TrainingDataHandler:
                           affair_text_scope: Union[list, str],
                           same_items_for_each_language=True,
                           test_size=0.4,
-                          running_mode="default"):
+                          running_mode="default",
+                          merge_texts=False):
 
         training_data_df = self.filter_training_data(language=language,
                                                      affair_text_scope=affair_text_scope,
                                                      affair_attachment_category=affair_attachment_category,
-                                                     same_items_for_each_language=same_items_for_each_language
+                                                     same_items_for_each_language=same_items_for_each_language,
+                                                     merge_texts=merge_texts
                                                      )
 
         training_data_df = self.create_df_for_split(training_data_df)
@@ -124,6 +126,7 @@ class TrainingDataHandler:
         return dataset
 
     def filter_training_data(self,
+                             merge_texts: bool,
                              language: Union[list, str],
                              affair_attachment_category: Union[list, str],
                              affair_text_scope: Union[list, str],
@@ -159,7 +162,8 @@ class TrainingDataHandler:
                 training_data.affair_text_srcid.isin(list(affair_text_srcid_in_all_languages))]
 
         # We decided that we will note merge texts that belong to the same affair_text_srcid
-        # training_data = self.merge_texts(training_data, ['text'])
+        if merge_texts:
+            training_data = self.merge_texts(training_data, ['text'])
 
         return training_data
 
