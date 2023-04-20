@@ -769,7 +769,7 @@ def run_experiment(
 
                 if script_new is not None:
                     # sleep different time for each seed to prevent access to temporary scripts at the same time
-                    command = f'sleep {seed * 10}; bash {str(script_new)}'
+                    command = f'sleep {seed}; bash {str(script_new)}'
                     gpu_command_dict[gpu_id].append(command)
                     print(command)
 
