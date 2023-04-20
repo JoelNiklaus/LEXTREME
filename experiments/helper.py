@@ -247,14 +247,17 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
-def T5_preprocess_function(batch, tokenizer, model_args, data_args):
+def T5_preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
+    if data_args.pad_to_max_length:
+        padding = "max_length"
+
     inputs = ['Classify:' + text for text in batch['input']]
-    model_inputs = tokenizer(inputs, max_length=data_args.max_seq_length, truncation=True)
+    model_inputs = tokenizer(inputs, max_length=data_args.max_seq_length, truncation=True, padding=padding)
 
     # Setup the tokenizer for targets
     with tokenizer.as_target_tokenizer():
-        labels = tokenizer(batch["label"], max_length=data_args.max_seq_length,
-                           truncation=True)
+        labels = [id2label[label] for label in batch['label']]
+        labels = tokenizer(labels, max_length=data_args.max_seq_length, truncation=True, padding=padding)
 
     model_inputs["label"] = labels["input_ids"]
 

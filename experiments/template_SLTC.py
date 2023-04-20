@@ -26,7 +26,7 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from DataClassArguments import DataTrainingArguments, ModelArguments, get_default_values
 from helper import compute_metrics_multi_class, make_predictions_multi_class, config_wandb, \
-    generate_model_and_tokenizer, preprocess_function, T5_preprocess_function, add_oversampling_to_multiclass_dataset, \
+    generate_model_and_tokenizer, preprocess_function, add_oversampling_to_multiclass_dataset, \
     get_data, get_label_list_from_sltc_tasks, model_is_multilingual, init_hyperparameter_search, \
     set_environment_variables
 
@@ -157,7 +157,7 @@ def main():
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
         with training_args.main_process_first(desc="train dataset map pre-processing"):
             train_dataset = train_dataset.map(
-                lambda x: T5_preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on train dataset",
@@ -169,7 +169,7 @@ def main():
             eval_dataset = eval_dataset.select(range(data_args.max_eval_samples))
         with training_args.main_process_first(desc="validation dataset map pre-processing"):
             eval_dataset = eval_dataset.map(
-                lambda x: T5_preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on validation dataset",
@@ -181,7 +181,7 @@ def main():
             predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                lambda x: T5_preprocess_function(x, tokenizer, model_args, data_args),
+                lambda x: preprocess_function(x, tokenizer, model_args, data_args),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 desc="Running tokenizer on prediction dataset",

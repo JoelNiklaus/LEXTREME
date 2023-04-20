@@ -5,12 +5,13 @@ import torch
 import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, T5ForConditionalGeneration
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, MT5EncoderModel
 from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
 from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 from models.camembert import HierCamembertForSequenceClassification
+from models.t5_encoder_classifier import T5ForSequenceClassification, HierT5ForSequenceClassification
 
 
 @dataclass
@@ -33,7 +34,7 @@ def sinusoidal_init(num_embeddings: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert']
+supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert', 'mt5']
 
 
 class HierarchicalBert(nn.Module):
@@ -50,12 +51,14 @@ class HierarchicalBert(nn.Module):
         self.max_segment_length = max_segment_length
 
         # Init sinusoidal positional embeddings
-        self.seg_pos_embeddings = nn.Embedding(max_segments + 1, encoder.config.hidden_size,
+        self.seg_pos_embeddings = nn.Embedding(max_segments + 1,
+                                               encoder.config.hidden_size,
                                                padding_idx=0,
-                                               _weight=sinusoidal_init(max_segments + 1, encoder.config.hidden_size))
+                                               _weight=sinusoidal_init(max_segments + 1,
+                                                                       encoder.config.hidden_size))
 
         # Init segment-wise transformer-based encoder
-        if encoder.config.model_type == 'distilbert':
+        if encoder.config.model_type in ['distilbert']:
             # for some reason, intermediate_size is called differently in DistilBertConfig
             dim_feedforward = encoder.config.hidden_dim
             # for some reason, hidden_act is called activation in DistilBertConfig
@@ -63,20 +66,41 @@ class HierarchicalBert(nn.Module):
             # for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
             dropout = encoder.config.dropout
             layer_norm_eps = 1e-5  # 1e-5 is default
+        elif encoder.config.model_type in ['mt5']:
+            # for some reason, intermediate_size is called differently in DistilBertConfig
+            dim_feedforward = encoder.config.hidden_size
+            # for some reason, hidden_act is called activation in DistilBertConfig
+            activation = encoder.config.feed_forward_proj
+            # for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
+            dropout = encoder.config.dropout_rate
+            layer_norm_eps = 1e-5  # 1e-5 is default
         else:
             dim_feedforward = encoder.config.intermediate_size
             activation = encoder.config.hidden_act
             dropout = encoder.config.hidden_dropout_prob
             layer_norm_eps = encoder.config.layer_norm_eps
-        self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                          nhead=encoder.config.num_attention_heads,
-                                          batch_first=True,
-                                          dim_feedforward=dim_feedforward,
-                                          activation=activation,
-                                          dropout=dropout,
-                                          layer_norm_eps=layer_norm_eps,
-                                          num_encoder_layers=2,
-                                          num_decoder_layers=0).encoder
+
+        if encoder.config.model_type in ['mt5']:
+            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
+                                              nhead=encoder.config.num_attention_heads,
+                                              batch_first=True,
+                                              dim_feedforward=dim_feedforward,
+                                              activation=activation,
+                                              dropout=dropout,
+                                              layer_norm_eps=layer_norm_eps,
+                                              num_encoder_layers=2,
+                                              num_decoder_layers=0
+                                              ).encoder
+        else:
+            self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
+                                              nhead=encoder.config.num_attention_heads,
+                                              batch_first=True,
+                                              dim_feedforward=dim_feedforward,
+                                              activation=activation,
+                                              dropout=dropout,
+                                              layer_norm_eps=layer_norm_eps,
+                                              num_encoder_layers=2,
+                                              num_decoder_layers=0).encoder
 
     def forward(self,
                 input_ids=None,
@@ -104,7 +128,7 @@ class HierarchicalBert(nn.Module):
 
         # Encode segments with BERT --> (256, 128, 768)
 
-        if self.encoder.config.model_type == 'distilbert':
+        if self.encoder.config.model_type in ['distilbert', 'mt5']:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape)[0]
         else:
@@ -151,6 +175,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             segment_encoder = model.deberta
         elif config.model_type == 'camembert':
             segment_encoder = model.roberta
+        elif config.model_type == 'mt5':
+            segment_encoder = model.t5
         # Replace flat BERT encoder with hierarchical BERT encoder
         model_encoder = HierarchicalBert(encoder=segment_encoder,
                                          max_segments=max_segments,
@@ -165,6 +191,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             model.deberta = model_encoder
         elif config.model_type == "camembert":
             model.roberta = model_encoder
+        elif config.model_type == 'mt5':
+            model.t5 = model_encoder
     elif config.model_type in ['longformer', 'big_bird']:
         pass
     else:
@@ -172,12 +200,16 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 
     return model
 
+
 # Some model tokenizers are based on roberta (https://huggingface.co/docs/transformers/model_doc/roberta)
 # a RoBERTa tokenizer, derived from the GPT-2 tokenizer, uses byte-level Byte-Pair-Encoding.
 # This tokenizer has been trained to treat spaces like parts of the tokens (a bit like sentencepiece) so a word will
 # be encoded differently whether it is at the beginning of the sentence (without space) or not
 # You need to pass add_prefix_space=True to make it work, otherwise an error will occur
-models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base", "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish", "BSC-TeMU/roberta-base-bne", "pdelobelle/robbert-v2-dutch-base", "roberta-large"]
+models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base",
+                                        "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish",
+                                        "BSC-TeMU/roberta-base-bne", "pdelobelle/robbert-v2-dutch-base",
+                                        "roberta-large"]
 
 
 def get_tokenizer(model_name_or_path, revision):
@@ -198,14 +230,16 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "deberta-v2": HierDebertaV2ForSequenceClassification,
         "roberta": HierRobertaForSequenceClassification,
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
-        "camembert": HierCamembertForSequenceClassification
+        "camembert": HierCamembertForSequenceClassification,
+        "mt5": HierT5ForSequenceClassification
+        # Here just get directly the encoder, because there is no transformers class MT5ForSequenceClassification
     }
     if model_args is not None:
         if model_type in model_type_to_model_class.keys() and model_args.hierarchical == True:
             return model_type_to_model_class[model_type]
         else:
             if model_type == 'mt5':
-                return T5ForConditionalGeneration
+                return T5ForSequenceClassification
             else:
                 return AutoModelForSequenceClassification
     else:
