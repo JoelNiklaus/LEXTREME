@@ -1,5 +1,5 @@
 # Another example is here, but it seems to be difficult: https://gist.github.com/sam-writer/723baf81c501d9d24c6955f201d86bbb
-# I took this one: https://github.com/paulthemagno/transformers/coMit/12b33f40c8fa29938ac6c8c2bcfd5e9dd224a911
+# I took this one: https://github.com/paulthemagno/transformers/commit/12b33f40c8fa29938ac6c8c2bcfd5e9dd224a911
 
 
 from typing import Optional, Tuple, Union
@@ -34,8 +34,9 @@ class T5Pooler(nn.Module):
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token.
-        first_token_tensor = hidden_states[:, 0]
-        pooled_output = self.dense(first_token_tensor)
+        # IMPORTANT: Remove this, because we already do pooling in hierbert
+        # first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(hidden_states)
         pooled_output = self.activation(pooled_output)
         return pooled_output
 
@@ -47,7 +48,7 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
         self.num_labels = config.num_labels
         self.config = config
 
-        self.t5 = MT5Model(config)
+        self.mt5_encoder = MT5EncoderModel(config)
         # classifier_dropout = (config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         # AttributeError: 'MT5Config' object has no attribute 'classifier_dropout' and not attribute 'hidden_dropout_prob'
         classifier_dropout = config.dropout_rate
@@ -86,7 +87,7 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        outputs = self.t5(
+        outputs = self.mt5_encoder(
             input_ids,
             attention_mask=attention_mask,
             # token_type_ids=token_type_ids, # it has no token_type_ids
@@ -99,8 +100,8 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
 
             # this is my main doubt: MT5Model needs boht input_ids/embeds and decoder_input_ids/emebds while BertModel only input_ids/embeds
             # I tried to pass to MT5Model the same values for these variables but I'm not sure about that
-            decoder_input_ids=input_ids,
-            decoder_inputs_embeds=inputs_embeds,
+            # decoder_input_ids=input_ids,
+            # decoder_inputs_embeds=inputs_embeds,
         )
 
         # added from BertModel (but I wanted to use here not to break MT5Model output)
@@ -141,8 +142,8 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
             # hidden_states=outputs.hidden_states,
             # attentions=outputs.attentions,
             # but it has the same variables with decoder_* at the beginning, since outputs is of the type Seq2SeqModelOutput
-            hidden_states=outputs.decoder_hidden_states,
-            attentions=outputs.decoder_attentions,
+            # hidden_states=outputs.decoder_hidden_states,
+            # attentions=outputs.decoder_attentions,
         )
 
 class HierT5ForSequenceClassification(MT5PreTrainedModel):
@@ -151,7 +152,7 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
         self.num_labels = config.num_labels
         self.config = config
 
-        self.t5 = MT5EncoderModel(config)
+        self.mt5_encoder = MT5EncoderModel(config)
         # classifier_dropout = (config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         # AttributeError: 'MT5Config' object has no attribute 'classifier_dropout' and not attribute 'hidden_dropout_prob'
         classifier_dropout = config.dropout_rate
@@ -190,7 +191,7 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        outputs = self.t5(
+        outputs = self.mt5_encoder(
             input_ids,
             attention_mask=attention_mask,
             # token_type_ids=token_type_ids, # it has no token_type_ids
@@ -246,6 +247,6 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
             # hidden_states=outputs.hidden_states,
             # attentions=outputs.attentions,
             # but it has the same variables with decoder_* at the beginning, since outputs is of the type Seq2SeqModelOutput
-            hidden_states=outputs.decoder_hidden_states,
-            attentions=outputs.decoder_attentions,
+            # hidden_states=outputs.decoder_hidden_states,
+            # attentions=outputs.decoder_attentions,
         )

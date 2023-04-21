@@ -82,10 +82,10 @@ class HierarchicalBert(nn.Module):
 
         if encoder.config.model_type in ['mt5']:
             self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                              nhead=encoder.config.num_attention_heads,
+                                              nhead=8,
                                               batch_first=True,
                                               dim_feedforward=dim_feedforward,
-                                              activation=activation,
+                                              activation='gelu',
                                               dropout=dropout,
                                               layer_norm_eps=layer_norm_eps,
                                               num_encoder_layers=2,
