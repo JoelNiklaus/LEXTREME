@@ -180,6 +180,7 @@ class TrainingDataHandler:
         else:
             return str(item)
 
+
     def merge_texts(self, dataframe, input_columns, key_to_group_by='affair_text_srcid'):
 
         dataframe_grouped = dataframe.groupby(['language', key_to_group_by], as_index=False).agg(list)

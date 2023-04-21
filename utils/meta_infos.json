@@ -555,7 +555,7 @@
     "politmonitor": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
-        "max_segments": 32,
+        "max_segments": 8,
         "max_seg_length": 128,
         "add_oversampling": false
       },
