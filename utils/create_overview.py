@@ -44,10 +44,47 @@ def insert_responsibilities(df):
 class ResultAggregator:
     meta_infos = meta_infos
 
-    def __init__(self, wandb_api_key=None, project_name=None,
-                 path_to_csv_export=None, verbose_logging=True, only_completed_tasks=True,
-                 split="predict", score='macro-f1'):
+    def __init__(self,
+                 only_completed_tasks=False,
+                 path_to_csv_export=None,
+                 project_name=None,
+                 score='macro-f1',
+                 split="predict",
+                 verbose_logging=True,
+                 wandb_api_key=None,
+                 which_language=None,
+                 ):
+        """
+        @type only_completed_tasks: bool
+        @type path_to_csv_export: str
+        @type project_name: str
+        @type score: Must be one of these: [macro-f1, macro-precision, macro-recall, micro-f1, micro-precision, micro-recall, weighted-f1, weighted-precision, weighted-recall]
+        @type split: Must be one of these: [train, validation, test]
+        @verbose_logging: bool
+        @wandb_api_key: str
+        @which_language: str
 
+        project_name: Default value is None. Specify the name of the project from wand which you want to fetch your data from.
+        Do not forget to put the name of the wandb team in fron of your project name.
+        For example: if your wand team name is awesome_team and your project tame awseome_project, you need to pass awesome_team/awesome_project
+        If set to None, it will create csv file called `current_wandb_results_unprocessed.csv` in your current directory.
+        If set to None, it will presumably take the api key which you are already logged with.
+        If set to None, it will presumably take the last project that you used with the wandb api.
+
+        only_completed_tasks: Default value is False. Specify if you want to consider only tasks in the reports that are entirely completed. Entirely completed means that all predefined models have successuflly run for all seeds. It is advised to keep it False.
+        path_to_csv_export: Default value is None. Specify the path and name of the csv file where you would liek to export your wandb results to save them locally.
+
+        score: Default value is macro-f1. Specify the default score which will be used to create reports.
+
+        split: Default value is `predict`. Specify the split which want to use to create your reports.
+
+        verbose_logging: Default value is True. Specify if you want print out all logging information. If set to False, the logs will not be printed out. However, all logging information will always be saved in a new file unter the logs folder.
+
+        wandb_api_key: Default value is None. Insert the wandb api key for the project you are interested in.
+
+        which_language: Default value is None. Choose which language should be considered for the overviews. If set to `monolingual`, only monolingual models will be considered. If set to `multilingual`, only multilingual models will be considered. Otherwise, only those models will be considered that belong to the defined language. For example, if you pass `de`, only German models will be considered.
+
+        """
         # Create the result directory if not existent
         if os.path.isdir('results') == False:
             os.mkdir('results')
@@ -69,6 +106,8 @@ class ResultAggregator:
             os.path.dirname(__file__), name_of_log_file)
 
         self.only_completed_tasks = only_completed_tasks
+
+        self.which_language = which_language
 
         if verbose_logging:
             handlers = [
@@ -354,8 +393,9 @@ class ResultAggregator:
             ["seed", "finetuning_task", "_name_or_path", "language"])
 
         # TODO: Remove this constraint in the future
-        #results = results[results._name_or_path.str.contains('joelito') == False]
-        results = results[results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
+        # results = results[results._name_or_path.str.contains('joelito') == False]
+        results = results[
+            results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
 
         return results
 
@@ -372,7 +412,23 @@ class ResultAggregator:
         self.available_predict_scores = deepcopy(
             self.available_predict_scores_original)
 
-    def check_seed_per_task(self, tasks_to_filter=[]):
+    def filter_by_language(self, dataframe, which_language):
+        if which_language == 'monolingual':
+            dataframe = dataframe[
+                dataframe._name_or_path.apply(lambda x: meta_infos['model_language_lookup_table'][x] != 'all')]
+        elif which_language == 'multilingual':
+            dataframe = dataframe[
+                dataframe._name_or_path.apply(lambda x: meta_infos['model_language_lookup_table'][x] == 'all')]
+        else:
+            dataframe = dataframe[
+                dataframe._name_or_path.apply(
+                    lambda x: meta_infos['model_language_lookup_table'][x] == which_language)]
+        return dataframe
+
+    def check_seed_per_task(self, tasks_to_filter=[], which_language=None):
+
+        if which_language is None:
+            which_language = self.which_language
 
         report = list()
 
@@ -432,14 +488,15 @@ class ResultAggregator:
         # TODO Remove that later
         report_df = report_df[report_df._name_or_path.isin(
             models_currently_to_be_ignored) == False]
-        report_df = report_df[report_df.finetuning_task !=
-                              "turkish_constitutional_court_decisions_judgment"]
+        # report_df = report_df[report_df.finetuning_task != "turkish_constitutional_court_decisions_judgment"]
+        if which_language is not None:
+            report_df = self.filter_by_language(report_df, which_language)
+
         report_df['revision'] = report_df._name_or_path.apply(insert_revision)
 
         report_df = insert_responsibilities(report_df)
 
-        if tasks_to_filter:
-
+        if len(tasks_to_filter) > 0:
             report_df = report_df[report_df.finetuning_task.isin(tasks_to_filter)]
 
         return report_df
@@ -460,10 +517,13 @@ class ResultAggregator:
 
         del self.results['look_up']
 
-    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=None):
+    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=None, which_language=None):
 
         if only_completed_tasks is None:
             only_completed_tasks = self.only_completed_tasks
+
+        if which_language is None:
+            which_language = self.which_language
 
         old_score = ""
 
@@ -473,7 +533,7 @@ class ResultAggregator:
             old_score = deepcopy(self.score)
             self.score = score
 
-        seed_check = self.check_seed_per_task()
+        seed_check = self.check_seed_per_task(which_language=which_language)
 
         incomplete_tasks = set(seed_check.finetuning_task.unique())
 
@@ -485,6 +545,7 @@ class ResultAggregator:
             score_to_filter = self.split + score
 
         if only_completed_tasks == True:
+            # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
                     self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
@@ -500,6 +561,15 @@ class ResultAggregator:
         df_pivot.reset_index(inplace=True)
         df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
             lambda x: self.meta_infos["task_type_mapping"][x])
+
+        # First wee need to check if there are all seed values as columns
+        # As stated in the above comment; if there are no completed tasks, there will not be any seeds values left
+        df_pivot_columns = df_pivot.columns.tolist()
+        if df_pivot.shape[0] == 0:
+            for seed in [1, 2, 3]:
+                if seed not in df_pivot_columns:
+                    df_pivot[seed] = ''
+
         df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
                              '_name_or_path', 'language', 1, 2, 3]]
         df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
@@ -510,32 +580,49 @@ class ResultAggregator:
 
         df_pivot['standard_deviation'] = df_pivot[[1, 2, 3]].std(axis=1)
 
+        if which_language is not None:
+            df_pivot = self.filter_by_language(df_pivot, which_language)
+
         return df_pivot
 
-    def create_report(self, only_completed_tasks=None, tasks_to_filter=[]):
+    def create_report(self, only_completed_tasks=None, which_language=None, tasks_to_filter=[]):
 
         if only_completed_tasks is None:
             only_completed_tasks = self.only_completed_tasks
 
+        if which_language is None:
+            which_language = self.which_language
+
         seed_check = self.check_seed_per_task(tasks_to_filter=tasks_to_filter)
         self.seed_check = seed_check
         macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1",
-                                                                     only_completed_tasks=only_completed_tasks)
+                                                                     only_completed_tasks=only_completed_tasks,
+                                                                     which_language=which_language
+                                                                     )
         self.macro_f1_overview = macro_f1_overview
         micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1",
-                                                                     only_completed_tasks=only_completed_tasks)
+                                                                     only_completed_tasks=only_completed_tasks,
+                                                                     which_language=which_language
+                                                                     )
         self.micro_f1_overview = micro_f1_overview
         weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1",
-                                                                        only_completed_tasks=only_completed_tasks)
+                                                                        only_completed_tasks=only_completed_tasks,
+                                                                        which_language=which_language
+                                                                        )
         self.weighted_f1_overview = weighted_f1_overview
         accuracy_normalized_overview = self.create_overview_of_results_per_seed(score="accuracy_normalized",
-                                                                                only_completed_tasks=only_completed_tasks)
+                                                                                only_completed_tasks=only_completed_tasks,
+                                                                                which_language=which_language
+                                                                                )
         self.accuracy_normalized_overview = accuracy_normalized_overview
 
         eval_macro_f1_overview = self.create_overview_of_results_per_seed(
-            score="eval/macro-f1", only_completed_tasks=only_completed_tasks)
+            score="eval/macro-f1", only_completed_tasks=only_completed_tasks, which_language=which_language)
 
         self.eval_macro_f1_overview = eval_macro_f1_overview
+
+        # write to csv, so we can read it with a bash script
+        self.seed_check.to_csv("results/completeness_report.tsv", sep="\t", index=False)
 
         with pd.ExcelWriter('results/report.xlsx') as writer:
             split_name = self.remove_slashes(self.split)
@@ -582,7 +669,7 @@ class ResultAggregator:
         if len(results_filtered.seed.unique()) < 3:
             logging.warning(
                 "Attention. For task " + finetuning_task + " with model name " + _name_or_path + " you have " + str(
-                    len(results_filtered.seed.unique())) + " instead of 3 seeds! The mean will be calculated anway.")
+                    len(results_filtered.seed.unique())) + " instead of 3 seeds! The mean will be calculated anyway.")
 
         if len(results_filtered.seed.unique()) != len(results_filtered.seed.tolist()):
             logging.warning(
@@ -777,14 +864,15 @@ class ResultAggregator:
 
         for _name_or_path in self.results._name_or_path.unique():
             for dataset, configs in self.meta_infos["dataset_to_config"].items():
-                # TODO: Remove this constraint in the future
-                if dataset != "turkish_constitutional_court_decisions_judgment":
-                    if task_constraint is not None:
-                        configs = [
-                            conf for conf in configs if conf in task_constraint]
+                if task_constraint is not None:
+                    configs = [
+                        conf for conf in configs if conf in task_constraint]
 
-                    dataset_mean = list()
-                    for conf in configs:
+                dataset_mean = list()
+                for conf in configs:
+                    # Look if there are results for that config. If not, skip it.
+
+                    if conf in self.config_aggregated_score.columns.tolist():
                         config_mean = self.config_aggregated_score.at[_name_or_path, conf]
                         if config_mean == "":  # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
                             logging.info(
@@ -796,16 +884,18 @@ class ResultAggregator:
                                 "Processed interrupted due to wrong mean value that is not a float. The mean value is: " + str(
                                     config_mean))
                             break
-                    if len(dataset_mean) > 0:
-                        if len(dataset_mean) != len(configs):
-                            logging.error(
-                                'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
-                        dataset_mean = self.get_mean_from_list_of_values(
-                            dataset_mean)
                     else:
-                        dataset_mean = ''
-                    self.dataset_aggregated_score.at[_name_or_path,
-                    dataset] = dataset_mean
+                        logging.info(
+                            "There seem to be no results for the configuration " + conf + " with language model " + _name_or_path)
+                if len(dataset_mean) > 0:
+                    if len(dataset_mean) != len(configs):
+                        logging.error(
+                            'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
+                    dataset_mean = self.get_mean_from_list_of_values(
+                        dataset_mean)
+                else:
+                    dataset_mean = ''
+                self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -913,10 +1003,18 @@ class ResultAggregator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-v', '--verbose', help='Whether to enable verbose logging',
+                        action='store_true', default=False)
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
     parser.add_argument('-pn', '--project_name', help='Insert the wandb project name',
                         default=None)
+    parser.add_argument('-wl', '--which_language',
+                        help='Default value is None. Choose which language should be considered for the overviews. '
+                             'If set to `monolingual`, only monolingual models will be considered. '
+                             'If set to `multilingual`, only multilingual models will be considered. '
+                             'Otherwise, only those models will be considered that belong to the defined language. '
+                             'For example, if you pass `de`, only German models will be considered.')
     parser.add_argument('-wak', '--wandb_api_key',
                         help='To be able to fetch the right results, you can insert the wand api key. '
                              'Alternatively, set the WANDB_API_KEY environment variable to your API key.',
@@ -928,13 +1026,17 @@ if __name__ == "__main__":
         tasks_for_report = js.load(f)
 
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
-                        verbose_logging=False, only_completed_tasks=True)
-   # ra = ResultAggregator(path_to_csv_export="current_wandb_results_unprocessed.csv", verbose_logging=False)
+                          project_name=args.project_name,
+                          path_to_csv_export=args.path_to_csv_export,
+                          verbose_logging=args.verbose,
+                          only_completed_tasks=False,
+                          which_language=args.which_language)
 
     ra.get_info()
 
-    ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
+    # ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
+    ra.create_report()
 
-    # ra.get_dataset_aggregated_score()
+    ra.get_dataset_aggregated_score()
 
-    # ra.get_language_aggregated_score()
+    ra.get_language_aggregated_score()

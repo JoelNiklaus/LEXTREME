@@ -91,8 +91,9 @@ class TrainingDataHandler:
                         elif running_mode == 'debug':
                             maximum = 6
                         if len(counter_dict[_key]) < maximum:
-                            counter_dict[_key].append(i)
-                            indices_to_keep.append(i)
+                            if i not in counter_dict[_key]:
+                                counter_dict[_key].append(i)
+                                indices_to_keep.append(i)
 
             training_data_df = training_data_df.iloc[indices_to_keep]
 
