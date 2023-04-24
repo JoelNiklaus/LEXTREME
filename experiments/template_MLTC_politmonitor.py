@@ -148,7 +148,7 @@ def main():
         tdh = TrainingDataHandler()
 
         tdh.get_training_data(language=data_args.language, affair_text_scope=['zh', 'ch'],
-                              affair_attachment_category='all', running_mode=data_args.running_mode)
+                              affair_attachment_category='all', running_mode=data_args.running_mode, merge_texts=False)
 
         print(tdh.training_data_df[['title', 'language', 'split']].groupby(
             ['language', 'split']).count())
@@ -257,9 +257,9 @@ def main():
 
     elif not data_args.do_hyperparameter_search:
         # Initialize our Trainer
-        training_args.metric_for_best_model = "eval_loss"
-        training_args.evaluation_strategy = IntervalStrategy.EPOCH
-        training_args.logging_strategy = IntervalStrategy.EPOCH
+        # training_args.metric_for_best_model = "eval_loss"
+        # training_args.evaluation_strategy = IntervalStrategy.EPOCH
+        # training_args.logging_strategy = IntervalStrategy.EPOCH
 
         trainer = MultilabelTrainer(
             model=model,
