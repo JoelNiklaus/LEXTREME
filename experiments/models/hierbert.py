@@ -82,10 +82,10 @@ class HierarchicalBert(nn.Module):
 
         if encoder.config.model_type in ['mt5']:
             self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                              nhead=8,
+                                              nhead=8, # MT5 has hidden size of 512 instead of 768, therefore, we need to set the num. of head manually, otherwise we get this error: AssertionError: embed_dim must be divisible by num_heads
                                               batch_first=True,
                                               dim_feedforward=dim_feedforward,
-                                              activation='gelu',
+                                              activation='gelu', # We also need to set the activation function manually, because it has another acitvation fucntion (gelu_new or something) that is not allowed with nn.Transformer
                                               dropout=dropout,
                                               layer_norm_eps=layer_norm_eps,
                                               num_encoder_layers=2,
@@ -231,7 +231,7 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "roberta": HierRobertaForSequenceClassification,
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
         "camembert": HierCamembertForSequenceClassification,
-        "mt5": HierT5ForSequenceClassification
+        "mt5": HierMT5ForSequenceClassification
         # Here just get directly the encoder, because there is no transformers class MT5ForSequenceClassification
     }
     if model_args is not None:
