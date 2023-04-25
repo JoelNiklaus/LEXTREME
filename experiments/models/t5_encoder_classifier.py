@@ -48,7 +48,7 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
         self.num_labels = config.num_labels
         self.config = config
 
-        self.mt5_encoder = MT5EncoderModel(config)
+        self.mt5 = MT5EncoderModel(config)
         # classifier_dropout = (config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         # AttributeError: 'MT5Config' object has no attribute 'classifier_dropout' and not attribute 'hidden_dropout_prob'
         classifier_dropout = config.dropout_rate
@@ -87,7 +87,7 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        outputs = self.mt5_encoder(
+        outputs = self.mt5(
             input_ids,
             attention_mask=attention_mask,
             # token_type_ids=token_type_ids, # it has no token_type_ids
@@ -152,7 +152,7 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
         self.num_labels = config.num_labels
         self.config = config
 
-        self.mt5_encoder = MT5EncoderModel(config)
+        self.mt5 = MT5EncoderModel(config)
         # classifier_dropout = (config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         # AttributeError: 'MT5Config' object has no attribute 'classifier_dropout' and not attribute 'hidden_dropout_prob'
         classifier_dropout = config.dropout_rate
@@ -191,7 +191,7 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        outputs = self.mt5_encoder(
+        outputs = self.mt5(
             input_ids,
             attention_mask=attention_mask,
             # token_type_ids=token_type_ids, # it has no token_type_ids

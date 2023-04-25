@@ -176,7 +176,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
         elif config.model_type == 'camembert':
             segment_encoder = model.roberta
         elif config.model_type == 'mt5':
-            segment_encoder = model.t5
+            segment_encoder = model.mt5
         # Replace flat BERT encoder with hierarchical BERT encoder
         model_encoder = HierarchicalBert(encoder=segment_encoder,
                                          max_segments=max_segments,
@@ -192,7 +192,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
         elif config.model_type == "camembert":
             model.roberta = model_encoder
         elif config.model_type == 'mt5':
-            model.t5 = model_encoder
+            model.mt5 = model_encoder
     elif config.model_type in ['longformer', 'big_bird']:
         pass
     else:
