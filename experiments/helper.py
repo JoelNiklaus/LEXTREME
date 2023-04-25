@@ -25,6 +25,7 @@ from transformers import (AutoConfig, AutoModelForTokenClassification,
 
 from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
+                             get_model_class_for_token_classification,
                              get_tokenizer)
 
 utils_path = os.path.join(os.path.dirname(__file__), '../utils')
@@ -825,7 +826,9 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         revision=model_args.revision
     )
 
-    model = AutoModelForTokenClassification.from_pretrained(
+    model_class = get_model_class_for_token_classification(config.model_type)
+
+    model = model_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=True if model_args.use_auth_token else None,

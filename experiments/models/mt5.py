@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 from transformers import MT5Config, MT5Model, PreTrainedModel, MT5ForConditionalGeneration, MT5EncoderModel
 
 from transformers.modeling_outputs import (
-    SequenceClassifierOutput,
+    SequenceClassifierOutput, TokenClassifierOutput
 )
 import sys
 import os
@@ -16,12 +16,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), './'))
 # Huggingface has the exact code in their Github repro, but for some reasons you cannot access it through the API: https://github.com/huggingface/transformers/blob/v4.28.1/src/transformers/models/mt5/modeling_mt5.py#L1291
 from modeling_mt5 import MT5PreTrainedModel
 
-
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
-
-
 
 
 # I inserted this class here to pool the output,it's a copy of BertPooler
@@ -38,6 +35,7 @@ class MT5Pooler(nn.Module):
         pooled_output = self.dense(first_token_tensor)
         pooled_output = self.activation(pooled_output)
         return pooled_output
+
 
 class MT5PoolerForHier(nn.Module):
     def __init__(self, config):
@@ -160,6 +158,7 @@ class MT5ForSequenceClassification(MT5PreTrainedModel):
             # attentions=outputs.decoder_attentions,
         )
 
+
 class HierMT5ForSequenceClassification(MT5PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -222,7 +221,6 @@ class HierMT5ForSequenceClassification(MT5PreTrainedModel):
             # decoder_inputs_embeds=inputs_embeds,
         )
 
-
         # added from BertModel (but I wanted to use here not to break MT5Model output)
         pooled_output = self.pooler(outputs[0]) if self.pooler is not None else None
         pooled_output = self.dropout(pooled_output)
@@ -263,4 +261,75 @@ class HierMT5ForSequenceClassification(MT5PreTrainedModel):
             # but it has the same variables with decoder_* at the beginning, since outputs is of the type Seq2SeqModelOutput
             # hidden_states=outputs.decoder_hidden_states,
             # attentions=outputs.decoder_attentions,
+        )
+
+
+# Taken from https://github.com/huggingface/transformers/blob/v4.28.1/src/transformers/models/bert/modeling_bert.py#L1714
+class MT5ForTokenClassification(MT5PreTrainedModel):
+    _keys_to_ignore_on_load_unexpected = [r"pooler"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.num_labels = config.num_labels
+
+        self.bert = MT5EncoderModel(config)  # add_pooling_layer=False
+        classifier_dropout = config.dropout_rate
+        self.dropout = nn.Dropout(classifier_dropout)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+
+        self.model_parallel = True
+
+        # Initialize weights and apply final processing
+        self.post_init()
+
+    def forward(
+            self,
+            input_ids: Optional[torch.Tensor] = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            # token_type_ids: Optional[torch.Tensor] = None,
+            # position_ids: Optional[torch.Tensor] = None,
+            head_mask: Optional[torch.Tensor] = None,
+            inputs_embeds: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+    ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
+        r"""
+        labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
+            Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
+        """
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            # token_type_ids=token_type_ids,
+            # position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs[0]
+
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        if not return_dict:
+            output = (logits,) + outputs[2:]
+            return ((loss,) + output) if loss is not None else output
+
+        return TokenClassifierOutput(
+            loss=loss,
+            logits=logits,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
         )

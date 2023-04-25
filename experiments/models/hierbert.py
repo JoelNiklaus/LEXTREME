@@ -5,13 +5,14 @@ import torch
 import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, MT5EncoderModel
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, MT5EncoderModel, \
+    AutoModelForTokenClassification
 from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
 from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 from models.camembert import HierCamembertForSequenceClassification
-from models.mt5 import MT5ForSequenceClassification, HierMT5ForSequenceClassification
+from models.mt5 import MT5ForSequenceClassification, HierMT5ForSequenceClassification, MT5ForTokenClassification
 
 
 @dataclass
@@ -82,10 +83,12 @@ class HierarchicalBert(nn.Module):
 
         if encoder.config.model_type in ['mt5']:
             self.seg_encoder = nn.Transformer(d_model=encoder.config.hidden_size,
-                                              nhead=8, # MT5 has hidden size of 512 instead of 768, therefore, we need to set the num. of head manually, otherwise we get this error: AssertionError: embed_dim must be divisible by num_heads
+                                              nhead=8,
+                                              # MT5 has hidden size of 512 instead of 768, therefore, we need to set the num. of head manually, otherwise we get this error: AssertionError: embed_dim must be divisible by num_heads
                                               batch_first=True,
                                               dim_feedforward=dim_feedforward,
-                                              activation='gelu', # We also need to set the activation function manually, because it has another acitvation fucntion (gelu_new or something) that is not allowed with nn.Transformer
+                                              activation='gelu',
+                                              # We also need to set the activation function manually, because it has another acitvation fucntion (gelu_new or something) that is not allowed with nn.Transformer
                                               dropout=dropout,
                                               layer_norm_eps=layer_norm_eps,
                                               num_encoder_layers=2,
@@ -244,6 +247,13 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
                 return AutoModelForSequenceClassification
     else:
         return AutoModelForSequenceClassification
+
+
+def get_model_class_for_token_classification(model_type):
+    if model_type == 'mt5':
+        return MT5ForTokenClassification
+    else:
+        return AutoModelForTokenClassification
 
 
 if __name__ == "__main__":
