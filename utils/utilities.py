@@ -63,7 +63,7 @@ optimal_batch_sizes = {
         'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 4},
         'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
     },
     # TODO test sizes here
@@ -72,13 +72,13 @@ optimal_batch_sizes = {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
-        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # bf16
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # fp16
     },
     # e.g. A100
     80: {
