@@ -247,7 +247,7 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
-def T5_preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
+def Mt5_preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
     if data_args.pad_to_max_length:
         padding = "max_length"
 

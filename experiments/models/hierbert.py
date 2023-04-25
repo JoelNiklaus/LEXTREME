@@ -11,7 +11,7 @@ from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
 from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 from models.camembert import HierCamembertForSequenceClassification
-from models.t5_encoder_classifier import T5ForSequenceClassification, HierT5ForSequenceClassification
+from models.mt5 import MT5ForSequenceClassification, HierMT5ForSequenceClassification
 
 
 @dataclass
@@ -239,7 +239,7 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
             return model_type_to_model_class[model_type]
         else:
             if model_type == 'mt5':
-                return T5ForSequenceClassification
+                return MT5ForSequenceClassification
             else:
                 return AutoModelForSequenceClassification
     else:

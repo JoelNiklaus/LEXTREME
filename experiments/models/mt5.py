@@ -25,7 +25,21 @@ from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 
 
 # I inserted this class here to pool the output,it's a copy of BertPooler
-class T5Pooler(nn.Module):
+class MT5Pooler(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.activation = nn.Tanh()
+
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        # We "pool" the model by simply taking the hidden state corresponding
+        # to the first token.
+        first_token_tensor = hidden_states[:, 0]
+        pooled_output = self.dense(first_token_tensor)
+        pooled_output = self.activation(pooled_output)
+        return pooled_output
+
+class MT5PoolerForHier(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
@@ -42,7 +56,7 @@ class T5Pooler(nn.Module):
 
 
 # copied by BertForSequenceClassification
-class T5ForSequenceClassification(MT5PreTrainedModel):
+class MT5ForSequenceClassification(MT5PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -56,13 +70,13 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-        # added not to raise error (this is not in BertForSequenceClassification), copied by T5ForConditionalGeneration
+        # added not to raise error (this is not in BertForSequenceClassification), copied by MT5ForConditionalGeneration
         self.model_parallel = False
 
         # this should be in MT5Model, as it is in BertModel, but I inserted here not return different output in MT5Model
-        # T5Pooler is a copy of BertPooler
+        # MT5Pooler is a copy of BertPooler
         # I coMented 'if add_pooling_layer else None' not to add additional parameters, but there is a 'add_pooling_layer' param in BertModel
-        self.pooler = T5Pooler(config)  # if add_pooling_layer else None
+        self.pooler = MT5Pooler(config)  # if add_pooling_layer else None
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -146,7 +160,7 @@ class T5ForSequenceClassification(MT5PreTrainedModel):
             # attentions=outputs.decoder_attentions,
         )
 
-class HierT5ForSequenceClassification(MT5PreTrainedModel):
+class HierMT5ForSequenceClassification(MT5PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -160,13 +174,13 @@ class HierT5ForSequenceClassification(MT5PreTrainedModel):
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-        # added not to raise error (this is not in BertForSequenceClassification), copied by T5ForConditionalGeneration
+        # added not to raise error (this is not in BertForSequenceClassification), copied by MT5ForConditionalGeneration
         self.model_parallel = False
 
         # this should be in MT5Model, as it is in BertModel, but I inserted here not return different output in MT5Model
-        # T5Pooler is a copy of BertPooler
+        # MT5Pooler is a copy of BertPooler
         # I coMented 'if add_pooling_layer else None' not to add additional parameters, but there is a 'add_pooling_layer' param in BertModel
-        self.pooler = T5Pooler(config)  # if add_pooling_layer else None
+        self.pooler = MT5PoolerForHier(config)  # if add_pooling_layer else None
 
         # Initialize weights and apply final processing
         self.post_init()
