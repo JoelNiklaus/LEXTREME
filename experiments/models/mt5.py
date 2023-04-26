@@ -277,7 +277,7 @@ class MT5ForTokenClassification(MT5PreTrainedModel):
         self.dropout = nn.Dropout(classifier_dropout)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
-        self.model_parallel = True
+        self.model_parallel = False
 
         # Initialize weights and apply final processing
         self.post_init()
