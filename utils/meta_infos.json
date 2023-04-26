@@ -1002,10 +1002,12 @@
         ],
         "base": [
           "xlm-roberta-base",
-          "microsoft/mdeberta-v3-base"
+          "microsoft/mdeberta-v3-base",
+          "google/mt5-base"
         ],
         "large": [
-          "xlm-roberta-large"
+          "xlm-roberta-large",
+          "google/mt5-large"
         ]
       }
     },
