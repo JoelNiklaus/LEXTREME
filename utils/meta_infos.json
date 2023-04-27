@@ -1002,7 +1002,8 @@
         ],
         "base": [
           "xlm-roberta-base",
-          "microsoft/mdeberta-v3-base"
+          "microsoft/mdeberta-v3-base",
+          "ZurichNLP/swissbert"
         ],
         "large": [
           "xlm-roberta-large"
