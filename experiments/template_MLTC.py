@@ -205,10 +205,6 @@ def main():
 
     elif not data_args.do_hyperparameter_search:
         # Initialize our Trainer
-        training_args.metric_for_best_model = "eval_loss"
-        training_args.evaluation_strategy = IntervalStrategy.EPOCH
-        training_args.logging_strategy = IntervalStrategy.EPOCH
-
         trainer = MultilabelTrainer(
             model=model,
             args=training_args,

@@ -218,11 +218,6 @@ def main():
     else:
         data_collator = None
 
-    # Initialize our Trainer
-    training_args.metric_for_best_model = "eval_loss"
-    training_args.evaluation_strategy = IntervalStrategy.EPOCH
-    training_args.logging_strategy = IntervalStrategy.EPOCH
-
     seqeval = Seqeval(label_list=label_list)
 
     # Training
