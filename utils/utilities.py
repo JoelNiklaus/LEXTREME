@@ -25,6 +25,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
         'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
@@ -38,6 +39,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
         'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
         'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
+        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
@@ -50,6 +52,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2}
@@ -62,6 +65,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
         'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 4},
         'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
@@ -75,6 +79,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # bf16
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
@@ -90,6 +95,7 @@ optimal_batch_sizes = {
         'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 26},
         'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
