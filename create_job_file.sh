@@ -19,6 +19,11 @@ elif [[ $dataset_name == *"considerations"* ]]; then
   fi
 fi
 
+# add exceptions
+if [[ $dataset_name == "swiss_judgment_prediction_xl_considerations" ]]; then
+  gpu_memory="80" # we get a time limit error otherwise
+fi
+
 # Replace slashes in the model name with underscores
 model_for_path=$(echo "${model}" | tr '/' '_')
 
@@ -42,7 +47,7 @@ cat > "${job_file}" << EOL
 #SBATCH --time=2-00:00:00
 #SBATCH -C GPU_MEM:${gpu_memory}GB
 #SBATCH --gpus=1
-#SBATCH --partition=gpu,owners
+#SBATCH --partition=owners
 #SBATCH --array=${seeds}
 
 # Load necessary modules
