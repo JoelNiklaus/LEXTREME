@@ -13,4 +13,4 @@ The directory contains the following folders:
 
 You can have a look at the notebook [Documentation_data_analysis](https://github.com/JoelNiklaus/LEXTREME/blob/main/utils/Documentation_data_analysis.ipynb)
 
-You can also just run `python create_overview.py` and it will automatically create a report saved in an excel filed called `report.xlsx` in the folder `results`. If you want to consider only specific finetuning tasks, you can add these in the json file called `tasks_for_report.sjon`.
+You can also just run `python create_overview.py` and it will automatically create a report saved in an excel filed called `report.xlsx` in the folder `results`. If you want to consider only specific finetuning tasks, you can add these in the json file called `tasks_for_report.json`.
