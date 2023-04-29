@@ -14,11 +14,6 @@ while IFS=$'\t' read -r dataset_name model language seeds revision responsible g
       continue
     fi
 
-    # skip the datasets that are not working
-    if [[ "$dataset_name" == "swiss_law_area_prediction_civil_considerations" ]]; then
-    continue
-fi
-
 
     # Invoke the create_job_file.sh script with the required arguments
     ./create_job_file.sh "$dataset_name" "$model" "$seeds"
