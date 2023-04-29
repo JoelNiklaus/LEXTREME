@@ -27,17 +27,15 @@ fi
 # Replace slashes in the model name with underscores
 model_for_path=$(echo "${model}" | tr '/' '_')
 
-# Set the base name for the job
-job_name="swiss_legal_data"
 # Generate a unique job file name
-job_file="jobfiles/${job_name}_${dataset_name}_${model_for_path}_${gpu_memory}.sbatch"
+job_file="jobfiles/${dataset_name}_${model_for_path}_${gpu_memory}.sbatch"
 
 # Create the job file
 cat > "${job_file}" << EOL
 #!/bin/bash
-#SBATCH --job-name=${job_name}_${dataset_name}_${model_for_path}_${gpu_memory}
-#SBATCH --output=slurm_logs/${job_name}_${dataset_name}_${model_for_path}_${gpu_memory}.out
-#SBATCH --error=slurm_logs/${job_name}_${dataset_name}_${model_for_path}_${gpu_memory}.err
+#SBATCH --job-name=${dataset_name}_${model_for_path}_${gpu_memory}
+#SBATCH --output=slurm_logs/${dataset_name}_${model_for_path}_${gpu_memory}.out
+#SBATCH --error=slurm_logs/${dataset_name}_${model_for_path}_${gpu_memory}.err
 #SBATCH --mail-user=jniklaus@stanford.edu
 #SBATCH --mail-type=end,fail
 #SBATCH --nodes=1

@@ -14,7 +14,6 @@ while IFS=$'\t' read -r dataset_name model language seeds revision responsible g
       continue
     fi
 
-
     # Invoke the create_job_file.sh script with the required arguments
     ./create_job_file.sh "$dataset_name" "$model" "$seeds"
 

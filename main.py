@@ -57,7 +57,13 @@ if __name__ == '__main__':
                         default=None)
     parser.add_argument('-lr', '--learning_rate', help='Define the learning rate.', default=1e-5)
     parser.add_argument('-mfbm', '--metric_for_best_model',
-                        help='Use in conjunction with load_best_model_at_end to specify the metric to use to compare two different models. Must be the name of a metric returned by the evaluation with or without the prefix "eval_". Will default to "loss" if unspecified and load_best_model_at_end=True (to use the evaluation loss). If you set this value, greater_is_better will default to True. Don’t forget to set it to False if your metric is better when lower. ',
+                        help='Use in conjunction with load_best_model_at_end to specify the metric to use '
+                             'to compare two different models. Must be the name of a metric '
+                             'returned by the evaluation with or without the prefix "eval_". '
+                             'Will default to "loss" if unspecified and load_best_model_at_end=True '
+                             '(to use the evaluation loss). If you set this value, '
+                             'greater_is_better will default to True. '
+                             'Don’t forget to set it to False if your metric is better when lower. ',
                         default="eval_loss")
     parser.add_argument('-nte', '--num_train_epochs', help='Define the number of training epochs.')
     parser.add_argument('-rev', '--revision', help='The specific model version to use. It can be a branch name, '
