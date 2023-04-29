@@ -3,7 +3,7 @@
 
 
 from typing import Optional, Tuple, Union
-from transformers import MT5Config, MT5Model, PreTrainedModel, MT5ForConditionalGeneration, MT5EncoderModel
+from transformers import MT5EncoderModel
 
 from transformers.modeling_outputs import (
     SequenceClassifierOutput, TokenClassifierOutput

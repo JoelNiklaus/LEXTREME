@@ -79,7 +79,7 @@ class DataTrainingArguments:
     language: Optional[str] = field(
         default=None,
         metadata={
-            "help": "For choosin the language "
+            "help": "Choose a language. Based on this value, your (multilingual) dataset will be filtered."
                     "value if set."
         },
     )
