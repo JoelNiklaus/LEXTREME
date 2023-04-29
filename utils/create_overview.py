@@ -309,24 +309,21 @@ class ResultAggregator:
     def correct_language(self, finetuning_task, language_model, language):
         '''
         Sometimes the language column is wrong.
-        For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased the run names start with “all_” instead of “el_” which should not be.
-        This code will check if a language model is multilingual and if a task is monolingual. If the language is all, it must be corrected to the language of the monolingual model.
+        For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased,
+        the run names start with “all_” instead of “el_” which should not be.
+        This code will check if a language model is multilingual and if a task is monolingual.
+        If the language is all, it must be corrected to the language of the monolingual model.
         '''
-
         if self.meta_infos["model_language_lookup_table"][language_model] == "all":
-            if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
+            task_lang_mapping = self.meta_infos["task_language_mapping"]
+            if finetuning_task in task_lang_mapping and len(task_lang_mapping[finetuning_task]) == 1:
                 if language == "all":
-                    new_language = self.meta_infos["task_language_mapping"][finetuning_task][0]
+                    new_language = task_lang_mapping[finetuning_task][0]
                     log_message = ' '.join(["Changed language to from " + language + " to " + new_language +
                                             " for the following combinations: ", finetuning_task, language_model])
                     logging.info(log_message)
                     return new_language
-                else:
-                    return language
-            else:
-                return language
-        else:
-            return language
+        return language
 
     def check_for_model_language_consistency(self, dataframe):
 
@@ -1035,7 +1032,7 @@ if __name__ == "__main__":
     ra.get_info()
 
     ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
-    #ra.create_report()
+    # ra.create_report()
 
     ra.get_dataset_aggregated_score()
 
