@@ -7,7 +7,7 @@
     "swiss_judgment_prediction_xl_considerations",
     "swiss_judgment_prediction_xl_facts",
     "swiss_law_area_prediction_sub_area_considerations",
-    "swiss_law_area_prediction_sub_area_facts",
+    "swiss_law_area_prediction_sub_area_facts"
   ],
   "excluded": [
     "swiss_law_area_prediction_facts",
