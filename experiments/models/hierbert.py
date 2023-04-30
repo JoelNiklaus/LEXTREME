@@ -151,7 +151,7 @@ class HierarchicalBert(nn.Module):
         if self.encoder.config.model_type in ['distilbert', 'mt5']:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape)[0]
-        elif self.encoder.config.model_type == 'x
+        elif self.encoder.config.model_type == 'xmod':
             print(input_ids.shape)
             print(input_ids_reshape.shape)
             print(lang_ids_reshape.shape)
