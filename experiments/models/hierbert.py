@@ -5,14 +5,15 @@ import torch
 import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, MT5EncoderModel, \
-    AutoModelForTokenClassification
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, \
+    AutoModelForTokenClassification, XmodForSequenceClassification
 from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
 from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 from models.camembert import HierCamembertForSequenceClassification
 from models.mt5 import MT5ForSequenceClassification, HierMT5ForSequenceClassification, MT5ForTokenClassification
+from models.xmod import HierXmodForSequenceClassification
 
 
 @dataclass
@@ -35,7 +36,7 @@ def sinusoidal_init(num_embeddings: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert', 'mt5']
+supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert', 'mt5', 'xmod']
 
 
 class HierarchicalBert(nn.Module):
@@ -109,6 +110,7 @@ class HierarchicalBert(nn.Module):
                 input_ids=None,
                 attention_mask=None,
                 token_type_ids=None,
+                lang_ids=None,  # This was introduced for ZurichNLP/swissbert which is a xmod model that needs lang_ids
                 position_ids=None,
                 head_mask=None,
                 inputs_embeds=None,
@@ -124,16 +126,39 @@ class HierarchicalBert(nn.Module):
         # Squash samples and segments into a single axis (batch_size * n_segments, max_segment_length) --> (256, 128)
         input_ids_reshape = input_ids.contiguous().view(-1, input_ids.size(-1))
         attention_mask_reshape = attention_mask.contiguous().view(-1, attention_mask.size(-1))
+
         if token_type_ids is not None:
             token_type_ids_reshape = token_type_ids.contiguous().view(-1, token_type_ids.size(-1))
         else:
             token_type_ids_reshape = None
+        if lang_ids is not None:
+            print('########################### Language Ids not None #####################################')
+            print(lang_ids.shape)
+            print(lang_ids)
+            lang_ids = torch.tensor([[x for _ in range(0, input_ids[:].shape[1])] for x in lang_ids])
+            # print(lang_ids)
+            # lang_id = torch.tensor([lang_ids[0]])
+            # to_add = tuple([lang_id for n in range(0, input_ids_reshape.shape[0])])
+            # lang_ids_reshaped = lang_ids.contiguous().flatten()
+            # lang_ids_reshape = torch.cat(to_add, 0)
+            lang_ids_reshape = lang_ids.contiguous().flatten()
+            print('lang_ids_reshape: ')
+            print(lang_ids_reshape)
+            # lang_ids_reshape = lang_ids.contiguous().view(-1, lang_ids.size(-1))[:,1]
 
         # Encode segments with BERT --> (256, 128, 768)
 
         if self.encoder.config.model_type in ['distilbert', 'mt5']:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape)[0]
+        elif self.encoder.config.model_type == 'x
+            print(input_ids.shape)
+            print(input_ids_reshape.shape)
+            print(lang_ids_reshape.shape)
+            encoder_outputs = self.encoder(lang_ids=lang_ids_reshape,
+                                           input_ids=input_ids_reshape,
+                                           attention_mask=attention_mask_reshape,
+                                           token_type_ids=token_type_ids_reshape)[0]
         else:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape,
@@ -180,6 +205,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             segment_encoder = model.roberta
         elif config.model_type == 'mt5':
             segment_encoder = model.mt5
+        elif config.model_type == 'xmod':
+            segment_encoder = model.roberta
         # Replace flat BERT encoder with hierarchical BERT encoder
         model_encoder = HierarchicalBert(encoder=segment_encoder,
                                          max_segments=max_segments,
@@ -188,7 +215,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             model.bert = model_encoder
         elif config.model_type == 'distilbert':
             model.distilbert = model_encoder
-        elif config.model_type in ['roberta', 'xlm-roberta']:
+        elif config.model_type in ['roberta', 'xlm-roberta', 'xmod']:  # xmod seems to use roberta encoder
             model.roberta = model_encoder
         elif config.model_type == 'deberta-v2':
             model.deberta = model_encoder
@@ -234,7 +261,8 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "roberta": HierRobertaForSequenceClassification,
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
         "camembert": HierCamembertForSequenceClassification,
-        "mt5": HierMT5ForSequenceClassification
+        "mt5": HierMT5ForSequenceClassification,
+        "xmod": HierXmodForSequenceClassification
         # Here just get directly the encoder, because there is no transformers class MT5ForSequenceClassification
     }
     if model_args is not None:
@@ -243,6 +271,8 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         else:
             if model_type == 'mt5':
                 return MT5ForSequenceClassification
+            elif model_type == 'xmod':
+                return XmodForSequenceClassification
             else:
                 return AutoModelForSequenceClassification
     else:
