@@ -5,6 +5,7 @@ model="$2"
 seeds="$3"
 
 # Determine the GPU memory based on the dataset name and model
+gpu_memory="80"
 if [[ $dataset_name == *"facts"* ]]; then
   if [[ $model == *"-base" ]]; then
     gpu_memory="24"
