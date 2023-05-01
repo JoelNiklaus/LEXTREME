@@ -4,7 +4,6 @@ import json as js
 import os
 import re
 from ast import literal_eval
-from collections import defaultdict
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -20,11 +19,12 @@ from seqeval.scheme import IOB2
 from sklearn.metrics import (accuracy_score, f1_score, matthews_corrcoef,
                              precision_score, recall_score)
 from sklearn.utils.extmath import softmax
-from transformers import (AutoConfig, AutoModelForTokenClassification,
-                          EvalPrediction, IntervalStrategy, EarlyStoppingCallback)
+from transformers import (AutoConfig,
+                          EvalPrediction, EarlyStoppingCallback)
 
 from models.hierbert import (build_hierarchical_model,
                              get_model_class_for_sequence_classification,
+                             get_model_class_for_token_classification,
                              get_tokenizer)
 
 utils_path = os.path.join(os.path.dirname(__file__), '../utils')
@@ -156,15 +156,31 @@ def model_is_multilingual(model_name_or_path):
         return False
 
 
-def get_data(training_args, data_args):
+def insert_lang_ids(dataset):
+    allowed_languages = ['de', 'fr', 'it', 'rm']
+    allowed_language_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']  # See https://huggingface.co/ZurichNLP/swissbert
+    dataset_filtered = dataset.filter(lambda x: x['language'] in allowed_languages)
+    lang_ids = dataset_filtered['language']
+    lang_ids = [li + '_CH' for li in lang_ids]
+    lang_ids = [allowed_language_ids.index(li) for li in lang_ids]
+    dataset_filtered = dataset_filtered.add_column("lang_ids", lang_ids)
+    return dataset_filtered
+
+
+def get_data(training_args, data_args, model_args):
     if training_args.do_train:
         train_dataset = make_split(data_args=data_args, split_name="train")
-
+        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
+            train_dataset = insert_lang_ids(train_dataset)
     if training_args.do_eval:
         eval_dataset = make_split(data_args=data_args, split_name="validation")
+        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
+            eval_dataset = insert_lang_ids(eval_dataset)
 
     if training_args.do_predict:
         predict_dataset = make_split(data_args=data_args, split_name="test")
+        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
+            predict_dataset = insert_lang_ids(predict_dataset)
 
     return train_dataset, eval_dataset, predict_dataset
 
@@ -209,11 +225,10 @@ def append_zero_segments(case_encodings, pad_token_id, data_args):
 
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     if len(id2label.keys()) > 1:  # Otherwise there might be some errors when filtering by language because of the class imbalance
-        for k in id2label.keys():
-            try:
-                train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
-            except:
-                pass
+        try:
+            train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
+        except Exception as e:
+            print(f"Exception: {e}")
 
     return train_dataset
 
@@ -283,7 +298,6 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             batch['segments'].append(string_blocks)
 
         # Tokenize the text
-
         tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
         for case in batch['segments']:
             case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
@@ -293,6 +307,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0, data_args))
 
         del batch['segments']
+
 
     else:
         tokenized = tokenizer(
@@ -771,7 +786,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         log_args(wandb, data_args, model_args)
 
 
-def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, num_labels):
+def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, training_args, num_labels):
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,
@@ -789,6 +804,14 @@ def generate_Model_Tokenizer_for_SequenceClassification(model_args, data_args, n
         use_auth_token=True if model_args.use_auth_token else None,
         revision=model_args.revision
     )
+
+    if config.model_type == 'xmod':
+        # For xmod you need ot set the default language, because it is an adapter-based model: https://huggingface.co/docs/transformers/main/en/model_doc/xmod
+        # We will do this in the forward pass
+
+        # It is recommended to freeze layers, see: https://huggingface.co/docs/transformers/v4.28.1/en/model_doc/xmod#finetuning
+        # model.set_default_language('de_CH')
+        model.freeze_embeddings_and_language_adapters()
 
     tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
 
@@ -808,7 +831,9 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
         revision=model_args.revision
     )
 
-    model = AutoModelForTokenClassification.from_pretrained(
+    model_class = get_model_class_for_token_classification(config.model_type)
+
+    model = model_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -824,14 +849,14 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_
     return model, tokenizer, config
 
 
-def generate_model_and_tokenizer(model_args, data_args, num_labels):
+def generate_model_and_tokenizer(data_args, model_args, training_args, num_labels):
     if meta_infos['task_type_mapping'][data_args.finetuning_task] in ['SLTC', 'MLTC']:
         function_for_generation = generate_Model_Tokenizer_for_SequenceClassification
     elif meta_infos['task_type_mapping'][data_args.finetuning_task] == 'NER':
         function_for_generation = generate_Model_Tokenizer_for_TokenClassification
 
-    return function_for_generation(model_args, data_args,
-                                   num_labels)
+    return function_for_generation(model_args=model_args, data_args=data_args, training_args=training_args,
+                                   num_labels=num_labels)
 
 
 def get_the_run_name_for_hyperparameter_tuning(data_args, training_args):

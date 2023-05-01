@@ -139,7 +139,8 @@ class ResultAggregator:
             results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull() == False]
 
-        self.results = results
+        # filter out all rows where the finetuning_task is not in config_to_dataset
+        self.results = results[results.finetuning_task.isin(self.meta_infos['config_to_dataset'].keys())]
 
         available_predict_scores = [col for col in self.results if bool(
             re.search(r'^\w+_predict/_' + self.score, col))]
@@ -309,24 +310,21 @@ class ResultAggregator:
     def correct_language(self, finetuning_task, language_model, language):
         '''
         Sometimes the language column is wrong.
-        For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased the run names start with “all_” instead of “el_” which should not be.
-        This code will check if a language model is multilingual and if a task is monolingual. If the language is all, it must be corrected to the language of the monolingual model.
+        For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased,
+        the run names start with “all_” instead of “el_” which should not be.
+        This code will check if a language model is multilingual and if a task is monolingual.
+        If the language is all, it must be corrected to the language of the monolingual model.
         '''
-
         if self.meta_infos["model_language_lookup_table"][language_model] == "all":
-            if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
+            task_lang_mapping = self.meta_infos["task_language_mapping"]
+            if finetuning_task in task_lang_mapping and len(task_lang_mapping[finetuning_task]) == 1:
                 if language == "all":
-                    new_language = self.meta_infos["task_language_mapping"][finetuning_task][0]
+                    new_language = task_lang_mapping[finetuning_task][0]
                     log_message = ' '.join(["Changed language to from " + language + " to " + new_language +
                                             " for the following combinations: ", finetuning_task, language_model])
                     logging.info(log_message)
                     return new_language
-                else:
-                    return language
-            else:
-                return language
-        else:
-            return language
+        return language
 
     def check_for_model_language_consistency(self, dataframe):
 
@@ -544,23 +542,23 @@ class ResultAggregator:
         else:
             score_to_filter = self.split + score
 
-        if only_completed_tasks == True:
+        if only_completed_tasks:
             # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
                     self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
-        elif only_completed_tasks == False:
+        else:
             df = self.results[(self.results.seed.isin(required_seeds))][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
 
-        df_pivot = df.pivot_table(values=score_to_filter, index=[
-            'finetuning_task', '_name_or_path', 'language'], columns='seed', aggfunc='first')
-        datasets = [self.meta_infos['config_to_dataset'][i[0]]
-                    for i in df_pivot.index.tolist()]
+        df_pivot = df.pivot_table(values=score_to_filter,
+                                  index=['finetuning_task', '_name_or_path', 'language'],
+                                  columns='seed',
+                                  aggfunc='first')
+        datasets = [self.meta_infos['config_to_dataset'][i[0]] for i in df_pivot.index.tolist()]
         df_pivot['dataset'] = datasets
         df_pivot.reset_index(inplace=True)
-        df_pivot['task_type'] = df_pivot["finetuning_task"].apply(
-            lambda x: self.meta_infos["task_type_mapping"][x])
+        df_pivot['task_type'] = df_pivot["finetuning_task"].apply(lambda x: self.meta_infos["task_type_mapping"][x])
 
         # First wee need to check if there are all seed values as columns
         # As stated in the above comment; if there are no completed tasks, there will not be any seeds values left
@@ -756,14 +754,14 @@ class ResultAggregator:
 
         logging.info("*** Calculating average scores ***")
 
-        if average_over_language == False:
+        if not average_over_language:
             for _name_or_path in self.results._name_or_path.unique():
                 for finetuning_task in self.results.finetuning_task.unique():
                     mean_macro_f1_score = self.get_average_score(
                         finetuning_task, _name_or_path)
                     overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
-        elif average_over_language == True:
+        else:
             for _name_or_path in self.results._name_or_path.unique():
                 for finetuning_task in self.results.finetuning_task.unique():
 
@@ -772,8 +770,7 @@ class ResultAggregator:
                     # If yes, we loop through all avalaible language-specific macro-f1 scores
 
                     if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
-                        mean_macro_f1_score = self.get_average_score(
-                            finetuning_task, _name_or_path)
+                        mean_macro_f1_score = self.get_average_score(finetuning_task, _name_or_path)
 
                     elif len(self.meta_infos["task_language_mapping"][finetuning_task]) > 1:
                         predict_language_mean_collected = list()
@@ -825,8 +822,6 @@ class ResultAggregator:
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
         # overview_template.fillna("", inplace=True)
-
-        overview_template = overview_template
 
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
                                     column_name="aggregated_score"):
@@ -1035,8 +1030,10 @@ if __name__ == "__main__":
     ra.get_info()
 
     ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
-    #ra.create_report()
+    # ra.create_report()
 
     ra.get_dataset_aggregated_score()
 
     ra.get_language_aggregated_score()
+
+    # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual

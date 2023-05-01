@@ -124,7 +124,8 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    train_dataset, eval_dataset, predict_dataset = get_data(training_args, data_args)
+    train_dataset, eval_dataset, predict_dataset = get_data(training_args=training_args, data_args=data_args,
+                                                            model_args=model_args)
 
     # Labels
     label_list = get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
@@ -141,6 +142,7 @@ def main():
 
     model, tokenizer, config = generate_model_and_tokenizer(model_args=model_args,
                                                             data_args=data_args,
+                                                            training_args=training_args,
                                                             num_labels=num_labels)
 
     # For hyperparameter search we always need the train dataset
@@ -205,10 +207,6 @@ def main():
 
     elif not data_args.do_hyperparameter_search:
         # Initialize our Trainer
-        training_args.metric_for_best_model = "eval_loss"
-        training_args.evaluation_strategy = IntervalStrategy.EPOCH
-        training_args.logging_strategy = IntervalStrategy.EPOCH
-
         trainer = MultilabelTrainer(
             model=model,
             args=training_args,

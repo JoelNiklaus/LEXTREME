@@ -1,6 +1,6 @@
 #!/bin/bash
 
-my_models="microsoft/mdeberta-v3-base xlm-roberta-base xlm-roberta-large"
+my_models="microsoft/mdeberta-v3-base xlm-roberta-large joelito/legal-swiss-roberta-large google/mt5-base"
 
 # Read the CSV file and loop through the lines
 while IFS=$'\t' read -r dataset_name model language seeds revision responsible gpu; do
