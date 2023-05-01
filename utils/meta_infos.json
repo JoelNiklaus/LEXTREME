@@ -924,7 +924,8 @@
           "xlm-roberta-base",
           "microsoft/mdeberta-v3-base",
           "google/mt5-base",
-          "ZurichNLP/swissbert"
+          "ZurichNLP/swissbert",
+          "joelito/legal-swiss-longformer-base"
         ],
         "large": [
           "xlm-roberta-large",

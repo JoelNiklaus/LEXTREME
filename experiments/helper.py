@@ -815,7 +815,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
 
     tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
 
-    if model_args.hierarchical:
+    if model_args.hierarchical and config.model_type != 'longformer':
         model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
 
     return model, tokenizer, config
