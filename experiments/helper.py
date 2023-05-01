@@ -280,7 +280,8 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
     pad_id = tokenizer.pad_token_id
 
-    if model_args.hierarchical:
+    if model_args.hierarchical and 'longformer' not in model_args.model_name_or_path:
+
         batch['segments'] = []
 
         tokenized = tokenizer(batch["input"], padding=padding, truncation=True,
@@ -308,14 +309,22 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
         del batch['segments']
 
-
     else:
-        tokenized = tokenizer(
-            batch["input"],
-            padding=padding,
-            max_length=data_args.max_seq_length,
-            truncation=True,
-        )
+        if 'longformer' in model_args.model_name_or_path and \
+                meta_infos["task_default_arguments"][data_args.finetuning_task]["ModelArguments"]["hierarchical"]:
+            tokenized = tokenizer(
+                batch["input"],
+                padding=padding,
+                max_length=data_args.max_segments * data_args.max_seg_length,
+                truncation=True,
+            )
+        else:
+            tokenized = tokenizer(
+                batch["input"],
+                padding=padding,
+                max_length=data_args.max_seq_length,
+                truncation=True,
+            )
 
     return tokenized
 
