@@ -21,9 +21,14 @@ elif [[ $dataset_name == *"considerations"* ]]; then
 fi
 
 # add exceptions
-if [[ $dataset_name == "swiss_judgment_prediction_xl_considerations" ]]; then
+if [[ $dataset_name == "swiss_judgment_prediction_xl_"* ]]; then
   gpu_memory="80" # we get a time limit error otherwise
 fi
+
+if [[ $model == "microsoft/mdeberta-v3-base" ]] || [[ $model == *"-roberta-large" ]]; then
+  gpu_memory="80" # we might get a time limit error otherwise
+fi
+
 
 # Replace slashes in the model name with underscores
 model_for_path=$(echo "${model}" | tr '/' '_')
@@ -49,11 +54,9 @@ cat > "${job_file}" << EOL
 #SBATCH --partition=owners
 #SBATCH --array=${seeds}
 
-# Load necessary modules
-ml load python/3.9.0 cuda/11.3.1
-
 # set up the environment
 cd /home/users/jniklaus/LEXTREME
+conda activate lextreme
 export PYTHONPATH=. HF_DATASETS_CACHE=$SCRATCH/cache/datasets/${SLURM_ARRAY_TASK_ID} TRANSFORMERS_CACHE=$SCRATCH/cache/models
 
 # Execute your program with the specified dataset, model, and GPU memory
