@@ -5,19 +5,12 @@ model="$2"
 seeds="$3"
 
 # Determine the GPU memory based on the dataset name and model
-gpu_memory="80"
-if [[ $dataset_name == *"facts"* ]]; then
-  if [[ $model == *"-base" ]]; then
-    gpu_memory="24"
-  elif [[ $model == *"-large" ]]; then
-    gpu_memory="48"
-  fi
-elif [[ $dataset_name == *"considerations"* ]]; then
-  if [[ $model == *"-base" ]]; then
-    gpu_memory="32"
-  elif [[ $model == *"-large" ]]; then
-    gpu_memory="80"
-  fi
+if [[ $dataset_name == "swiss_criticality_prediction_citation_"* ]] || [[ $dataset_name == "swiss_law_area_prediction_"* ]]; then
+  gpu_memory="32"
+elif [[ $dataset_name == "swiss_criticality_prediction_bge_"* ]]; then
+  gpu_memory="48"
+else # swiss_judgment_prediction_xl
+  gpu_memory="80"
 fi
 
 # add exceptions
