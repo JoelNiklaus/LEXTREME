@@ -19,88 +19,97 @@ optimal_batch_sizes = {
     # e.g. RTX 2080 Ti or GTX 1080 Ti
     # TODO test sizes here
     11: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 16, 512: 8, 1024: 4, 2048: 2, 4096: 1},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 16, 512: 8, 1024: 4, 2048: 2, 4096: 1, 8192: 1},
+        # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
-        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
+        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
+        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
     },
     # TODO test sizes here
     # e.g. P100
     16: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
-        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
-        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
+        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
+        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
+        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
     },
     # e.g. RTX 3090
     24: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
+        # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
-        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4},
+        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
+        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2}
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2}  # 8192 untested
     },
     # e.g. V100
     32: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
-        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
-        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
+        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
+        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},  # 8192 untested
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
+        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
-        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},  # 8192 untested
     },
     # TODO test sizes here
     # e.g. A6000
     48: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64, 8192: 64},
+        # 8192 untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32},
+        # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
+        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # bf16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 18},  # bf16; 8192 untested
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16; 8192 untested
     },
     # e.g. A100
     80: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64, 8192: 64},
+        # fp16 ; 8192 untested
         # 'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32}, # 8192 untested
+        # fp16 ; 8192 untested
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 26},
-        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # 8192 untested
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16; 8192 untested
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # bf16; 8192 untested
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16; 8192 untested
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
