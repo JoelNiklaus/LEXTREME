@@ -829,7 +829,7 @@
         "max_seg_length": 128
       },
       "ModelArguments": {
-        "hierarchical": true
+        "hierarchical": false
       }
     },
     "scotus": {
