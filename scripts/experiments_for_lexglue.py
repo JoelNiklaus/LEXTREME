@@ -16,6 +16,8 @@ tasks = [
     "case_hold"
   ]
 
+os.chdir('../')
+
 for row in models.to_dict(orient="records"):
     name_or_path = row["_name_or_path"]
     revision = row["revision"]
