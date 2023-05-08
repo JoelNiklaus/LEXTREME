@@ -268,12 +268,12 @@ task_type_mapping = meta_infos["task_type_mapping"]
 max_sequence_lengths = dict()
 for task in meta_infos["task_default_arguments"].keys():
     if "max_segments" in meta_infos["task_default_arguments"][task][
-            "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
-            "DataTrainingArguments"]:
+        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"]:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-            "max_segments"] * \
-            meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-            "max_seg_length"]
+                                         "max_segments"] * \
+                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_seg_length"]
     else:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
             "max_seq_length"]
@@ -438,11 +438,11 @@ def generate_command_for_experiments(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-            ' --greater_is_better {GREATER_IS_BETTER} '
+                           ' --greater_is_better {GREATER_IS_BETTER} '
 
     if (data["language"] is not None):
         command_template = command_template + ' --language {LANGUAGE} '
@@ -451,7 +451,7 @@ def generate_command_for_experiments(**data):
                                               'LANGUAGE}/seed_{SEED}'
     else:
         command_template = command_template + \
-            ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
+                           ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
@@ -469,7 +469,7 @@ def generate_command_for_experiments(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
                     command_template += ' --fp16 --fp16_full_eval'
@@ -480,7 +480,7 @@ def generate_command_for_experiments(**data):
 
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
         command_template += ' --logging_steps ' + \
-            str(data["logging_steps"]) + ' '
+                            str(data["logging_steps"]) + ' '
     if 'eval_steps' in data.keys() and data['eval_steps'] is not None:
         command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
     if 'save_steps' in data.keys() and data['save_steps'] is not None:
@@ -557,11 +557,11 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-            ' --greater_is_better {GREATER_IS_BETTER} '
+                           ' --greater_is_better {GREATER_IS_BETTER} '
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
@@ -584,7 +584,7 @@ def generate_command_for_hyperparameter_search(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
@@ -845,6 +845,7 @@ def run_experiment(
                     download_mode=download_mode,
                     eval_steps=eval_steps,
                     evaluation_strategy=evaluation_strategy,
+                    early_stopping_patience=early_stopping_patience,
                     gpu_memory=gpu_memory,
                     gpu_number=gpu_id,
                     greater_is_better=greater_is_better,
@@ -943,6 +944,7 @@ def run_experiment(
                     download_mode=download_mode,
                     eval_steps=eval_steps,
                     evaluation_strategy=evaluation_strategy,
+                    early_stopping_patience=early_stopping_patience,
                     gpu_memory=gpu_memory,
                     gpu_number=gpu_id,
                     greater_is_better=greater_is_better,
