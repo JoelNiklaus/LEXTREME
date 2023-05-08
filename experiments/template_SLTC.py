@@ -224,7 +224,7 @@ def main():
             compute_metrics=compute_metrics_multi_class,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
         )
         # Training
         if training_args.do_train:

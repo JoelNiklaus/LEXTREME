@@ -27,7 +27,6 @@ from helper import Seqeval, make_predictions_ner, config_wandb, generate_model_a
     get_data, get_label_list_from_ner_tasks, model_is_multilingual, init_hyperparameter_search, \
     set_environment_variables
 
-
 logger = logging.getLogger(__name__)
 
 set_environment_variables()
@@ -248,7 +247,7 @@ def main():
             compute_metrics=seqeval.compute_metrics_for_token_classification,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
         )
 
         # Training
@@ -292,11 +291,13 @@ def main():
         # Prediction
         if training_args.do_predict:
             logger.info("*** Predict ***")
-            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args, predict_dataset=predict_dataset,
+            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args,
+                                 predict_dataset=predict_dataset,
                                  id2label=id2label, training_args=training_args)
 
         # Clean up checkpoints
-        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
+        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if
+                       '/checkpoint' in filepath]
         for checkpoint in checkpoints:
             shutil.rmtree(checkpoint)
 

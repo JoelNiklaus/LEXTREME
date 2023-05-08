@@ -1,2 +1,0 @@
-microsoft/mdeberta-v3-base
-xlm-roberta-base

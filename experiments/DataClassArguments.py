@@ -143,6 +143,12 @@ class DataTrainingArguments:
             "help": "Specify the hyperparameter search method. You can choose between grid, random, bayes."
         },
     )
+    early_stopping_patience: int = field(
+        default=5,
+        metadata={
+            "help": "Define Early Stopping Patients."
+        },
+    )
 
     server_ip: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
     server_port: Optional[str] = field(default=None, metadata={"help": "For distant debugging."})
