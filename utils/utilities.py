@@ -1,3 +1,4 @@
+# Original
 import random
 
 import arrow
@@ -19,33 +20,50 @@ optimal_batch_sizes = {
     # e.g. RTX 2080 Ti or GTX 1080 Ti
     # TODO test sizes here
     11: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
+        # untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 16, 512: 8, 1024: 4, 2048: 2, 4096: 1, 8192: 1},
         # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        # 8192 untested
+        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # model is too large
+        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},
+        # 8192 untested
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # 8192 untested
+        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'google/mt5-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
+        # model is too large
+        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},
+        # model is too large
+        'google/mt5-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},
+        # model is too large
+        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},
     },
     # TODO test sizes here
     # e.g. P100
     16: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
+        # untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
-        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
+        # 8192 untested
+        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4, 8192: 4},
+        # untested
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # untested
+        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},
+        # untested
+        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
+        # untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # untested
+        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
     },
     # e.g. RTX 3090
     24: {
@@ -54,10 +72,14 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
         # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
+        # 8192 untested
+        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},
+        # 8192 untested
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # 8192 untested
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},
+        # 8192 untested
+        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
         'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
@@ -70,14 +92,21 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
         # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
-        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
+        # 8192 untested
+        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8, 8192: 8},
+        # 8192 untested
+        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},
+        # 8192 untested
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},
+        # 8192 untested
+        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},# 8192 untested
-        'google/mt5-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
-        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
+        # 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        # 8192 untested
+        'google/mt5-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},
+        # 8192 untested
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},
     },
     # TODO test sizes here
     # e.g. A6000
@@ -87,35 +116,50 @@ optimal_batch_sizes = {
         'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32},
         # 8192 untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
+        # 8192 untested
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
+        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},
+        # 8192 untested
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 18},  # bf16; 8192 untested
+        # bf16; 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 18},
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'google/mt5-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
-        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
+        # fp16
+        'google/mt5-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},
+        # fp16
+        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},
     },
     # e.g. A100
     80: {
         'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64, 8192: 64},
         # fp16 ; 8192 untested
         # 'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32}, # 8192 untested
+        # 8192 untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32},
         # fp16 ; 8192 untested
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16; 8192 untested
+        # 8192 untested
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # 8192 untested
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
+        # fp16
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        # fp16; 8192 untested
+        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # bf16; 8192 untested
+        # bf16; 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'google/mt5-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
+        # fp16
+        'google/mt5-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
+        # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
@@ -132,7 +176,8 @@ def make_boolean(value):
 def remove_old_files(path_to_directory, days=-30):
     # keep files for 7 days to make sure that this works also in a hpc environment
     criticalTime = arrow.now().shift().shift(days=days)
-    print(f"Removing old temporary bash scripts (older than {days} days: before {criticalTime})")
+    print(
+        f"Removing old temporary bash scripts (older than {days} days: before {criticalTime})")
 
     for file in Path(path_to_directory).glob('*'):
         if file.is_file():
@@ -145,7 +190,8 @@ def remove_old_files(path_to_directory, days=-30):
 
 
 def get_meta_infos():
-    path_to_json_file = os.path.join(os.path.dirname(__file__), 'meta_infos.json')
+    path_to_json_file = os.path.join(
+        os.path.dirname(__file__), 'meta_infos.json')
     with open(path_to_json_file, 'r') as f:
         meta_infos = js.load(f)
 
@@ -200,7 +246,8 @@ def get_meta_infos():
     meta_infos["model_type_mapping"] = model_type_mapping
 
     _TYPES = sorted(list(set(meta_infos["model_type_mapping"])))
-    _LANGUAGES = sorted(list(set(meta_infos['model_language_lookup_table'].values())))
+    _LANGUAGES = sorted(
+        list(set(meta_infos['model_language_lookup_table'].values())))
     _SIZES = sorted(list(set(meta_infos['model_size_mapping'].values())))
 
     meta_infos['_TYPES'] = _TYPES
@@ -221,12 +268,12 @@ task_type_mapping = meta_infos["task_type_mapping"]
 max_sequence_lengths = dict()
 for task in meta_infos["task_default_arguments"].keys():
     if "max_segments" in meta_infos["task_default_arguments"][task][
-        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
-        "DataTrainingArguments"]:
+            "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+            "DataTrainingArguments"]:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-                                         "max_segments"] * \
-                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-                                         "max_seg_length"]
+            "max_segments"] * \
+            meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+            "max_seg_length"]
     else:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
             "max_seq_length"]
@@ -253,31 +300,41 @@ def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_bat
     try:
         batch_size_dict = optimal_batch_sizes[int(gpu_memory)][language_model]
     except:
-        print(f"Did not find a batch size for the language model {language_model} and the gpu memory {gpu_memory}")
+        print(
+            f"Did not find a batch size for the language model {language_model} and the gpu memory {gpu_memory}")
         if "joelito" in language_model:
             if "base" in language_model:
-                print(f"We assume that the language model {language_model} is based on xlm-roberta-base.")
-                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-base"]
+                print(
+                    f"We assume that the language model {language_model} is based on xlm-roberta-base.")
+                batch_size_dict = optimal_batch_sizes[int(
+                    gpu_memory)]["xlm-roberta-base"]
             elif "large" in language_model:
-                print(f"We assume that the language model {language_model} is based on xlm-roberta-large.")
-                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["xlm-roberta-large"]
+                print(
+                    f"We assume that the language model {language_model} is based on xlm-roberta-large.")
+                batch_size_dict = optimal_batch_sizes[int(
+                    gpu_memory)]["xlm-roberta-large"]
             else:
-                raise ValueError("Did not find the language model in the dictionary.")
+                raise ValueError(
+                    "Did not find the language model in the dictionary.")
         else:
             print(f"The language model {language_model} will be considered a monolingual model. "
                   "Therefore, we revert to the default batch size.")
             if language_model not in meta_infos['model_size_mapping'].keys():
-                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_base"]
+                batch_size_dict = optimal_batch_sizes[int(
+                    gpu_memory)]["monolingual_base"]
             elif meta_infos['model_size_mapping'][language_model] != 'large':
-                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_base"]
+                batch_size_dict = optimal_batch_sizes[int(
+                    gpu_memory)]["monolingual_base"]
             else:
-                batch_size_dict = optimal_batch_sizes[int(gpu_memory)]["monolingual_large"]
+                batch_size_dict = optimal_batch_sizes[int(
+                    gpu_memory)]["monolingual_large"]
     batch_size = None
     while batch_size is None:
         try:
             batch_size = batch_size_dict[max_seq_len]
         except KeyError:
-            max_seq_len *= 2  # if the sequence length is not in the dictionary, we try the next higher one
+            # if the sequence length is not in the dictionary, we try the next higher one
+            max_seq_len *= 2
     accumulation_steps = total_batch_size // batch_size
 
     return batch_size, accumulation_steps
@@ -379,10 +436,12 @@ def generate_command_for_experiments(**data):
                        '--seed {SEED} '
 
     if data["dataset_cache_dir"] is not None:
-        command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+        command_template = command_template + \
+            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
-        command_template = command_template + ' --greater_is_better {GREATER_IS_BETTER} '
+        command_template = command_template + \
+            ' --greater_is_better {GREATER_IS_BETTER} '
 
     if (data["language"] is not None):
         command_template = command_template + ' --language {LANGUAGE} '
@@ -390,11 +449,13 @@ def generate_command_for_experiments(**data):
                                               'MODEL_NAME}/results_after_training_only_on_language_with_id__{' \
                                               'LANGUAGE}/seed_{SEED}'
     else:
-        command_template = command_template + ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
+        command_template = command_template + \
+            ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
-    run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search(r"\d", str(data["gpu_number"])))
+    run_on_cpu = "gpu_number" not in data.keys() or not bool(
+        re.search(r"\d", str(data["gpu_number"])))
 
     if run_on_cpu:
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
@@ -407,7 +468,7 @@ def generate_command_for_experiments(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
                     command_template += ' --fp16 --fp16_full_eval'
@@ -417,7 +478,8 @@ def generate_command_for_experiments(**data):
                 command_template += ' --fp16 --fp16_full_eval'
 
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
-        command_template += ' --logging_steps ' + str(data["logging_steps"]) + ' '
+        command_template += ' --logging_steps ' + \
+            str(data["logging_steps"]) + ' '
     if 'eval_steps' in data.keys() and data['eval_steps'] is not None:
         command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
     if 'save_steps' in data.keys() and data['save_steps'] is not None:
@@ -487,23 +549,26 @@ def generate_command_for_hyperparameter_search(**data):
                        '--revision {REVISION} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
-                       '--search_type_method {SEARCH_TYPE_METHOD} '
+                       '--search_type_method {SEARCH_TYPE_METHOD} ' \
+                       '--early_stopping_patience {EARLY_STOPPING_PATIENCE}'
 
     if data["dataset_cache_dir"] is not None:
-        command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+        command_template = command_template + \
+            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
-        command_template = command_template + ' --greater_is_better {GREATER_IS_BETTER} '
+        command_template = command_template + \
+            ' --greater_is_better {GREATER_IS_BETTER} '
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
     if data["lower_case"]:
         command_template = command_template + ' --lower_case '
 
-
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
-    run_on_cpu = "gpu_number" not in data.keys() or not bool(re.search(r"\d", str(data["gpu_number"])))
+    run_on_cpu = "gpu_number" not in data.keys() or not bool(
+        re.search(r"\d", str(data["gpu_number"])))
 
     if run_on_cpu:
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
@@ -516,7 +581,7 @@ def generate_command_for_hyperparameter_search(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
@@ -547,7 +612,8 @@ def generate_command_for_hyperparameter_search(**data):
                                             RUNNING_MODE=data["running_mode"],
                                             SAVE_STRATEGY=data["save_strategy"],
                                             SEARCH_TYPE_METHOD=data["search_type_method"],
-                                            TASK=data["task"]
+                                            TASK=data["task"],
+                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"]
                                             )
 
     file_name = './temporary_scripts/hyperparameter_search_' + data["task"] + "_" + str(
@@ -638,7 +704,8 @@ def run_experiment(
 
     if list_of_languages is not None:
         if type(list_of_languages) == str:
-            list_of_languages = list_of_languages.split(',') if ',' in list_of_languages else [list_of_languages]
+            list_of_languages = list_of_languages.split(
+                ',') if ',' in list_of_languages else [list_of_languages]
 
     if log_directory is None:
         log_directory = "results"
@@ -709,9 +776,12 @@ def run_experiment(
             all_variables = [[task], models_to_be_used, list_of_seeds]
 
         all_variables_perturbations = list(itertools.product(*all_variables))
-        all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]
-        all_variables_perturbations = list(zip(cycle(gpu_number), all_variables_perturbations))
-        all_variables_perturbations = [[x[0]] + x[1].split('$') for x in all_variables_perturbations]
+        all_variables_perturbations = [
+            '$'.join([str(x) for x in p]) for p in all_variables_perturbations]
+        all_variables_perturbations = list(
+            zip(cycle(gpu_number), all_variables_perturbations))
+        all_variables_perturbations = [
+            [x[0]] + x[1].split('$') for x in all_variables_perturbations]
         print(all_variables_perturbations)
 
         for (gpu_id, task, model_name, seed) in all_variables_perturbations:
@@ -721,7 +791,8 @@ def run_experiment(
             seed = int(seed)
 
             if batch_size is None:
-                batch_size, accumulation_steps = get_optimal_batch_size(model_name, task, gpu_memory)
+                batch_size, accumulation_steps = get_optimal_batch_size(
+                    model_name, task, gpu_memory)
             else:
                 if accumulation_steps is None:
                     accumulation_steps = 1
@@ -730,7 +801,8 @@ def run_experiment(
                 if model_name in meta_infos["model_language_lookup_table"].keys():
                     # all means just the entire dataset, so that we take the default value
                     if meta_infos["model_language_lookup_table"][model_name] != 'all':
-                        list_of_languages = [meta_infos["model_language_lookup_table"][model_name]]
+                        list_of_languages = [
+                            meta_infos["model_language_lookup_table"][model_name]]
                     else:
                         list_of_languages = [None]
 
@@ -807,14 +879,18 @@ def run_experiment(
     else:
 
         if task == 'all':
-            all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used]
+            all_variables = [
+                [t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used]
         else:
             all_variables = [[task], models_to_be_used]
 
         all_variables_perturbations = list(itertools.product(*all_variables))
-        all_variables_perturbations = ['$'.join([str(x) for x in p]) for p in all_variables_perturbations]
-        all_variables_perturbations = list(zip(cycle([gpu_number]), all_variables_perturbations))
-        all_variables_perturbations = [[x[0]] + x[1].split('$') for x in all_variables_perturbations]
+        all_variables_perturbations = [
+            '$'.join([str(x) for x in p]) for p in all_variables_perturbations]
+        all_variables_perturbations = list(
+            zip(cycle([gpu_number]), all_variables_perturbations))
+        all_variables_perturbations = [
+            [x[0]] + x[1].split('$') for x in all_variables_perturbations]
         print(all_variables_perturbations)
 
         for (gpu_id, task, model_name) in all_variables_perturbations:
@@ -823,7 +899,8 @@ def run_experiment(
                 if model_name in meta_infos["model_language_lookup_table"].keys():
                     # all means just the entire dataset, so that we take the default value
                     if meta_infos["model_language_lookup_table"][model_name] != 'all':
-                        list_of_languages = [meta_infos["model_language_lookup_table"][model_name]]
+                        list_of_languages = [
+                            meta_infos["model_language_lookup_table"][model_name]]
                     else:
                         list_of_languages = [None]
 
@@ -896,13 +973,16 @@ def run_experiment(
     with open('command_dict.json', 'w') as f:
         js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
 
-    commands_to_run = ['; sleep 10; '.join(commands) for _, commands in gpu_command_dict.items()]
+    commands_to_run = ['; sleep 10; '.join(
+        commands) for _, commands in gpu_command_dict.items()]
 
     with open('temporary_scripts/final_commands_run_inparallel.txt', 'w') as f:
         for gpu_id, commands in gpu_command_dict.items():
-            print('On GPU ', gpu_id, 'this system command is applied:', file=f, end='\n')
+            print('On GPU ', gpu_id,
+                  'this system command is applied:', file=f, end='\n')
             print('\t', '; sleep 10; '.join(commands), file=f, end='\n')
-            print('On GPU ', gpu_id, 'the following commands are run sequentially.', file=f, end='\n')
+            print('On GPU ', gpu_id,
+                  'the following commands are run sequentially.', file=f, end='\n')
             for c in commands:
                 print('\t', c, file=f)
             print("\n########################################\n", file=f)
