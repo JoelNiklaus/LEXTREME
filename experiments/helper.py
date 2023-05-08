@@ -36,6 +36,21 @@ from utilities import get_meta_infos
 meta_infos = get_meta_infos()
 
 
+def add_language(dataset, language="en"):
+    new_column = [language] * len(dataset)
+    dataset = dataset.add_column("language", new_column)
+    return dataset
+
+
+def prepare_lexglue_dataset(dataset):
+    if 'labels' in list(dataset.features.keys()):
+        dataset = dataset.rename_columns({'text': 'input', 'labels': 'label'})
+    else:
+        dataset = dataset.rename_columns({'text': 'input'})
+    dataset = add_language(dataset)
+    return dataset
+
+
 def return_language_prefix(language, finetuning_task):
     '''
         In wandb we log the name of the task with a prefix to distinguish the filtered languages.
@@ -56,24 +71,39 @@ def filter_dataset_by_language(dataset, language):
     return dataset
 
 
+def get_overall_dataset_name(finetuning_task):
+    if finetuning_task in meta_infos["lexglue_configs"]:
+        overall_dataset_name = "lex_glue"
+    else:
+        overall_dataset_name = "joelito/lextreme"
+
+    print(overall_dataset_name)
+    return overall_dataset_name
+
+
 def make_efficient_split(data_args, split_name, ner_tasks):
+    overall_dataset_name = get_overall_dataset_name(data_args.finetuning_task)
+
     if data_args.running_mode == "debug":
         split_name = split_name + '[:100]'
     if data_args.running_mode == "experimental":
         split_name = split_name + '[:5%]'
 
     if data_args.dataset_cache_dir is None:
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+        dataset = load_dataset(overall_dataset_name, data_args.finetuning_task, split=split_name,
                                download_mode=data_args.download_mode)
 
     else:
         if not os.path.exists(data_args.dataset_cache_dir):
             os.mkdir(data_args.dataset_cache_dir)
 
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+        dataset = load_dataset(overall_dataset_name, data_args.finetuning_task, split=split_name,
                                cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
 
-    if bool(re.search('eurlex', data_args.finetuning_task)):
+    if overall_dataset_name == 'lex_glue':
+        dataset = prepare_lexglue_dataset(dataset)
+
+    if bool(re.search('eurlex', data_args.finetuning_task)) and overall_dataset_name == "joelito/lextreme":
         dataset = split_into_languages(dataset)
 
     if data_args.finetuning_task in ner_tasks:
@@ -85,18 +115,23 @@ def make_efficient_split(data_args, split_name, ner_tasks):
 
 
 def make_split_with_postfiltering(data_args, split_name, ner_tasks):
+    overall_dataset_name = get_overall_dataset_name(data_args.finetuning_task)
+
     if data_args.dataset_cache_dir is None:
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+        dataset = load_dataset(overall_dataset_name, data_args.finetuning_task, split=split_name,
                                download_mode=data_args.download_mode)
 
     else:
         if not os.path.exists(data_args.dataset_cache_dir):
             os.mkdir(data_args.dataset_cache_dir)
 
-        dataset = load_dataset("joelito/lextreme", data_args.finetuning_task, split=split_name,
+        dataset = load_dataset(overall_dataset_name, data_args.finetuning_task, split=split_name,
                                cache_dir=data_args.dataset_cache_dir, download_mode=data_args.download_mode)
 
-    if bool(re.search('eurlex', data_args.finetuning_task)):
+    if overall_dataset_name == 'lex_glue':
+        dataset = prepare_lexglue_dataset(dataset)
+
+    if bool(re.search('eurlex', data_args.finetuning_task)) and overall_dataset_name == "joelito/lextreme":
         dataset = split_into_languages(dataset)
 
     if data_args.finetuning_task in ner_tasks:
@@ -156,31 +191,60 @@ def model_is_multilingual(model_name_or_path):
         return False
 
 
-def insert_lang_ids(dataset):
-    allowed_languages = ['de', 'fr', 'it', 'rm']
-    allowed_language_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']  # See https://huggingface.co/ZurichNLP/swissbert
-    dataset_filtered = dataset.filter(lambda x: x['language'] in allowed_languages)
-    lang_ids = dataset_filtered['language']
-    lang_ids = [li + '_CH' for li in lang_ids]
-    lang_ids = [allowed_language_ids.index(li) for li in lang_ids]
-    dataset_filtered = dataset_filtered.add_column("lang_ids", lang_ids)
-    return dataset_filtered
+def find_allowed_lang_ids(model_name_or_path):
+    allowed_lang_ids_dict = dict()
+    if model_name_or_path == 'ZurichNLP/swissbert':
+        allowed_lang_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']  # See https://huggingface.co/ZurichNLP/swissbert
+    elif model_name_or_path == "facebook/xmod-base":
+        allowed_lang_ids = ['en_XX', 'id_ID', 'vi_VN', 'ru_RU', 'fa_IR', 'sv_SE', 'ja_XX', 'fr_XX', 'de_DE', 'ro_RO',
+                            'ko_KR',
+                            'hu_HU', 'es_XX', 'fi_FI', 'uk_UA', 'da_DK', 'pt_XX', 'no_XX', 'th_TH', 'pl_PL', 'bg_BG',
+                            'nl_XX',
+                            'zh_CN', 'he_IL', 'el_GR', 'it_IT', 'sk_SK', 'hr_HR', 'tr_TR', 'ar_AR', 'cs_CZ', 'lt_LT',
+                            'hi_IN',
+                            'zh_TW', 'ca_ES', 'ms_MY', 'sl_SI', 'lv_LV', 'ta_IN', 'bn_IN', 'et_EE', 'az_AZ', 'sq_AL',
+                            'sr_RS',
+                            'kk_KZ', 'ka_GE', 'tl_XX', 'ur_PK', 'is_IS', 'hy_AM', 'ml_IN', 'mk_MK', 'be_BY', 'la_VA',
+                            'te_IN',
+                            'eu_ES', 'gl_ES', 'mn_MN', 'kn_IN', 'ne_NP', 'sw_KE', 'si_LK', 'mr_IN', 'af_ZA', 'gu_IN',
+                            'cy_GB',
+                            'eo_EO', 'km_KH', 'ky_KG', 'uz_UZ', 'ps_AF', 'pa_IN', 'ga_IE', 'ha_NG', 'am_ET', 'lo_LA',
+                            'ku_TR',
+                            'so_SO', 'my_MM', 'or_IN', 'sa_IN']
+
+    for lang_id in allowed_lang_ids:
+        allowed_lang_ids_dict[lang_id[:2]] = lang_id
+
+    return allowed_lang_ids_dict, allowed_lang_ids
+
+
+def insert_lang_ids(dataset, model_name_or_path):
+    if model_name_or_path in ['ZurichNLP/swissbert', 'facebook/xmod-base']:
+        allowed_lang_ids_dict, allowed_lang_ids = find_allowed_lang_ids(model_name_or_path)
+        allowed_languages = list(allowed_lang_ids_dict.keys())
+        dataset_filtered = dataset.filter(lambda x: x['language'] in allowed_languages)
+        lang_ids = dataset_filtered['language']
+        lang_ids = [allowed_lang_ids_dict[li] for li in lang_ids]
+        lang_ids = [allowed_lang_ids.index(li) for li in lang_ids]
+        dataset_filtered = dataset_filtered.add_column("lang_ids", lang_ids)
+        return dataset_filtered
+    else:
+        return dataset
 
 
 def get_data(training_args, data_args, model_args):
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
     if training_args.do_train:
         train_dataset = make_split(data_args=data_args, split_name="train")
-        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
-            train_dataset = insert_lang_ids(train_dataset)
+        train_dataset = insert_lang_ids(train_dataset, model_args.model_name_or_path)
     if training_args.do_eval:
         eval_dataset = make_split(data_args=data_args, split_name="validation")
-        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
-            eval_dataset = insert_lang_ids(eval_dataset)
+        eval_dataset = insert_lang_ids(eval_dataset, model_args.model_name_or_path)
 
     if training_args.do_predict:
         predict_dataset = make_split(data_args=data_args, split_name="test")
-        if model_args.model_name_or_path == 'ZurichNLP/swissbert':
-            predict_dataset = insert_lang_ids(predict_dataset)
+        predict_dataset = insert_lang_ids(predict_dataset, model_args.model_name_or_path)
 
     return train_dataset, eval_dataset, predict_dataset
 
