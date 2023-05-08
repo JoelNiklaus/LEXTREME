@@ -675,6 +675,7 @@ def run_experiment(
         download_mode,
         eval_steps,
         evaluation_strategy,
+        early_stopping_patience,
         gpu_memory,
         gpu_number,
         greater_is_better,

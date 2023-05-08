@@ -4,7 +4,8 @@ import os
 
 
 df = pd.read_excel('utils/results/report.xlsx')
-df = df[df.run=="x"]
+df = df[df.finetuning_task.str.contains("multi_eur")]
+df = df[df._name_or_path.str.contains("(joelito|roberta)")==False]
 
 
 
