@@ -193,7 +193,7 @@ def model_is_multilingual(model_name_or_path):
 
 def find_allowed_lang_ids(model_name_or_path):
     allowed_lang_ids_dict = dict()
-    if model_name_or_path == 'ZurichNLP/swissbert':
+    if model_name_or_path in ['ZurichNLP/swissbert', 'ZurichNLP/swissbert-xlm-vocab']:
         allowed_lang_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']  # See https://huggingface.co/ZurichNLP/swissbert
     elif model_name_or_path == "facebook/xmod-base":
         allowed_lang_ids = ['en_XX', 'id_ID', 'vi_VN', 'ru_RU', 'fa_IR', 'sv_SE', 'ja_XX', 'fr_XX', 'de_DE', 'ro_RO',
@@ -219,7 +219,7 @@ def find_allowed_lang_ids(model_name_or_path):
 
 
 def insert_lang_ids(dataset, model_name_or_path):
-    if model_name_or_path in ['ZurichNLP/swissbert', 'facebook/xmod-base']:
+    if model_name_or_path in ['ZurichNLP/swissbert', 'ZurichNLP/swissbert-xlm-vocab', 'facebook/xmod-base']:
         allowed_lang_ids_dict, allowed_lang_ids = find_allowed_lang_ids(model_name_or_path)
         allowed_languages = list(allowed_lang_ids_dict.keys())
         dataset_filtered = dataset.filter(lambda x: x['language'] in allowed_languages)
@@ -877,14 +877,6 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
         use_auth_token=True if model_args.use_auth_token else None,
         revision=model_args.revision
     )
-
-    if config.model_type == 'xmod':
-        # For xmod you need ot set the default language, because it is an adapter-based model: https://huggingface.co/docs/transformers/main/en/model_doc/xmod
-        # We will do this in the forward pass
-
-        # It is recommended to freeze layers, see: https://huggingface.co/docs/transformers/v4.28.1/en/model_doc/xmod#finetuning
-        # model.set_default_language('de_CH')
-        model.freeze_embeddings_and_language_adapters()
 
     tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
 

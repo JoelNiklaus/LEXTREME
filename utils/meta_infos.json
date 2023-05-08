@@ -1045,6 +1045,7 @@
           "microsoft/mdeberta-v3-base",
           "google/mt5-base",
           "ZurichNLP/swissbert",
+          "ZurichNLP/swissbert-xlm-vocab",
           "joelito/legal-swiss-longformer-base",
           "facebook/xmod-base"
         ],
