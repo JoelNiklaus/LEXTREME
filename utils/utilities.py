@@ -415,6 +415,7 @@ def generate_command_for_experiments(**data):
                        '--do_train ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--eval_accumulation_steps {ACCUMULATION_STEPS} ' \
+                       '--early_stopping_patience {EARLY_STOPPING_PATIENCE} ' \
                        '--evaluation_strategy {EVALUATION_STRATEGY} ' \
                        '--gradient_accumulation_steps {ACCUMULATION_STEPS} ' \
                        '--hierarchical {HIERARCHICAL} ' \
@@ -512,7 +513,8 @@ def generate_command_for_experiments(**data):
                                             EVALUATION_STRATEGY=data["evaluation_strategy"],
                                             LOGGING_STRATEGY=data["logging_strategy"],
                                             SAVE_STRATEGY=data["save_strategy"],
-                                            REVISION=data["revision"]
+                                            REVISION=data["revision"],
+                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -537,6 +539,7 @@ def generate_command_for_hyperparameter_search(**data):
                        '--do_train ' \
                        '--download_mode {DOWNLOAD_MODE} ' \
                        '--evaluation_strategy {EVALUATION_STRATEGY} ' \
+                       '--early_stopping_patience {EARLY_STOPPING_PATIENCE} ' \
                        '--hierarchical {HIERARCHICAL} ' \
                        '--learning_rate {LEARNING_RATE} ' \
                        '--log_directory {LOG_DIRECTORY} ' \
