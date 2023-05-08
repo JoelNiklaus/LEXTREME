@@ -27,7 +27,6 @@ from helper import Seqeval, make_predictions_ner, config_wandb, generate_model_a
     get_data, get_label_list_from_ner_tasks, model_is_multilingual, init_hyperparameter_search, \
     set_environment_variables
 
-
 logger = logging.getLogger(__name__)
 
 set_environment_variables()
@@ -248,7 +247,7 @@ def main():
             compute_metrics=seqeval.compute_metrics_for_token_classification,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
         )
 
         # Training
@@ -277,7 +276,9 @@ def main():
             trainer.save_state()
 
         # Evaluation
-        if training_args.do_eval:
+        # This was commented out, because in some cases it caused eval_loss == NaN and therefore destroyed experiments
+        # If you want to log the evaluation results at the end locally, uncomment this section
+        '''if training_args.do_eval:
             logger.info("*** Evaluate ***")
             metrics = trainer.evaluate(eval_dataset=eval_dataset)
 
@@ -285,16 +286,18 @@ def main():
             metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
             trainer.log_metrics("eval", metrics)
-            trainer.save_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)'''
 
         # Prediction
         if training_args.do_predict:
             logger.info("*** Predict ***")
-            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args, predict_dataset=predict_dataset,
+            make_predictions_ner(trainer=trainer, tokenizer=tokenizer, data_args=data_args,
+                                 predict_dataset=predict_dataset,
                                  id2label=id2label, training_args=training_args)
 
         # Clean up checkpoints
-        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if '/checkpoint' in filepath]
+        checkpoints = [filepath for filepath in glob.glob(f'{training_args.output_dir}/*/') if
+                       '/checkpoint' in filepath]
         for checkpoint in checkpoints:
             shutil.rmtree(checkpoint)
 

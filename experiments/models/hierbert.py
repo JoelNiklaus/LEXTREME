@@ -132,19 +132,8 @@ class HierarchicalBert(nn.Module):
         else:
             token_type_ids_reshape = None
         if lang_ids is not None:
-            print('########################### Language Ids not None #####################################')
-            print(lang_ids.shape)
-            print(lang_ids)
             lang_ids = torch.tensor([[x for _ in range(0, input_ids[:].shape[1])] for x in lang_ids])
-            # print(lang_ids)
-            # lang_id = torch.tensor([lang_ids[0]])
-            # to_add = tuple([lang_id for n in range(0, input_ids_reshape.shape[0])])
-            # lang_ids_reshaped = lang_ids.contiguous().flatten()
-            # lang_ids_reshape = torch.cat(to_add, 0)
             lang_ids_reshape = lang_ids.contiguous().flatten()
-            print('lang_ids_reshape: ')
-            print(lang_ids_reshape)
-            # lang_ids_reshape = lang_ids.contiguous().view(-1, lang_ids.size(-1))[:,1]
 
         # Encode segments with BERT --> (256, 128, 768)
 
@@ -152,9 +141,6 @@ class HierarchicalBert(nn.Module):
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape)[0]
         elif self.encoder.config.model_type == 'xmod':
-            print(input_ids.shape)
-            print(input_ids_reshape.shape)
-            print(lang_ids_reshape.shape)
             encoder_outputs = self.encoder(lang_ids=lang_ids_reshape,
                                            input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape,
@@ -250,6 +236,9 @@ def get_tokenizer(model_name_or_path, revision):
     tokenizer_class = AutoTokenizer
     if model_name_or_path in models_that_require_add_prefix_space:
         return tokenizer_class.from_pretrained(model_name_or_path, add_prefix_space=True, revision=revision)
+    elif model_name_or_path == 'facebook/xmod-base':
+        # facebook/xmod-base uses the tokenizer from xlm-roberta-base, see: https://huggingface.co/facebook/xmod-base
+        return AutoTokenizer.from_pretrained("xlm-roberta-base")
     else:
         return tokenizer_class.from_pretrained(model_name_or_path, revision=revision)
 

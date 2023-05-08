@@ -1,7 +1,0 @@
-en
-fr
-hu
-it
-nb
-nl
-pl

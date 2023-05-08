@@ -19,103 +19,82 @@ optimal_batch_sizes = {
     # e.g. RTX 2080 Ti or GTX 1080 Ti
     # TODO test sizes here
     11: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 16, 512: 8, 1024: 4, 2048: 2, 4096: 1, 8192: 1},
-        # 8192 untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 16, 512: 8, 1024: 4, 2048: 2, 4096: 1},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
+        'monolingual_base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'monolingual_large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'google/mt5-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
-        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
+        'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
+        'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0},  # model is too large
     },
     # TODO test sizes here
     # e.g. P100
     16: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},  # untested
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
-        'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
+        'monolingual_base': {256: 32, 512: 32, 1024: 8, 2048: 4, 4096: 4},
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4},  # untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},  # untested
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},  # untested
     },
     # e.g. RTX 3090
     24: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
-        # 8192 untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8, 8192: 8},
-        # 8192 untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 32, 2048: 16, 4096: 8},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
+        'monolingual_base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
+        'monolingual_large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
-        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2}
     },
     # e.g. V100
     32: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
-        # 8192 untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
-        # 8192 untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 32, 1024: 64, 2048: 32, 4096: 16},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
-        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
-        'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
+        'monolingual_base': {256: 64, 512: 32, 1024: 32, 2048: 8, 4096: 8},
+        'monolingual_large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
+        'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},# 8192 untested
-        'google/mt5-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
-        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 8, 4096: 8},
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2},
     },
     # TODO test sizes here
     # e.g. A6000
     48: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64, 8192: 64},
-        # 8192 untested
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32},
-        # 8192 untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'monolingual_large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 16},
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 18},  # bf16; 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'google/mt5-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
-        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
     },
     # e.g. A100
     80: {
-        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64, 8192: 64},
-        # fp16 ; 8192 untested
+        'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 64},  # fp16
         # 'distilbert-base-multilingual-cased': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
-        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32, 8192: 32}, # 8192 untested
-        # fp16 ; 8192 untested
+        'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp16
         # 'microsoft/Multilingual-MiniLM-L12-H384': {256: 64, 512: 64, 1024: 64, 2048: 64, 4096: 32},  # fp32
         # same as xlm-r to be safe (monolingual models have a smaller vocab than xlm-r and are equally sized
-        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # 8192 untested
-        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # 8192 untested
-        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # fp16; 8192 untested
+        'monolingual_base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 26},
+        'monolingual_large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},
+        'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp16
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # bf16; 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # bf16
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'google/mt5-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp16
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
@@ -244,8 +223,10 @@ def get_python_file_for_task(task):
         return f"template_NER.py --finetuning_task " + task
     elif meta_infos["task_type_mapping"][task] == "SLTC":
         return f"template_SLTC.py --finetuning_task " + task
-    elif meta_infos["task_type_mapping"][task] == "MLTC":
+    elif meta_infos["task_type_mapping"][task] == "MLTC" and task != "politmonitor":
         return f"template_MLTC.py --finetuning_task " + task
+    elif task == "politmonitor":
+        return f"template_MLTC_politmonitor.py --finetuning_task " + task
 
 
 def get_optimal_batch_size(language_model: str, task: str, gpu_memory, total_batch_size=64):
@@ -376,7 +357,8 @@ def generate_command_for_experiments(**data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
                        '--save_total_limit 6 ' \
-                       '--seed {SEED} '
+                       '--seed {SEED} ' \
+                       '--early_stopping_patience {EARLY_STOPPING_PATIENCE}'
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -422,8 +404,6 @@ def generate_command_for_experiments(**data):
         command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
     if 'save_steps' in data.keys() and data['save_steps'] is not None:
         command_template += ' --save_steps ' + str(data["save_steps"]) + ' '
-    if data["lower_case"]:
-        command_template = command_template + ' --lower_case '
 
     # mdeberta does not work with fp16 because it was trained with bf16
     # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -450,7 +430,8 @@ def generate_command_for_experiments(**data):
                                             EVALUATION_STRATEGY=data["evaluation_strategy"],
                                             LOGGING_STRATEGY=data["logging_strategy"],
                                             SAVE_STRATEGY=data["save_strategy"],
-                                            REVISION=data["revision"]
+                                            REVISION=data["revision"],
+                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
@@ -487,7 +468,8 @@ def generate_command_for_hyperparameter_search(**data):
                        '--revision {REVISION} ' \
                        '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
-                       '--search_type_method {SEARCH_TYPE_METHOD} '
+                       '--search_type_method {SEARCH_TYPE_METHOD} ' \
+                       '--early_stopping_patience {EARLY_STOPPING_PATIENCE}'
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + ' --dataset_cache_dir {DATASET_CACHE_DIR}'
@@ -497,9 +479,6 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
-    if data["lower_case"]:
-        command_template = command_template + ' --lower_case '
-
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
@@ -547,7 +526,8 @@ def generate_command_for_hyperparameter_search(**data):
                                             RUNNING_MODE=data["running_mode"],
                                             SAVE_STRATEGY=data["save_strategy"],
                                             SEARCH_TYPE_METHOD=data["search_type_method"],
-                                            TASK=data["task"]
+                                            TASK=data["task"],
+                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"]
                                             )
 
     file_name = './temporary_scripts/hyperparameter_search_' + data["task"] + "_" + str(

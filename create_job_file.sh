@@ -5,24 +5,23 @@ model="$2"
 seeds="$3"
 
 # Determine the GPU memory based on the dataset name and model
-if [[ $dataset_name == *"facts"* ]]; then
-  if [[ $model == *"-base" ]]; then
-    gpu_memory="24"
-  elif [[ $model == *"-large" ]]; then
-    gpu_memory="48"
-  fi
-elif [[ $dataset_name == *"considerations"* ]]; then
-  if [[ $model == *"-base" ]]; then
-    gpu_memory="32"
-  elif [[ $model == *"-large" ]]; then
-    gpu_memory="80"
-  fi
+if [[ $dataset_name == "swiss_criticality_prediction_citation_"* ]] || [[ $dataset_name == "swiss_law_area_prediction_"* ]]; then
+  gpu_memory="32"
+elif [[ $dataset_name == "swiss_criticality_prediction_bge_"* ]]; then
+  gpu_memory="48"
+else # swiss_judgment_prediction_xl
+  gpu_memory="80"
 fi
 
 # add exceptions
-if [[ $dataset_name == "swiss_judgment_prediction_xl_considerations" ]]; then
+if [[ $dataset_name == "swiss_judgment_prediction_xl_"* ]]; then
   gpu_memory="80" # we get a time limit error otherwise
 fi
+
+if [[ $model == "microsoft/mdeberta-v3-base" ]] || [[ $model == *"-roberta-large" ]]; then
+  gpu_memory="80" # we might get a time limit error otherwise
+fi
+
 
 # Replace slashes in the model name with underscores
 model_for_path=$(echo "${model}" | tr '/' '_')
@@ -48,11 +47,9 @@ cat > "${job_file}" << EOL
 #SBATCH --partition=owners
 #SBATCH --array=${seeds}
 
-# Load necessary modules
-ml load python/3.9.0 cuda/11.3.1
-
 # set up the environment
 cd /home/users/jniklaus/LEXTREME
+conda activate lextreme
 export PYTHONPATH=. HF_DATASETS_CACHE=$SCRATCH/cache/datasets/${SLURM_ARRAY_TASK_ID} TRANSFORMERS_CACHE=$SCRATCH/cache/models
 
 # Execute your program with the specified dataset, model, and GPU memory

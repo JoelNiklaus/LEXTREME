@@ -68,8 +68,14 @@
     "turkish_constitutional_court_decisions_judgment": "TCD",
     "swiss_criticality_prediction": "SCP",
     "swiss_law_area_prediction": "SLAP",
-    "swiss_judgment_prediction_xl": "SJPXL"
-    },
+    "swiss_judgment_prediction_xl": "SJPXL",
+    "ecthr_a": "ecthr_a",
+    "ecthr_b": "ecthr_b",
+    "eurlex": "eurlex",
+    "scotus": "scotus",
+    "ledgar": "ledgar",
+    "unfair_tos": "unfair_tos"
+  },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
     "brazilian_court_decisions_unanimity": "BCD-U",
@@ -99,7 +105,13 @@
     "swiss_law_area_prediction_sub_area_facts": "SLAP-SF",
     "swiss_law_area_prediction_sub_area_considerations": "SLAP-SC",
     "swiss_judgment_prediction_xl_facts": "SJPXL-F",
-    "swiss_judgment_prediction_xl_considerations": "SJPXL-C"
+    "swiss_judgment_prediction_xl_considerations": "SJPXL-C",
+    "ecthr_a": "ecthr_a",
+    "ecthr_b": "ecthr_b",
+    "eurlex": "eurlex",
+    "scotus": "scotus",
+    "ledgar": "ledgar",
+    "unfair_tos": "unfair_tos"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -130,7 +142,13 @@
     "swiss_law_area_prediction_sub_area_facts": "SLTC",
     "swiss_law_area_prediction_sub_area_considerations": "SLTC",
     "swiss_judgment_prediction_xl_facts": "SLTC",
-    "swiss_judgment_prediction_xl_considerations": "SLTC"
+    "swiss_judgment_prediction_xl_considerations": "SLTC",
+    "ecthr_a": "MLTC",
+    "ecthr_b": "MLTC",
+    "eurlex": "MLTC",
+    "scotus": "SLTC",
+    "ledgar": "SLTC",
+    "unfair_tos": "MLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -330,27 +348,27 @@
       "fr",
       "it"
     ],
-    "swiss_law_area_prediction_facts":  [
+    "swiss_law_area_prediction_facts": [
       "de",
       "fr",
       "it"
     ],
-    "swiss_law_area_prediction_considerations":  [
+    "swiss_law_area_prediction_considerations": [
       "de",
       "fr",
       "it"
     ],
-    "swiss_law_area_prediction_sub_area_facts":  [
+    "swiss_law_area_prediction_sub_area_facts": [
       "de",
       "fr",
       "it"
     ],
-    "swiss_law_area_prediction_sub_area_considerations":  [
+    "swiss_law_area_prediction_sub_area_considerations": [
       "de",
       "fr",
       "it"
     ],
-    "swiss_judgment_prediction_xl_facts":  [
+    "swiss_judgment_prediction_xl_facts": [
       "de",
       "fr",
       "it"
@@ -359,6 +377,24 @@
       "de",
       "fr",
       "it"
+    ],
+    "ecthr_a": [
+      "en"
+    ],
+    "ecthr_b": [
+      "en"
+    ],
+    "eurlex": [
+      "en"
+    ],
+    "scotus": [
+      "en"
+    ],
+    "ledgar": [
+      "en"
+    ],
+    "unfair_tos": [
+      "en"
     ]
   },
   "config_to_dataset": {
@@ -390,7 +426,13 @@
     "swiss_law_area_prediction_sub_area_facts": "swiss_law_area_prediction",
     "swiss_law_area_prediction_sub_area_considerations": "swiss_law_area_prediction",
     "swiss_judgment_prediction_xl_facts": "swiss_judgment_prediction_xl",
-    "swiss_judgment_prediction_xl_considerations": "swiss_judgment_prediction_xl"
+    "swiss_judgment_prediction_xl_considerations": "swiss_judgment_prediction_xl",
+    "ecthr_a": "ecthr",
+    "ecthr_b": "ecthr",
+    "eurlex": "eurlex",
+    "scotus": "scotus",
+    "ledgar": "ledgar",
+    "unfair_tos": "unfair_tos"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -437,10 +479,10 @@
       "turkish_constitutional_court_decisions_judgment"
     ],
     "swiss_criticality_prediction": [
-     "swiss_criticality_prediction_bge_facts",
-     "swiss_criticality_prediction_bge_considerations",
-     "swiss_criticality_prediction_citation_facts",
-     "swiss_criticality_prediction_citation_considerations"
+      "swiss_criticality_prediction_bge_facts",
+      "swiss_criticality_prediction_bge_considerations",
+      "swiss_criticality_prediction_citation_facts",
+      "swiss_criticality_prediction_citation_considerations"
     ],
     "swiss_law_area_prediction": [
       "swiss_law_area_prediction_facts",
@@ -448,9 +490,25 @@
       "swiss_law_area_prediction_sub_area_facts",
       "swiss_law_area_prediction_sub_area_considerations"
     ],
-    "swiss_judgment_prediction_xl":[
+    "swiss_judgment_prediction_xl": [
       "swiss_judgment_prediction_xl_facts",
       "swiss_judgment_prediction_xl_considerations"
+    ],
+    "ecthr": [
+      "ecthr_a",
+      "ecthr_b"
+    ],
+    "eurlex": [
+      "eurlex"
+    ],
+    "scotus": [
+      "scotus"
+    ],
+    "ledgar": [
+      "ledgar"
+    ],
+    "unfair_tos": [
+      "unfair_tos"
     ]
   },
   "task_default_arguments": {
@@ -676,7 +734,7 @@
         "hierarchical": true
       }
     },
-    "swiss_law_area_prediction_facts":  {
+    "swiss_law_area_prediction_facts": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
@@ -687,7 +745,7 @@
         "hierarchical": true
       }
     },
-    "swiss_law_area_prediction_sub_area_facts":  {
+    "swiss_law_area_prediction_sub_area_facts": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
@@ -698,7 +756,7 @@
         "hierarchical": true
       }
     },
-    "swiss_law_area_prediction_considerations":  {
+    "swiss_law_area_prediction_considerations": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 32,
@@ -709,7 +767,7 @@
         "hierarchical": true
       }
     },
-    "swiss_law_area_prediction_sub_area_considerations":  {
+    "swiss_law_area_prediction_sub_area_considerations": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 32,
@@ -720,7 +778,7 @@
         "hierarchical": true
       }
     },
-    "swiss_judgment_prediction_xl_facts":  {
+    "swiss_judgment_prediction_xl_facts": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 16,
@@ -731,7 +789,7 @@
         "hierarchical": true
       }
     },
-    "swiss_judgment_prediction_xl_considerations":  {
+    "swiss_judgment_prediction_xl_considerations": {
       "DataTrainingArguments": {
         "max_seq_length": 512,
         "max_segments": 32,
@@ -740,6 +798,68 @@
       },
       "ModelArguments": {
         "hierarchical": true
+      }
+    },
+    "ecthr_a": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 64,
+        "max_seg_length": 128,
+        "add_oversampling": false
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "ecthr_b": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 64,
+        "max_seg_length": 128,
+        "add_oversampling": false
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "eurlex": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "scotus": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 64,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": true
+      }
+    },
+    "ledgar": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "unfair_tos": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512,
+        "max_segments": 32,
+        "max_seg_length": 128
+      },
+      "ModelArguments": {
+        "hierarchical": false
       }
     }
   },
@@ -924,7 +1044,9 @@
           "xlm-roberta-base",
           "microsoft/mdeberta-v3-base",
           "google/mt5-base",
-          "ZurichNLP/swissbert"
+          "ZurichNLP/swissbert",
+          "joelito/legal-swiss-longformer-base",
+          "facebook/xmod-base"
         ],
         "large": [
           "xlm-roberta-large",
@@ -1130,5 +1252,14 @@
         ]
       }
     }
-  }
+  },
+  "lexglue_configs": [
+    "ecthr_a",
+    "ecthr_b",
+    "eurlex",
+    "scotus",
+    "ledgar",
+    "unfair_tos",
+    "case_hold"
+  ]
 }

@@ -224,7 +224,7 @@ def main():
             compute_metrics=compute_metrics_multi_class,
             tokenizer=tokenizer,
             data_collator=data_collator,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=5)]
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=data_args.early_stopping_patience)]
         )
         # Training
         if training_args.do_train:
@@ -247,7 +247,9 @@ def main():
             trainer.save_state()
 
         # Evaluation
-        if training_args.do_eval:
+        # This was commented out, because in some cases it caused eval_loss == NaN and therefore destroyed experiments
+        # If you want to log the evaluation results at the end locally, uncomment this section
+        '''if training_args.do_eval:
             logger.info("*** Evaluate ***")
             metrics = trainer.evaluate(eval_dataset=eval_dataset)
 
@@ -256,7 +258,7 @@ def main():
             metrics["eval_samples"] = min(max_eval_samples, len(eval_dataset))
 
             trainer.log_metrics("eval", metrics)
-            trainer.save_metrics("eval", metrics)
+            trainer.save_metrics("eval", metrics)'''
 
         # Prediction
         if training_args.do_predict:

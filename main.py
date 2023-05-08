@@ -27,6 +27,9 @@ if __name__ == '__main__':
                              "evaluation is done during training; steps = Evaluation is done (and logged) every "
                              "eval_steps; epoch = Evaluation is done at the end of each epoch.",
                         default=None)
+    parser.add_argument('-esp', '--early_stopping_patience',
+                        help="Define Early Stopping Patients.",
+                        default=5)
     parser.add_argument('-gn', '--gpu_number', help='Define which GPU you would like to use.', default=None)
     parser.add_argument('-gib', '--greater_is_better',
                         help='Use in conjunction with load_best_model_at_end and metric_for_best_model to specify if better models should have a greater metric or not. Will default to: True if metric_for_best_model is set to a value that isn’t "loss" or "eval_loss". False if metric_for_best_model is not set, or set to "loss" or "eval_loss". ',
@@ -128,6 +131,7 @@ if __name__ == '__main__':
         dataset_cache_dir=args.dataset_cache_dir,
         do_hyperparameter_search=make_boolean(args.do_hyperparameter_search),
         download_mode=args.download_mode,
+        early_stopping_patience=args.early_stopping_patience,
         eval_steps=args.eval_steps,
         evaluation_strategy=args.evaluation_strategy,
         gpu_memory=args.gpu_memory,
@@ -141,7 +145,7 @@ if __name__ == '__main__':
         log_directory=args.log_directory,
         logging_steps=args.logging_steps,
         logging_strategy=args.logging_strategy,
-        lower_case=args.lower_case,
+        lower_case=make_boolean(args.lower_case),
         metric_for_best_model=args.metric_for_best_model,
         num_train_epochs=args.num_train_epochs,
         preprocessing_num_workers=args.preprocessing_num_workers,
