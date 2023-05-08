@@ -29,6 +29,7 @@ optimal_batch_sizes = {
         'google/mt5-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
+        'google/mt5-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
         'xlm-roberta-large': {256: 0, 512: 0, 1024: 0, 2048: 0, 4096: 0, 8192: 0},  # model is too large
     },
     # TODO test sizes here
@@ -43,6 +44,7 @@ optimal_batch_sizes = {
         'google/mt5-base': {256: 32, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # untested
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
+        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
         'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # untested
     },
     # e.g. RTX 3090
@@ -57,8 +59,9 @@ optimal_batch_sizes = {
         'xlm-roberta-base': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 8, 8192: 8},  # 8192 untested
         'google/mt5-base': {256: 64, 512: 32, 1024: 16, 2048: 4, 4096: 4, 8192: 4},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2}  # 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        'google/mt5-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
+        'xlm-roberta-large': {256: 16, 512: 8, 1024: 8, 2048: 4, 4096: 2, 8192: 2},
     },
     # e.g. V100
     32: {
@@ -72,8 +75,9 @@ optimal_batch_sizes = {
         'xlm-roberta-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
         'google/mt5-base': {256: 32, 512: 16, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # 8192 untested
         # lower batch sizes because not possible with fp16
-        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},  # 8192 untested
-        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},  # 8192 untested
+        'microsoft/mdeberta-v3-base': {256: 32, 512: 16, 1024: 8, 2048: 4, 4096: 2, 8192: 2},# 8192 untested
+        'google/mt5-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
+        'xlm-roberta-large': {256: 8, 512: 4, 1024: 4, 2048: 2, 4096: 2, 8192: 2},# 8192 untested
     },
     # TODO test sizes here
     # e.g. A6000
@@ -90,7 +94,8 @@ optimal_batch_sizes = {
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 18},  # bf16; 8192 untested
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16; 8192 untested
+        'google/mt5-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 32, 1024: 16, 2048: 8, 4096: 4, 8192: 4},  # fp16
     },
     # e.g. A100
     80: {
@@ -109,7 +114,8 @@ optimal_batch_sizes = {
         # lower batch sizes because not possible with fp16
         'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},  # bf16; 8192 untested
         # 'microsoft/mdeberta-v3-base': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8},  # fp32
-        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16; 8192 untested
+        'google/mt5-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
+        'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 8, 8192: 8},  # fp16
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
