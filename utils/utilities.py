@@ -416,6 +416,8 @@ def generate_command_for_experiments(**data):
         command_template += ' --eval_steps ' + str(data["eval_steps"]) + ' '
     if 'save_steps' in data.keys() and data['save_steps'] is not None:
         command_template += ' --save_steps ' + str(data["save_steps"]) + ' '
+    if data["lower_case"]:
+        command_template = command_template + ' --lower_case '
 
     # mdeberta does not work with fp16 because it was trained with bf16
     # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -489,6 +491,9 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
+    if data["lower_case"]:
+        command_template = command_template + ' --lower_case '
+
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 

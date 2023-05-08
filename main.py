@@ -145,7 +145,7 @@ if __name__ == '__main__':
         log_directory=args.log_directory,
         logging_steps=args.logging_steps,
         logging_strategy=args.logging_strategy,
-        lower_case=args.lower_case,
+        lower_case=make_boolean(args.lower_case),
         metric_for_best_model=args.metric_for_best_model,
         num_train_epochs=args.num_train_epochs,
         preprocessing_num_workers=args.preprocessing_num_workers,
