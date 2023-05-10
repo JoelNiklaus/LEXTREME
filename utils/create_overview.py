@@ -15,10 +15,18 @@ from traceback import print_exc
 from utilities import get_meta_infos
 import json as js
 
+file_name_for_joels_models = 'joels_models.xlsx'
+
 joels_models = pd.read_excel(os.path.join(
-    os.path.dirname(__file__), 'joels_models.xlsx'))
-models_currently_to_be_ignored = joels_models[
-    joels_models.need_to_be_run == "no"]._name_or_path.tolist()
+    os.path.dirname(__file__), file_name_for_joels_models))
+
+if file_name_for_joels_models == 'joels_models.xlsx':
+    models_currently_to_be_ignored = joels_models[
+        joels_models.need_to_be_run == "no"]._name_or_path.tolist()
+elif file_name_for_joels_models == 'joels_models_revision_infos_MultiLegalPile.xlsx':
+    models_currently_to_be_ignored = joels_models[
+        joels_models.need_to_be_run_with_LEXTREME == False]._name_or_path.tolist()
+    models_currently_to_be_ignored.extend(["google/mt5-small", "google/mt5-base", "ZurichNLP/swissbert", "ZurichNLP/swissbert-xlm-vocab", "joelito/legal-swiss-longformer-base", "facebook/xmod-base", "google/mt5-large"])
 
 
 def insert_revision(_name_or_path):
@@ -343,7 +351,7 @@ class ResultAggregator:
         '''
         For some reason, when wandb shows loss == nan, you will not get a nan value from the API.
         Instead, it returns a very low value in scientifc notation.
-        This functions tries to detect these cases. 
+        This functions tries to detect these cases.
         A manuel evaluation showed that the predictions are worse in these cases, so we need to rerun the experiments again.
 
         '''
