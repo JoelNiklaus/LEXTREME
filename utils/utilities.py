@@ -378,7 +378,22 @@ def get_default_number_of_training_epochs(task, model_name, running_mode, langua
                 evaluation_strategy = "epoch"
                 logging_strategy = "epoch"
                 save_strategy = "epoch"
-
+        elif task in ["swiss_judgment_prediction_xl_considerations", "swiss_judgment_prediction_xl_facts"]:
+            if running_mode == "default":
+                # this dataset is so large, one epoch is enough to save compute
+                # anyway, it starts overfitting for distilbert-base-multilingual-cased already at epoch 2 when training multilingually
+                num_train_epochs = 1
+                evaluation_strategy = "steps"
+                logging_strategy = "steps"
+                save_strategy = "steps"
+                eval_steps = 1000
+                logging_steps = 1000
+                save_steps = 1000
+            else:
+                num_train_epochs = 50
+                evaluation_strategy = "epoch"
+                logging_strategy = "epoch"
+                save_strategy = "epoch"
         else:
             num_train_epochs = 50
             evaluation_strategy = "epoch"
