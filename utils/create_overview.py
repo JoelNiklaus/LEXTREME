@@ -26,7 +26,9 @@ if file_name_for_joels_models == 'joels_models.xlsx':
 elif file_name_for_joels_models == 'joels_models_revision_infos_MultiLegalPile.xlsx':
     models_currently_to_be_ignored = joels_models[
         joels_models.need_to_be_run_with_LEXTREME == False]._name_or_path.tolist()
-    models_currently_to_be_ignored.extend(["google/mt5-small", "google/mt5-base", "ZurichNLP/swissbert", "ZurichNLP/swissbert-xlm-vocab", "joelito/legal-swiss-longformer-base", "facebook/xmod-base", "google/mt5-large"])
+    models_currently_to_be_ignored.extend(
+        ["google/mt5-small", "google/mt5-base", "ZurichNLP/swissbert", "ZurichNLP/swissbert-xlm-vocab",
+         "joelito/legal-swiss-longformer-base", "facebook/xmod-base", "google/mt5-large"])
 
 
 def insert_revision(_name_or_path):
@@ -158,6 +160,14 @@ class ResultAggregator:
 
         # Add column to rows to indicate if this run pertains to completed tasks or not
         self.mark_incomplete_tasks()
+
+        self.prefix = '''\\begin{table*}[!ht]
+            \\centering
+            \\caption{Caption}
+            '''
+        self.suffix = '''\\caption{Table explanation text.}
+                        \\label{tab:table_label}
+                        \\end{table*}'''
 
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
@@ -386,7 +396,7 @@ class ResultAggregator:
                           .apply(self.loss_equals_nan) == False]
 
         # Keep only results from seed 1,2,3 and remove anything else
-        results = results[results.seed.isin([1, 2, 3])]
+        # results = results[results.seed.isin([1, 2, 3])]
 
         # When fetching the data from the wandb api it it return state instead of State as column name
         # I could make every column name lowercase, but I am afraid this might cause some problems
@@ -431,14 +441,12 @@ class ResultAggregator:
                     lambda x: meta_infos['model_language_lookup_table'][x] == which_language)]
         return dataframe
 
-    def check_seed_per_task(self, tasks_to_filter=[], which_language=None):
+    def check_seed_per_task(self, task_constraint=[], which_language=None, required_seeds={"1", "2", "3"}):
 
         if which_language is None:
             which_language = self.which_language
 
         report = list()
-
-        required_seeds = {"1", "2", "3"}
 
         for task, languages in self.meta_infos["task_language_mapping"].items():
             required_models = list()
@@ -502,8 +510,8 @@ class ResultAggregator:
 
         report_df = insert_responsibilities(report_df)
 
-        if len(tasks_to_filter) > 0:
-            report_df = report_df[report_df.finetuning_task.isin(tasks_to_filter)]
+        if len(task_constraint) > 0:
+            report_df = report_df[report_df.finetuning_task.isin(task_constraint)]
 
         return report_df
 
@@ -523,7 +531,9 @@ class ResultAggregator:
 
         del self.results['look_up']
 
-    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=None, which_language=None):
+    def create_overview_of_results_per_seed(self, score=None, only_completed_tasks=None, which_language=None,
+                                            task_constraint: list = [], model_constraint: list = [],
+                                            required_seeds=[1, 2, 3]):
 
         if only_completed_tasks is None:
             only_completed_tasks = self.only_completed_tasks
@@ -543,7 +553,8 @@ class ResultAggregator:
 
         incomplete_tasks = set(seed_check.finetuning_task.unique())
 
-        required_seeds = [1, 2, 3]
+        required_seeds = list(required_seeds)
+        required_seeds = [int(s) for s in required_seeds]
 
         if bool(re.search('(eval|train)', score)):
             score_to_filter = score
@@ -555,9 +566,16 @@ class ResultAggregator:
             df = self.results[(self.results.seed.isin(required_seeds)) & (
                     self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
+
         else:
             df = self.results[(self.results.seed.isin(required_seeds))][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
+
+        if len(task_constraint) > 0:
+            df = df[df.finetuning_task.isin(task_constraint)]
+
+        if len(model_constraint) > 0:
+            df = df[df._name_or_path.isin(model_constraint)]
 
         df_pivot = df.pivot_table(values=score_to_filter,
                                   index=['finetuning_task', '_name_or_path', 'language'],
@@ -572,12 +590,13 @@ class ResultAggregator:
         # As stated in the above comment; if there are no completed tasks, there will not be any seeds values left
         df_pivot_columns = df_pivot.columns.tolist()
         if df_pivot.shape[0] == 0:
-            for seed in [1, 2, 3]:
+            for seed in required_seeds:
                 if seed not in df_pivot_columns:
                     df_pivot[seed] = ''
 
-        df_pivot = df_pivot[['dataset', 'finetuning_task', 'task_type',
-                             '_name_or_path', 'language', 1, 2, 3]]
+        relevant_columns = ['dataset', 'finetuning_task', 'task_type', '_name_or_path', 'language']
+        relevant_columns.extend(required_seeds)
+        df_pivot = df_pivot[relevant_columns]
         df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
         df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
 
@@ -591,7 +610,11 @@ class ResultAggregator:
 
         return df_pivot
 
-    def create_report(self, only_completed_tasks=None, which_language=None, tasks_to_filter=[]):
+    def create_report(self, only_completed_tasks=None, which_language=None, task_constraint: list = [],
+                      model_constraint: list = [],
+                      required_seeds={"1", "2", "3"}):
+
+        required_seeds = {str(s) for s in required_seeds}
 
         if only_completed_tasks is None:
             only_completed_tasks = self.only_completed_tasks
@@ -599,31 +622,44 @@ class ResultAggregator:
         if which_language is None:
             which_language = self.which_language
 
-        seed_check = self.check_seed_per_task(tasks_to_filter=tasks_to_filter)
+        seed_check = self.check_seed_per_task(task_constraint=task_constraint, required_seeds=required_seeds)
         self.seed_check = seed_check
         macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1",
                                                                      only_completed_tasks=only_completed_tasks,
-                                                                     which_language=which_language
+                                                                     which_language=which_language,
+                                                                     task_constraint=task_constraint,
+                                                                     model_constraint=model_constraint,
+                                                                     required_seeds=required_seeds
                                                                      )
         self.macro_f1_overview = macro_f1_overview
         micro_f1_overview = self.create_overview_of_results_per_seed(score="micro-f1",
                                                                      only_completed_tasks=only_completed_tasks,
-                                                                     which_language=which_language
+                                                                     which_language=which_language,
+                                                                     task_constraint=task_constraint,
+                                                                     model_constraint=model_constraint,
+                                                                     required_seeds=required_seeds
                                                                      )
         self.micro_f1_overview = micro_f1_overview
         weighted_f1_overview = self.create_overview_of_results_per_seed(score="weighted-f1",
                                                                         only_completed_tasks=only_completed_tasks,
-                                                                        which_language=which_language
+                                                                        which_language=which_language,
+                                                                        task_constraint=task_constraint,
+                                                                        model_constraint=model_constraint,
+                                                                        required_seeds=required_seeds
                                                                         )
         self.weighted_f1_overview = weighted_f1_overview
         accuracy_normalized_overview = self.create_overview_of_results_per_seed(score="accuracy_normalized",
                                                                                 only_completed_tasks=only_completed_tasks,
-                                                                                which_language=which_language
+                                                                                which_language=which_language,
+                                                                                task_constraint=task_constraint,
+                                                                                model_constraint=model_constraint,
+                                                                                required_seeds=required_seeds
                                                                                 )
         self.accuracy_normalized_overview = accuracy_normalized_overview
 
         eval_macro_f1_overview = self.create_overview_of_results_per_seed(
-            score="eval/macro-f1", only_completed_tasks=only_completed_tasks, which_language=which_language)
+            score="eval/macro-f1", only_completed_tasks=only_completed_tasks, which_language=which_language,
+            task_constraint=task_constraint, model_constraint=model_constraint, required_seeds=required_seeds)
 
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
@@ -850,24 +886,34 @@ class ResultAggregator:
                     'results/config_aggregated_scores_simple.csv')
                 self.config_aggregated_score.to_excel(
                     'results/config_aggregated_scores_simple.xlsx')
+                self.make_latext_table(self.config_aggregated_score, 'results/config_aggregated_scores_simple.tex')
             if average_over_language == True:
                 self.config_aggregated_score.to_csv(
                     'results/config_aggregated_scores_average_over_language.csv')
                 self.config_aggregated_score.to_excel(
                     'results/config_aggregated_scores_average_over_language.xlsx')
+                self.make_latext_table(self.config_aggregated_score,
+                                       'results/config_aggregated_scores_average_over_language.tex')
 
-    def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint=None):
+    def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
+                                     model_constraint: list = []):
 
         self.get_config_aggregated_score(
             average_over_language=average_over_language, write_to_csv=write_to_csv)
 
-        columns = list(self.meta_infos["dataset_to_config"].keys())
+        columns = list()
+        for dataset, configs in self.meta_infos["dataset_to_config"].items():
+            if len(task_constraint) > 0:
+                configs = [c for c in configs if c in task_constraint]
+            if len(configs) > 0:
+                columns.append(dataset)
 
         self.dataset_aggregated_score = self.create_template(columns=columns)
 
         for _name_or_path in self.results._name_or_path.unique():
-            for dataset, configs in self.meta_infos["dataset_to_config"].items():
-                if task_constraint is not None:
+            for dataset in columns:
+                configs = self.meta_infos["dataset_to_config"][dataset]
+                if len(task_constraint) > 0:
                     configs = [
                         conf for conf in configs if conf in task_constraint]
 
@@ -910,25 +956,32 @@ class ResultAggregator:
             except:
                 pass
 
+        if len(model_constraint) > 0:
+            self.dataset_aggregated_score = self.dataset_aggregated_score[
+                self.dataset_aggregated_score.index.isin(model_constraint)]
+
         if write_to_csv:
             if average_over_language == False:
                 self.dataset_aggregated_score.to_csv(
                     'results/dataset_aggregated_scores_simple.csv')
                 self.dataset_aggregated_score.to_excel(
                     'results/dataset_aggregated_scores_simple.xlsx')
+                self.make_latext_table(self.dataset_aggregated_score, 'results/dataset_aggregated_scores_simple.tex')
             if average_over_language == True:
                 self.dataset_aggregated_score.to_csv(
                     'results/dataset_aggregated_scores_average_over_language.csv')
                 self.dataset_aggregated_score.to_excel(
                     'results/dataset_aggregated_scores_average_over_language.xlsx')
+                self.make_latext_table(self.dataset_aggregated_score,
+                                       'results/dataset_aggregated_scores_average_over_language.tex')
 
-    def get_aggregated_score_for_language(self, score_type, task_constraint=None):
+    def get_aggregated_score_for_language(self, score_type, task_constraint: list = []):
 
         tasks_relevant_for_language = list(
             self.results[(self.results[score_type].isnull() == False) & (
                     self.results[score_type] != "")].finetuning_task.unique())
 
-        if task_constraint is not None:
+        if len(task_constraint) > 0:
             tasks_relevant_for_language = [
                 t for t in tasks_relevant_for_language if t in task_constraint]
 
@@ -974,7 +1027,7 @@ class ResultAggregator:
 
         return results_averaged_over_datasets
 
-    def get_language_aggregated_score(self, write_to_csv=True, task_constraint=None):
+    def get_language_aggregated_score(self, write_to_csv=True, task_constraint: list = [], model_constraint: list = []):
 
         all_languages = set()
 
@@ -996,11 +1049,27 @@ class ResultAggregator:
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
 
+        if len(model_constraint) > 0:
+            self.language_aggregated_score = self.language_aggregated_score[
+                self.language_aggregated_score.index.isin(model_constraint)]
+
         if write_to_csv:
             self.language_aggregated_score.to_csv(
                 'results/language_aggregated_scores.csv')
             self.language_aggregated_score.to_excel(
                 'results/language_aggregated_scores.xlsx')
+            self.make_latext_table(self.language_aggregated_score, 'results/language_aggregated_scores.tex')
+
+    def make_latext_table(self, dataframe, file_name):
+
+        dataframe.fillna('', inplace=True)
+
+        for c in dataframe.columns.tolist():
+            dataframe.rename(columns={c: '\\textbf{' + c + '}'}, inplace=True)
+
+        with open(file_name, 'w') as f:
+            print(self.prefix + dataframe.to_latex(index=False, escape=False) + self.suffix, file=f)
+
 
 
 if __name__ == "__main__":
@@ -1037,11 +1106,15 @@ if __name__ == "__main__":
 
     ra.get_info()
 
-    ra.create_report(tasks_to_filter=tasks_for_report['finetuning_task'])
+    # ra.create_report(task_constraint=["ledgar"], only_completed_tasks=False)
+    ra.create_report(task_constraint=tasks_for_report['finetuning_task'],
+                     model_constraint=tasks_for_report['_name_or_path'])
     # ra.create_report()
 
-    ra.get_dataset_aggregated_score()
+    ra.get_dataset_aggregated_score(task_constraint=tasks_for_report['finetuning_task'],
+                                    model_constraint=tasks_for_report['_name_or_path'])
 
-    ra.get_language_aggregated_score()
+    ra.get_language_aggregated_score(task_constraint=tasks_for_report['finetuning_task'],
+                                     model_constraint=tasks_for_report['_name_or_path'])
 
     # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual

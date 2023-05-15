@@ -11,5 +11,19 @@
     "swiss_law_area_prediction_sub_area_considerations",
     "swiss_law_area_prediction_sub_area_facts"
   ],
-  "excluded": []
+  "excluded": [],
+  "_name_or_path": [
+    "xlm-roberta-large",
+    "google/mt5-large",
+    "xlm-roberta-base",
+    "microsoft/mdeberta-v3-base",
+    "google/mt5-base",
+    "ZurichNLP/swissbert",
+    "ZurichNLP/swissbert-xlm-vocab",
+    "joelito/legal-swiss-longformer-base",
+    "facebook/xmod-base",
+    "distilbert-base-multilingual-cased",
+    "microsoft/Multilingual-MiniLM-L12-H384",
+    "google/mt5-small"
+  ]
 }
