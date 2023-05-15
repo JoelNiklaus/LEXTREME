@@ -441,7 +441,8 @@ class ResultAggregator:
                     lambda x: meta_infos['model_language_lookup_table'][x] == which_language)]
         return dataframe
 
-    def check_seed_per_task(self, task_constraint=[], which_language=None, required_seeds={"1", "2", "3"}):
+    def check_seed_per_task(self, task_constraint: list = [], model_constraint: list = [], which_language=None,
+                            required_seeds={"1", "2", "3"}):
 
         if which_language is None:
             which_language = self.which_language
@@ -512,6 +513,9 @@ class ResultAggregator:
 
         if len(task_constraint) > 0:
             report_df = report_df[report_df.finetuning_task.isin(task_constraint)]
+
+        if len(model_constraint) > 0:
+            report_df = report_df[report_df._name_or_path.isin(model_constraint)]
 
         return report_df
 
@@ -622,7 +626,8 @@ class ResultAggregator:
         if which_language is None:
             which_language = self.which_language
 
-        seed_check = self.check_seed_per_task(task_constraint=task_constraint, required_seeds=required_seeds)
+        seed_check = self.check_seed_per_task(task_constraint=task_constraint, model_constraint=model_constraint,
+                                              required_seeds=required_seeds)
         self.seed_check = seed_check
         macro_f1_overview = self.create_overview_of_results_per_seed(score="macro-f1",
                                                                      only_completed_tasks=only_completed_tasks,
@@ -1068,8 +1073,7 @@ class ResultAggregator:
             dataframe.rename(columns={c: '\\textbf{' + c + '}'}, inplace=True)
 
         with open(file_name, 'w') as f:
-            print(self.prefix + dataframe.to_latex(index=False, escape=False) + self.suffix, file=f)
-
+            print(self.prefix + dataframe.to_latex(index=True, escape=False) + self.suffix, file=f)
 
 
 if __name__ == "__main__":
