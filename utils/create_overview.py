@@ -873,17 +873,29 @@ class ResultAggregator:
         # overview_template.fillna("", inplace=True)
 
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
-                                    column_name="aggregated_score"):
+                                    column_name="aggregated_score", task_constraint: list = [],
+                                    model_constraint: list = []):
 
         # Insert aggregated mean for each model name
 
-        self.config_aggregated_score = self.create_template()
+        columns = list()
+        for _, configs in self.meta_infos["dataset_to_config"].items():
+            if len(task_constraint) > 0:
+                configs = [c for c in configs if c in task_constraint]
+            if len(configs) > 0:
+                columns.extend(configs)
+
+        self.config_aggregated_score = self.create_template(columns=columns)
 
         self.insert_config_average_scores(
             self.config_aggregated_score, average_over_language=average_over_language)
 
         self.config_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.config_aggregated_score, column_name=column_name)
+
+        if len(model_constraint) > 0:
+            self.config_aggregated_score = self.config_aggregated_score[
+                self.config_aggregated_score.index.isin(model_constraint)]
 
         if write_to_csv:
             if average_over_language == False:
@@ -904,7 +916,8 @@ class ResultAggregator:
                                      model_constraint: list = []):
 
         self.get_config_aggregated_score(
-            average_over_language=average_over_language, write_to_csv=write_to_csv)
+            average_over_language=average_over_language, write_to_csv=write_to_csv, model_constraint=model_constraint,
+            task_constraint=task_constraint)
 
         columns = list()
         for dataset, configs in self.meta_infos["dataset_to_config"].items():
@@ -944,11 +957,15 @@ class ResultAggregator:
                 if len(dataset_mean) > 0:
                     if len(dataset_mean) != len(configs):
                         logging.error(
-                            'Attention! It seems for dataset ' + dataset + ' you do not have the average values for configs. The average score will be calculated on the basis of incomplete information.')
+                            'Attention! It seems for dataset ' + dataset + 'you do not have the average values for '
+                                                                           'configs. The average score will be '
+                                                                           'calculated on the basis of incomplete '
+                                                                           'information.')
                     dataset_mean = self.get_mean_from_list_of_values(
                         dataset_mean)
                 else:
                     dataset_mean = ''
+
                 self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
@@ -1111,9 +1128,13 @@ if __name__ == "__main__":
     ra.get_info()
 
     # ra.create_report(task_constraint=["ledgar"], only_completed_tasks=False)
+
+    '''ra.create_report()
+    ra.get_dataset_aggregated_score()
+    ra.get_language_aggregated_score()'''
+
     ra.create_report(task_constraint=tasks_for_report['finetuning_task'],
                      model_constraint=tasks_for_report['_name_or_path'])
-    # ra.create_report()
 
     ra.get_dataset_aggregated_score(task_constraint=tasks_for_report['finetuning_task'],
                                     model_constraint=tasks_for_report['_name_or_path'])
