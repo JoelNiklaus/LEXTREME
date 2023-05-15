@@ -928,17 +928,18 @@ class ResultAggregator:
 
         self.dataset_aggregated_score = self.create_template(columns=columns)
 
-        for _name_or_path in self.results._name_or_path.unique():
+        relevant_models = self.results._name_or_path.unique()
+
+        if len(model_constraint) > 0:
+            relevant_models = [rm for rm in relevant_models if rm in model_constraint]
+
+        for _name_or_path in relevant_models:
             for dataset in columns:
                 configs = self.meta_infos["dataset_to_config"][dataset]
-                if len(task_constraint) > 0:
-                    configs = [
-                        conf for conf in configs if conf in task_constraint]
 
                 dataset_mean = list()
                 for conf in configs:
                     # Look if there are results for that config. If not, skip it.
-
                     if conf in self.config_aggregated_score.columns.tolist():
                         config_mean = self.config_aggregated_score.at[_name_or_path, conf]
                         if config_mean == "":  # This is to avoid string values; if there were no scores available I returned an empty string, because 0.0 would be missleading
@@ -961,8 +962,7 @@ class ResultAggregator:
                                                                            'configs. The average score will be '
                                                                            'calculated on the basis of incomplete '
                                                                            'information.')
-                    dataset_mean = self.get_mean_from_list_of_values(
-                        dataset_mean)
+                    dataset_mean = self.get_mean_from_list_of_values(dataset_mean)
                 else:
                     dataset_mean = ''
 
@@ -1082,7 +1082,9 @@ class ResultAggregator:
                 'results/language_aggregated_scores.xlsx')
             self.make_latext_table(self.language_aggregated_score, 'results/language_aggregated_scores.tex')
 
-    def make_latext_table(self, dataframe, file_name):
+    def make_latext_table(self, df, file_name):
+
+        dataframe = deepcopy(df)
 
         dataframe.fillna('', inplace=True)
 
