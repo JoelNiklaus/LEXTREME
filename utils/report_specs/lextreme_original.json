@@ -1,0 +1,30 @@
+{
+  "wandb_project_name": "lextreme/paper_results",
+  "finetuning_task": [
+    "brazilian_court_decisions_judgment",
+    "brazilian_court_decisions_unanimity",
+    "german_argument_mining",
+    "greek_legal_code_chapter",
+    "greek_legal_code_subject",
+    "greek_legal_code_volume",
+    "swiss_judgment_prediction",
+    "online_terms_of_service_unfairness_levels",
+    "online_terms_of_service_clause_topics",
+    "covid19_emergency_event",
+    "multi_eurlex_level_1",
+    "multi_eurlex_level_2",
+    "multi_eurlex_level_3",
+    "greek_legal_ner",
+    "legalnero",
+    "lener_br",
+    "mapa_coarse",
+    "mapa_fine"
+  ],
+  "_name_or_path": [
+    "distilbert-base-multilingual-cased",
+    "microsoft/Multilingual-MiniLM-L12-H384",
+    "microsoft/mdeberta-v3-base",
+    "xlm-roberta-base",
+    "xlm-roberta-large"
+  ]
+}
