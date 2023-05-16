@@ -115,7 +115,7 @@ class ResultAggregator:
         self.api = wandb.Api()
 
         name_of_log_file = f'{self.log_dir}/logs_' + \
-            datetime.now().isoformat() + '.log'
+                           datetime.now().isoformat() + '.log'
         name_of_log_file = os.path.join(
             os.path.dirname(__file__), name_of_log_file)
 
@@ -489,7 +489,7 @@ class ResultAggregator:
 
             for am in available_models:
                 list_of_seeds = set(self.results[(self.results.finetuning_task == task) & (
-                    self.results._name_or_path == am)].seed.unique())
+                        self.results._name_or_path == am)].seed.unique())
                 list_of_seeds = set([str(int(x)) for x in list_of_seeds])
                 if list_of_seeds.intersection(required_seeds) != required_seeds:
                     missing_seeds = set(
@@ -540,7 +540,7 @@ class ResultAggregator:
             "language"]
 
         self.results["look_up"] = self.results["finetuning_task"] + "_" + self.results["_name_or_path"] + "_" + \
-            self.results["language"]
+                                  self.results["language"]
 
         self.results['completed_task'] = np.where(
             self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
@@ -574,7 +574,7 @@ class ResultAggregator:
         print('Incomplete tasks are: ', incomplete_tasks)
 
         required_seeds = list(required_seeds)
-        required_seeds = [int(s) for s in required_seeds]
+        required_seeds = sorted(int(s) for s in required_seeds)
 
         if bool(re.search('(eval|train)', score)):
             score_to_filter = score
@@ -584,7 +584,7 @@ class ResultAggregator:
         if only_completed_tasks:
             # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
-                self.results.finetuning_task.isin(incomplete_tasks) == False)][
+                    self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
 
         else:
@@ -627,6 +627,16 @@ class ResultAggregator:
         if old_score:
             self.score = old_score
 
+        # Add column with best seed
+        for i, _ in df_pivot.iterrows():
+            all_seed_values = list()
+            for seed in required_seeds:
+                seed_value = df_pivot.at[i, seed]
+                all_seed_values.append((seed, seed_value))
+            best_seed = sorted(all_seed_values, key=lambda x: x[1], reverse=True)[0][0]
+            best_seed_value = sorted(all_seed_values, key=lambda x: x[1], reverse=True)[0][1]
+            df_pivot.at[i, 'best_seed'] = best_seed
+            df_pivot.at[i, 'best_seed_value'] = best_seed_value
         df_pivot['standard_deviation'] = df_pivot[[1, 2, 3]].std(axis=1)
 
         if which_language is not None:
@@ -807,12 +817,12 @@ class ResultAggregator:
                 logging.warning(
                     'Attention! ' + _name_or_path + 'has string values as mean score for the following '
                                                     'datasets/languages: ' + ', '.join(
-                                                        string_values_indices))
+                        string_values_indices))
 
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(
                 all_mean_macro_f1_scores_cleaned)
             dataframe.at[_name_or_path,
-                         column_name] = all_mean_macro_f1_scores_mean
+            column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
         first_column = [column_name]
@@ -847,7 +857,7 @@ class ResultAggregator:
                     mean_macro_f1_score = self.get_average_score(
                         finetuning_task, _name_or_path)
                     overview_template.at[_name_or_path,
-                                         finetuning_task] = mean_macro_f1_score
+                    finetuning_task] = mean_macro_f1_score
 
         else:
             for _name_or_path in allowed_models:
@@ -907,7 +917,7 @@ class ResultAggregator:
                             mean_macro_f1_score = ""
 
                     overview_template.at[_name_or_path,
-                                         finetuning_task] = mean_macro_f1_score
+                    finetuning_task] = mean_macro_f1_score
 
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
@@ -1015,7 +1025,7 @@ class ResultAggregator:
                     dataset_mean = ''
 
                 self.dataset_aggregated_score.at[_name_or_path,
-                                                 dataset] = dataset_mean
+                dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -1051,7 +1061,7 @@ class ResultAggregator:
 
         tasks_relevant_for_language = list(
             self.results[(self.results[score_type].isnull() == False) & (
-                self.results[score_type] != "")].finetuning_task.unique())
+                    self.results[score_type] != "")].finetuning_task.unique())
 
         if len(task_constraint) > 0:
             tasks_relevant_for_language = [
@@ -1117,7 +1127,7 @@ class ResultAggregator:
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
                 self.language_aggregated_score.at[language_model,
-                                                  language] = score
+                language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -1145,7 +1155,7 @@ class ResultAggregator:
 
         with open(file_name, 'w') as f:
             print(self.prefix + dataframe.to_latex(index=True,
-                  escape=False) + self.suffix, file=f)
+                                                   escape=False) + self.suffix, file=f)
 
 
 if __name__ == "__main__":
@@ -1182,7 +1192,7 @@ if __name__ == "__main__":
                           verbose_logging=args.verbose,
                           only_completed_tasks=False,
                           which_language=args.which_language,
-                          required_seeds=[1, 2, 3])
+                          required_seeds=[1, 2, 3, 4, 5])
 
     ra.get_info()
 
