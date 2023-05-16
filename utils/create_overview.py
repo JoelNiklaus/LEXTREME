@@ -58,6 +58,8 @@ class ResultAggregator:
                  only_completed_tasks=False,
                  path_to_csv_export=None,
                  project_name=None,
+                 output_dir='results',
+                 log_dir='logs',
                  score='macro-f1',
                  split="predict",
                  verbose_logging=True,
@@ -96,8 +98,11 @@ class ResultAggregator:
 
         """
         # Create the result directory if not existent
-        if os.path.isdir('results') == False:
-            os.mkdir('results')
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        self.log_dir = log_dir
+        os.makedirs(self.log_dir, exist_ok=True)
 
         if split == "eval":
             self.split = split + "/"
@@ -108,12 +113,8 @@ class ResultAggregator:
 
         self.api = wandb.Api()
 
-        if os.path.exists('logs') == False:
-            os.mkdir('logs')
-
-        name_of_log_file = 'logs/loggings_' + datetime.now().isoformat() + '.txt'
-        name_of_log_file = os.path.join(
-            os.path.dirname(__file__), name_of_log_file)
+        name_of_log_file = f'{self.log_dir}/logs_' + datetime.now().isoformat() + '.log'
+        name_of_log_file = os.path.join(os.path.dirname(__file__), name_of_log_file)
 
         self.only_completed_tasks = only_completed_tasks
 
@@ -142,8 +143,7 @@ class ResultAggregator:
         self._path = name_of_log_file
         if path_to_csv_export is None:
             results = self.get_wandb_overview(project_name)
-            results.to_csv(
-                "current_wandb_results_unprocessed.csv", index=False)
+            results.to_csv(f"{self.output_dir}/current_wandb_results_unprocessed.csv", index=False)
         else:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results, name_editing=False)
@@ -244,8 +244,7 @@ class ResultAggregator:
         # results = wandb_summarizer.download.get_results(project_name=project_name)
         results = self.fetch_data(project_name=project_name)
         results = pd.DataFrame(results)
-        results.to_csv(
-            "results/current_wandb_results_unprocessed.csv", index=False)
+        results.to_csv(f"{self.output_dir}/current_wandb_results_unprocessed.csv", index=False)
         results = self.edit_result_dataframe(results)
         return results
 
@@ -669,9 +668,9 @@ class ResultAggregator:
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
         # write to csv, so we can read it with a bash script
-        self.seed_check.to_csv("results/completeness_report.tsv", sep="\t", index=False)
+        self.seed_check.to_csv(f"{self.output_dir}/completeness_report.tsv", sep="\t", index=False)
 
-        with pd.ExcelWriter('results/report.xlsx') as writer:
+        with pd.ExcelWriter(f'{self.output_dir}/report.xlsx') as writer:
             split_name = self.remove_slashes(self.split)
             self.seed_check.to_excel(
                 writer, index=False, sheet_name="completeness_report")
@@ -900,17 +899,17 @@ class ResultAggregator:
         if write_to_csv:
             if average_over_language == False:
                 self.config_aggregated_score.to_csv(
-                    'results/config_aggregated_scores_simple.csv')
+                    f'{self.output_dir}/config_aggregated_scores_simple.csv')
                 self.config_aggregated_score.to_excel(
-                    'results/config_aggregated_scores_simple.xlsx')
-                self.make_latext_table(self.config_aggregated_score, 'results/config_aggregated_scores_simple.tex')
+                    f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
+                self.make_latext_table(self.config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
             if average_over_language == True:
                 self.config_aggregated_score.to_csv(
-                    'results/config_aggregated_scores_average_over_language.csv')
+                    f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
                 self.config_aggregated_score.to_excel(
-                    'results/config_aggregated_scores_average_over_language.xlsx')
+                    f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
                 self.make_latext_table(self.config_aggregated_score,
-                                       'results/config_aggregated_scores_average_over_language.tex')
+                                       f'{self.output_dir}/config_aggregated_scores_average_over_language.tex')
 
     def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
                                      model_constraint: list = []):
@@ -985,17 +984,17 @@ class ResultAggregator:
         if write_to_csv:
             if average_over_language == False:
                 self.dataset_aggregated_score.to_csv(
-                    'results/dataset_aggregated_scores_simple.csv')
+                    f'{self.output_dir}/dataset_aggregated_scores_simple.csv')
                 self.dataset_aggregated_score.to_excel(
-                    'results/dataset_aggregated_scores_simple.xlsx')
-                self.make_latext_table(self.dataset_aggregated_score, 'results/dataset_aggregated_scores_simple.tex')
+                    f'{self.output_dir}/dataset_aggregated_scores_simple.xlsx')
+                self.make_latext_table(self.dataset_aggregated_score, f'{self.output_dir}/dataset_aggregated_scores_simple.tex')
             if average_over_language == True:
                 self.dataset_aggregated_score.to_csv(
-                    'results/dataset_aggregated_scores_average_over_language.csv')
+                    f'{self.output_dir}/dataset_aggregated_scores_average_over_language.csv')
                 self.dataset_aggregated_score.to_excel(
-                    'results/dataset_aggregated_scores_average_over_language.xlsx')
+                    f'{self.output_dir}/dataset_aggregated_scores_average_over_language.xlsx')
                 self.make_latext_table(self.dataset_aggregated_score,
-                                       'results/dataset_aggregated_scores_average_over_language.tex')
+                                       f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
 
     def get_aggregated_score_for_language(self, score_type, task_constraint: list = []):
 
@@ -1077,10 +1076,10 @@ class ResultAggregator:
 
         if write_to_csv:
             self.language_aggregated_score.to_csv(
-                'results/language_aggregated_scores.csv')
+                f'{self.output_dir}/language_aggregated_scores.csv')
             self.language_aggregated_score.to_excel(
-                'results/language_aggregated_scores.xlsx')
-            self.make_latext_table(self.language_aggregated_score, 'results/language_aggregated_scores.tex')
+                f'{self.output_dir}/language_aggregated_scores.xlsx')
+            self.make_latext_table(self.language_aggregated_score, f'{self.output_dir}/language_aggregated_scores.tex')
 
     def make_latext_table(self, df, file_name):
 
@@ -1102,8 +1101,6 @@ if __name__ == "__main__":
                         action='store_true', default=False)
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
-    parser.add_argument('-pn', '--project_name', help='Insert the wandb project name',
-                        default=None)
     parser.add_argument('-wl', '--which_language',
                         help='Default value is None. Choose which language should be considered for the overviews. '
                              'If set to `monolingual`, only monolingual models will be considered. '
@@ -1114,14 +1111,19 @@ if __name__ == "__main__":
                         help='To be able to fetch the right results, you can insert the wand api key. '
                              'Alternatively, set the WANDB_API_KEY environment variable to your API key.',
                         default=None)
+    parser.add_argument('-rs', '--report_spec',
+                        help='This is the json file that contains the wandb project name and the tasks and models '
+                             'that should be considered for the report.',
+                        default=None)
 
     args = parser.parse_args()
 
-    with open('tasks_for_report.json', 'r') as f:
-        tasks_for_report = js.load(f)
+    with open(f"report_specs/{args.report_spec}.json", 'r') as f:
+        report_spec = js.load(f)
 
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
-                          project_name=args.project_name,
+                          project_name=report_spec['wandb_project_name'],
+                          output_dir=f'results/{report_spec["wandb_project_name"]}',
                           path_to_csv_export=args.path_to_csv_export,
                           verbose_logging=args.verbose,
                           only_completed_tasks=False,
@@ -1131,17 +1133,22 @@ if __name__ == "__main__":
 
     # ra.create_report(task_constraint=["ledgar"], only_completed_tasks=False)
 
-    '''ra.create_report()
+    '''
+    ra.create_report()
     ra.get_dataset_aggregated_score()
-    ra.get_language_aggregated_score()'''
+    ra.get_language_aggregated_score()
+    '''
 
-    ra.create_report(task_constraint=tasks_for_report['finetuning_task'],
-                     model_constraint=tasks_for_report['_name_or_path'])
+    ra.create_report(task_constraint=report_spec['finetuning_task'],
+                     model_constraint=report_spec['_name_or_path'])
 
-    ra.get_dataset_aggregated_score(task_constraint=tasks_for_report['finetuning_task'],
-                                    model_constraint=tasks_for_report['_name_or_path'])
+    ra.get_dataset_aggregated_score(task_constraint=report_spec['finetuning_task'],
+                                    model_constraint=report_spec['_name_or_path'])
 
-    ra.get_language_aggregated_score(task_constraint=tasks_for_report['finetuning_task'],
-                                     model_constraint=tasks_for_report['_name_or_path'])
+    ra.get_language_aggregated_score(task_constraint=report_spec['finetuning_task'],
+                                     model_constraint=report_spec['_name_or_path'])
+
+
+    # TODO maybe move all of this reporting functionality into a separate folder
 
     # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual
