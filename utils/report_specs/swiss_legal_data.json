@@ -1,4 +1,5 @@
 {
+  "wandb_project_name": "swiss-legal-data/neurips2023",
   "finetuning_task": [
     "swiss_criticality_prediction_bge_considerations",
     "swiss_criticality_prediction_bge_facts",
@@ -11,7 +12,6 @@
     "swiss_law_area_prediction_sub_area_considerations",
     "swiss_law_area_prediction_sub_area_facts"
   ],
-  "excluded": [],
   "_name_or_path": [
     "distilbert-base-multilingual-cased",
     "microsoft/Multilingual-MiniLM-L12-H384",
@@ -25,6 +25,7 @@
     "ZurichNLP/swissbert",
     "ZurichNLP/swissbert-xlm-vocab",
     "joelito/legal-swiss-roberta-base",
+    "joelito/legal-swiss-roberta-large",
     "joelito/legal-swiss-longformer-base"
   ]
 }
