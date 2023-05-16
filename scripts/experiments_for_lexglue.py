@@ -11,14 +11,17 @@ tasks = [
     "scotus",
     "ledgar",
     "unfair_tos",
-    "case_hold"
+    "case_hold",
+    "ecthr_a",
+    "ecthr_b"
   ]
 
 
 
-missing_runs = pd.read_excel('../utils/results/report.xlsx', sheet_name = 'completeness_report')
+missing_runs = pd.read_excel('../utils/results/lextreme/paper_results/report.xlsx', sheet_name = 'completeness_report')
 missing_runs = missing_runs[missing_runs.finetuning_task.isin(tasks)]
 missing_runs = missing_runs[missing_runs._name_or_path.isin(models)]
+missing_runs = missing_runs[missing_runs._name_or_path.str.contains('joelito')]
 
 print(missing_runs.shape)
 print(missing_runs.head())
@@ -30,5 +33,6 @@ for row in missing_runs.to_dict(orient="records"):
     name_or_path = row["_name_or_path"]
     revision = row["revision"]
     ft = row['finetuning_task']
-    command = 'python main.py -gn 0 -gm 80 -los 1,2,3,4,5 --lower_case true -bz 4 -as 2 -mfbm micro-f1 -nte 20 -lr 3e-5 -esp 3 -ld paper_results ' + '-t '+ft +' -lmt '+ name_or_path +' -rev '+revision
+    seeds = row['missing_seeds']
+    command = 'python main.py -gn 0 -gm 80 -los '+seeds+' --lower_case true -bz 8 -mfbm micro-f1 -nte 20 -lr 3e-5 -esp 3 -ld paper_results ' + '-t '+ft +' -lmt '+ name_or_path +' -rev '+revision
     os.system(command)
