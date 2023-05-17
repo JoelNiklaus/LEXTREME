@@ -1046,7 +1046,6 @@
           "google/mt5-base",
           "ZurichNLP/swissbert",
           "ZurichNLP/swissbert-xlm-vocab",
-          "joelito/legal-swiss-longformer-base",
           "facebook/xmod-base"
         ],
         "large": [
@@ -1245,7 +1244,9 @@
         "small": [],
         "base": [
           "joelito/legal-xlm-roberta-base",
-          "joelito/legal-swiss-roberta-base"
+          "joelito/legal-swiss-roberta-base",
+          "joelito/legal-swiss-longformer-base",
+          "joelito/legal-xlm-longformer-base",
         ],
         "large": [
           "joelito/legal-xlm-roberta-large",
