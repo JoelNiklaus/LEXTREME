@@ -1246,7 +1246,7 @@
           "joelito/legal-xlm-roberta-base",
           "joelito/legal-swiss-roberta-base",
           "joelito/legal-swiss-longformer-base",
-          "joelito/legal-xlm-longformer-base",
+          "joelito/legal-xlm-longformer-base"
         ],
         "large": [
           "joelito/legal-xlm-roberta-large",
