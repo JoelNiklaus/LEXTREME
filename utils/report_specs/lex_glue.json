@@ -1,0 +1,23 @@
+{
+  "wandb_project_name": "lextreme/paper_results",
+  "finetuning_task": [
+    "ecthr_a",
+    "ecthr_b",
+    "eurlex",
+    "scotus",
+    "ledgar",
+    "unfair_tos"
+  ],
+  "_name_or_path": [
+    "distilbert-base-multilingual-cased",
+    "microsoft/Multilingual-MiniLM-L12-H384",
+    "microsoft/mdeberta-v3-base",
+    "xlm-roberta-base",
+    "xlm-roberta-large",
+    "joelito/legal-english-roberta-base",
+    "joelito/legal-english-roberta-large",
+    "joelito/legal-xlm-roberta-base",
+    "joelito/legal-xlm-roberta-large",
+    "joelito/legal-xlm-longformer-base"
+  ]
+}

@@ -42,12 +42,19 @@ def add_language(dataset, language="en"):
     return dataset
 
 
+def join_text_as_list(example):
+    if type(example['input']) == list:
+        example['input'] = ' '.join(example['input'])
+    return example
+
+
 def prepare_lexglue_dataset(dataset):
     if 'labels' in list(dataset.features.keys()):
         dataset = dataset.rename_columns({'text': 'input', 'labels': 'label'})
     else:
         dataset = dataset.rename_columns({'text': 'input'})
     dataset = add_language(dataset)
+    dataset = dataset.map(join_text_as_list)
     return dataset
 
 
