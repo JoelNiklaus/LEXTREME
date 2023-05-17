@@ -15,6 +15,7 @@
     "xlm-roberta-base",
     "xlm-roberta-large",
     "joelito/legal-english-roberta-base",
+    "joelito/legal-english-roberta-large",
     "joelito/legal-xlm-roberta-base",
     "joelito/legal-xlm-roberta-large",
     "joelito/legal-xlm-longformer-base"
