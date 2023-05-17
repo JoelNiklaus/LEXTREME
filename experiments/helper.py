@@ -54,7 +54,7 @@ def prepare_lexglue_dataset(dataset):
     else:
         dataset = dataset.rename_columns({'text': 'input'})
     dataset = add_language(dataset)
-    dataset = dataset.map(join_text_as_list())
+    dataset = dataset.map(join_text_as_list)
     return dataset
 
 
