@@ -1179,12 +1179,20 @@ if __name__ == "__main__":
                         help='This is the json file that contains the wandb project name and the tasks and models '
                              'that should be considered for the report.',
                         default=None)
+    parser.add_argument('-los', '--list_of_seeds',
+                        help='Decide what the required seeds are.',
+                        default=[1, 2, 3])
 
     args = parser.parse_args()
 
     with open(f"report_specs/{args.report_spec}.json", 'r') as f:
         report_spec = js.load(f)
 
+    if type(args.list_of_seeds) == str:
+        list_of_seeds = args.list_of_seeds.split(',')
+        list_of_seeds = [int(s.strip()) for s in list_of_seeds]
+    else:
+        list_of_seeds = args.list_of_seeds
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
                           project_name=report_spec['wandb_project_name'],
                           output_dir=f'results/{report_spec["wandb_project_name"]}',
@@ -1192,7 +1200,7 @@ if __name__ == "__main__":
                           verbose_logging=args.verbose,
                           only_completed_tasks=False,
                           which_language=args.which_language,
-                          required_seeds=[1, 2, 3, 4, 5])
+                          required_seeds=list_of_seeds)
 
     ra.get_info()
 
