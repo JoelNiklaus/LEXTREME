@@ -20,16 +20,6 @@ file_name_for_joels_models = 'joels_models.xlsx'
 joels_models = pd.read_excel(os.path.join(
     os.path.dirname(__file__), file_name_for_joels_models))
 
-if file_name_for_joels_models == 'joels_models.xlsx':
-    models_currently_to_be_ignored = joels_models[
-        joels_models.need_to_be_run == "no"]._name_or_path.tolist()
-elif file_name_for_joels_models == 'joels_models_revision_infos_MultiLegalPile.xlsx':
-    models_currently_to_be_ignored = joels_models[
-        joels_models.need_to_be_run_with_LEXTREME == False]._name_or_path.tolist()
-    models_currently_to_be_ignored.extend(
-        ["google/mt5-small", "google/mt5-base", "ZurichNLP/swissbert", "ZurichNLP/swissbert-xlm-vocab",
-         "joelito/legal-swiss-longformer-base", "facebook/xmod-base", "google/mt5-large"])
-
 
 def insert_revision(_name_or_path):
     if _name_or_path in joels_models._name_or_path.tolist():
@@ -511,10 +501,6 @@ class ResultAggregator:
 
         report_df = report_df.drop_duplicates()
 
-        # TODO Remove that later
-        report_df = report_df[report_df._name_or_path.isin(
-            models_currently_to_be_ignored) == False]
-        # report_df = report_df[report_df.finetuning_task != "turkish_constitutional_court_decisions_judgment"]
         if which_language is not None:
             report_df = self.filter_by_language(report_df, which_language)
 
