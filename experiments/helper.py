@@ -386,7 +386,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             tokenized = tokenizer(
                 batch["input"],
                 padding=padding,
-                max_length=data_args.max_segments * data_args.max_seg_length,
+                max_length=data_args.max_segments * data_args.max_seg_length if data_args.max_segments * data_args.max_seg_length <= 4096 else 4096,
                 truncation=True,
             )
         else:
