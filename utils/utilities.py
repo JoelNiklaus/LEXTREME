@@ -150,7 +150,7 @@ optimal_batch_sizes = {
         # fp16
         'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
         # fp16; 8192 untested
-        'google/mt5-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16, 8192: 16},
+        'google/mt5-base': {256: 64, 512: 32, 1024: 8, 2048: 16, 4096: 8, 8192: 4},
         # 'xlm-roberta-base': {256: 64, 512: 64, 1024: 64, 2048: 32, 4096: 16},  # fp32
         # lower batch sizes because not possible with fp16
         # bf16; 8192 untested
@@ -480,12 +480,12 @@ def generate_command_for_experiments(**data):
         if data["model_name"] == "microsoft/mdeberta-v3-base":
             if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
                 command_template += ' --bf16 --bf16_full_eval'
-        else:
+        elif 't5' not in data["model_name"]:
+            # It seems like fp16 triggers eval/loss nan with t5: https://discuss.huggingface.co/t/t5-variants-return-training-loss-0-and-validation-loss-nan-while-fine-tuning/30839/5
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
-            if str(data[
-                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
-                # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
+            if str(data["hierarchical"]).lower() == 'true':  # We perceived some issues with xlm-roberta-base and
+                # xlm-roberta-large. They returned a nan loss with fp16 in combination with hierarchical models
                 if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
                     command_template += ' --fp16 --fp16_full_eval'
                 else:
