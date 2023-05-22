@@ -762,6 +762,12 @@ class ResultAggregator:
 
         return mean_value
 
+    def insert_model_abbreviation(self, model_name):
+        if model_name in self.meta_infos["model_abbrevations"].keys():
+            return self.meta_infos["model_abbrevations"][model_name]
+        else:
+            return model_name
+
     def create_template(self, columns=None):
         # Create empty dataframe
         overview_template = pd.DataFrame()
@@ -787,7 +793,7 @@ class ResultAggregator:
 
         return overview_template
 
-    def insert_aggregated_score_over_language_models(self, dataframe, column_name="aggregated_score"):
+    def insert_aggregated_score_over_language_models(self, dataframe, column_name="Agg."):
 
         dataframe[column_name] = ""
 
