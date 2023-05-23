@@ -174,7 +174,7 @@ def make_boolean(value):
 
 
 def remove_old_files(path_to_directory, days=-30):
-    # keep files for 7 days to make sure that this works also in a hpc environment
+    # keep files for 30 days to make sure that this works also in a hpc environment
     criticalTime = arrow.now().shift().shift(days=days)
     print(
         f"Removing old temporary bash scripts (older than {days} days: before {criticalTime})")
