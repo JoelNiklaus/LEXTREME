@@ -2,7 +2,8 @@
 
 dataset_name="$1"
 model="$2"
-seeds="$3"
+revision="$3"
+seeds="$4"
 
 # Determine the GPU memory based on the dataset name and model
 if [[ $dataset_name == "swiss_criticality_prediction_citation_"* ]] || [[ $dataset_name == "swiss_law_area_prediction_"* ]]; then
@@ -18,7 +19,7 @@ if [[ $dataset_name == "swiss_judgment_prediction_xl_"* ]]; then
   gpu_memory="80" # we get a time limit error otherwise
 fi
 
-if [[ $model == "microsoft/mdeberta-v3-base" ]] || [[ $model == *"-roberta-large" ]]; then
+if [[ $model == "microsoft/mdeberta-v3-base" ]] || [[ $model == *"-roberta-large" ]] || [[ $model == *"mt5-"* ]]; then
   gpu_memory="80" # we might get a time limit error otherwise
 fi
 
@@ -49,11 +50,13 @@ cat > "${job_file}" << EOL
 
 # set up the environment
 cd /home/users/jniklaus/LEXTREME
+conda init bash
 conda activate lextreme
+export PATH=$PATH:/home/groups/deho/miniconda3/envs/lextreme/bin/python3
 export PYTHONPATH=. HF_DATASETS_CACHE=$SCRATCH/cache/datasets/${SLURM_ARRAY_TASK_ID} TRANSFORMERS_CACHE=$SCRATCH/cache/models
 
 # Execute your program with the specified dataset, model, and GPU memory
-python3 main.py -t ${dataset_name} -lmt ${model} -ld $SCRATCH/swiss_legal_data -gm ${gpu_memory} -los \${SLURM_ARRAY_TASK_ID} -rmo default -dmo reuse_dataset_if_exists
+python3 main.py -t ${dataset_name} -lmt ${model} -rev ${revision} -ld $SCRATCH/swiss_legal_data -gm ${gpu_memory} -los \${SLURM_ARRAY_TASK_ID} -rmo default -dmo reuse_dataset_if_exists
 
 EOL
 

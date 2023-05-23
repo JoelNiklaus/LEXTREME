@@ -14,11 +14,12 @@ while IFS=$'\t' read -r dataset_name model language seeds revision responsible g
       continue
     fi
 
-    if ! [[ "$model" == "xlm-roberta-large" ]] && [[ "$dataset_name" == "swiss_judgment_prediction_xl_"* ]]; then
+    # skip the datasets that are not in my_datasets
+    if ! [[ " $my_datasets " =~ " $dataset_name " ]]; then
       continue
     fi
 
     # Invoke the create_job_file.sh script with the required arguments
-    ./create_job_file.sh "$dataset_name" "$model" "$seeds"
+    ./create_job_file.sh "$dataset_name" "$model" "$revision" "$seeds"
 
 done < utils/results/swiss-legal-data/neurips2023/completeness_report.tsv
