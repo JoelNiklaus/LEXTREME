@@ -221,6 +221,8 @@ class ResultAggregator:
                 if x.state == "finished":
                     entry['state'] = x.state
                     entry["finetuning_task"] = x.config['finetuning_task']
+                    if entry["finetuning_task"] == 'case_hold':
+                        entry["finetuning_task"] = 'en_' + entry["finetuning_task"]
                     entry["seed"] = x.config['seed']
                     entry["_name_or_path"] = x.config['_name_or_path']
                     entry['name'] = x.name
