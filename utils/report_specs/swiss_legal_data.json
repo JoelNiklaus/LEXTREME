@@ -26,6 +26,12 @@
     "ZurichNLP/swissbert-xlm-vocab",
     "joelito/legal-swiss-roberta-base",
     "joelito/legal-swiss-roberta-large",
-    "joelito/legal-swiss-longformer-base"
+    "joelito/legal-swiss-longformer-base",
+    "joelito/legal-german-roberta-base",
+    "joelito/legal-german-roberta-large",
+    "joelito/legal-french-roberta-base",
+    "joelito/legal-french-roberta-large",
+    "joelito/legal-italian-roberta-base",
+    "joelito/legal-italian-roberta-large"
   ]
 }
