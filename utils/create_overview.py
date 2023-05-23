@@ -221,6 +221,8 @@ class ResultAggregator:
                 if x.state == "finished":
                     entry['state'] = x.state
                     entry["finetuning_task"] = x.config['finetuning_task']
+                    if entry["finetuning_task"] == 'case_hold':
+                        entry["finetuning_task"] = 'en_' + entry["finetuning_task"]
                     entry["seed"] = x.config['seed']
                     entry["_name_or_path"] = x.config['_name_or_path']
                     entry['name'] = x.name
@@ -762,6 +764,12 @@ class ResultAggregator:
 
         return mean_value
 
+    def insert_model_abbreviation(self, model_name):
+        if model_name in self.meta_infos["model_abbrevations"].keys():
+            return self.meta_infos["model_abbrevations"][model_name]
+        else:
+            return model_name
+
     def create_template(self, columns=None):
         # Create empty dataframe
         overview_template = pd.DataFrame()
@@ -787,7 +795,7 @@ class ResultAggregator:
 
         return overview_template
 
-    def insert_aggregated_score_over_language_models(self, dataframe, column_name="aggregated_score"):
+    def insert_aggregated_score_over_language_models(self, dataframe, column_name="Agg."):
 
         dataframe[column_name] = ""
 

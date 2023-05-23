@@ -69,12 +69,12 @@
     "swiss_criticality_prediction": "SCP",
     "swiss_law_area_prediction": "SLAP",
     "swiss_judgment_prediction_xl": "SJPXL",
-    "ecthr_a": "ecthr_a",
-    "ecthr_b": "ecthr_b",
-    "eurlex": "eurlex",
-    "scotus": "scotus",
-    "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "ecthr": "ECT",
+    "eurlex": "EUR",
+    "scotus": "SCO",
+    "ledgar": "LED",
+    "unfair_tos": "UTS",
+    "case_hold": "CAH"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -106,12 +106,47 @@
     "swiss_law_area_prediction_sub_area_considerations": "SLAP-SC",
     "swiss_judgment_prediction_xl_facts": "SJPXL-F",
     "swiss_judgment_prediction_xl_considerations": "SJPXL-C",
-    "ecthr_a": "ecthr_a",
-    "ecthr_b": "ecthr_b",
-    "eurlex": "eurlex",
-    "scotus": "scotus",
-    "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "ecthr_a": "ECTA",
+    "ecthr_b": "ECTB",
+    "eurlex": "EUR",
+    "scotus": "SCO",
+    "ledgar": "LED",
+    "unfair_tos": "UTS",
+    "case_hold": "CAH"
+  },
+  "model_abbrevations": {
+    "distilbert-base-multilingual-cased": "DistilBert ",
+    "microsoft/Multilingual-MiniLM-L12-H384": "MiniLM",
+    "microsoft/mdeberta-v3-base": "mDeberta-v3",
+    "xlm-roberta-base": "XLM-R-base",
+    "xlm-roberta-large": "XLM-R-large",
+    "joelito/legal-bulgarian-roberta-base": "JL-buR-base",
+    "joelito/legal-croatian-roberta-base": "JL-crR-base",
+    "joelito/legal-czech-roberta-base": "JL-czR-base",
+    "joelito/legal-danish-roberta-base": "JL-daR-base",
+    "joelito/legal-dutch-roberta-base": "JL-nlR-base",
+    "joelito/legal-english-roberta-base": "JL-enR-base",
+    "joelito/legal-estonian-roberta-base": "JL-esR-base",
+    "joelito/legal-finnish-roberta-base": "JL-fiR-base",
+    "joelito/legal-french-roberta-base": "JL-frR-base",
+    "joelito/legal-german-roberta-base": "JL-deR-base",
+    "joelito/legal-greek-roberta-base": "JL-elR-base",
+    "joelito/legal-hungarian-roberta-base": "JL-huR-base",
+    "joelito/legal-irish-roberta-base": "JL-gaR-base",
+    "joelito/legal-italian-roberta-base": "JL-itR-base",
+    "joelito/legal-latvian-roberta-base": "JL-ltR-base",
+    "joelito/legal-lithuanian-roberta-base": "JL-liR-base",
+    "joelito/legal-maltese-roberta-base": "JL-mtR-base",
+    "joelito/legal-polish-roberta-base": "JL-esR-base",
+    "joelito/legal-portuguese-roberta-base": "JL-ptR-base",
+    "joelito/legal-romanian-roberta-base": "JL-roR-base",
+    "joelito/legal-slovak-roberta-base": "JL-skR-base",
+    "joelito/legal-slovenian-roberta-base": "JL-slR-base",
+    "joelito/legal-spanish-roberta-base": "JL-esR-base",
+    "joelito/legal-swedish-roberta-base": "JL-svR-base",
+    "joelito/legal-xlm-roberta-base": "JL-XLM-R-base",
+    "joelito/legal-xlm-roberta-large": "JL-XLM-R-large",
+    "joelito/legal-xlm-longformer-base": "JL-XLM-Longformer-base"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -148,7 +183,8 @@
     "eurlex": "MLTC",
     "scotus": "SLTC",
     "ledgar": "SLTC",
-    "unfair_tos": "MLTC"
+    "unfair_tos": "MLTC",
+    "case_hold": "SLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -395,6 +431,9 @@
     ],
     "unfair_tos": [
       "en"
+    ],
+    "case_hold": [
+      "en"
     ]
   },
   "config_to_dataset": {
@@ -432,7 +471,8 @@
     "eurlex": "eurlex",
     "scotus": "scotus",
     "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "unfair_tos": "unfair_tos",
+    "case_hold": "case_hold"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -509,6 +549,9 @@
     ],
     "unfair_tos": [
       "unfair_tos"
+    ],
+    "case_hold": [
+      "case_hold"
     ]
   },
   "task_default_arguments": {

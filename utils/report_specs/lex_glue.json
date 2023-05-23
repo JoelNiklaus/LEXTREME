@@ -6,7 +6,8 @@
     "eurlex",
     "scotus",
     "ledgar",
-    "unfair_tos"
+    "unfair_tos",
+    "case_hold"
   ],
   "_name_or_path": [
     "distilbert-base-multilingual-cased",

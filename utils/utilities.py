@@ -492,6 +492,8 @@ def generate_command_for_experiments(**data):
                     command_template += ' --fp16 '
             else:
                 command_template += ' --fp16 --fp16_full_eval'
+        else:
+            command_template += ' --fp16 '
 
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
         command_template += ' --logging_steps ' + \
