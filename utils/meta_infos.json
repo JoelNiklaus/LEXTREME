@@ -69,12 +69,12 @@
     "swiss_criticality_prediction": "SCP",
     "swiss_law_area_prediction": "SLAP",
     "swiss_judgment_prediction_xl": "SJPXL",
-    "ecthr_a": "ecthr_a",
-    "ecthr_b": "ecthr_b",
-    "eurlex": "eurlex",
-    "scotus": "scotus",
-    "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "ecthr": "ECT",
+    "eurlex": "EUR",
+    "scotus": "SCO",
+    "ledgar": "LED",
+    "unfair_tos": "UTS",
+    "case_hold": "CAH"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -106,12 +106,54 @@
     "swiss_law_area_prediction_sub_area_considerations": "SLAP-SC",
     "swiss_judgment_prediction_xl_facts": "SJPXL-F",
     "swiss_judgment_prediction_xl_considerations": "SJPXL-C",
-    "ecthr_a": "ecthr_a",
-    "ecthr_b": "ecthr_b",
-    "eurlex": "eurlex",
-    "scotus": "scotus",
-    "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "ecthr_a": "ECTA",
+    "ecthr_b": "ECTB",
+    "eurlex": "EUR",
+    "scotus": "SCO",
+    "ledgar": "LED",
+    "unfair_tos": "UTS",
+    "case_hold": "CAH"
+  },
+  "model_abbrevations": {
+    "distilbert-base-multilingual-cased": "DistilBERT",
+    "microsoft/Multilingual-MiniLM-L12-H384": "MiniLM",
+    "microsoft/mdeberta-v3-base": "mDeBERTa-v3",
+    "xlm-roberta-base": "XLM-R-base",
+    "xlm-roberta-large": "XLM-R-large",
+    "joelito/legal-bulgarian-roberta-base": "Legal-bg-R-base",
+    "joelito/legal-croatian-roberta-base": "Legal-hr-R-base",
+    "joelito/legal-czech-roberta-base": "Legal-cs-R-base",
+    "joelito/legal-danish-roberta-base": "Legal-da-R-base",
+    "joelito/legal-dutch-roberta-base": "Legal-nl-R-base",
+    "joelito/legal-english-roberta-base": "Legal-en-R-base",
+    "joelito/legal-english-roberta-large": "Legal-en-R-large",
+    "joelito/legal-estonian-roberta-base": "Legal-et-R-base",
+    "joelito/legal-finnish-roberta-base": "Legal-fi-R-base",
+    "joelito/legal-french-roberta-base": "Legal-fr-R-base",
+    "joelito/legal-french-roberta-large": "Legal-fr-R-large",
+    "joelito/legal-german-roberta-base": "Legal-de-R-base",
+    "joelito/legal-german-roberta-large": "Legal-de-R-large",
+    "joelito/legal-greek-roberta-base": "Legal-el-R-base",
+    "joelito/legal-hungarian-roberta-base": "Legal-hu-R-base",
+    "joelito/legal-irish-roberta-base": "Legal-ga-R-base",
+    "joelito/legal-italian-roberta-base": "Legal-it-R-base",
+    "joelito/legal-italian-roberta-large": "Legal-it-R-large",
+    "joelito/legal-latvian-roberta-base": "Legal-lv-R-base",
+    "joelito/legal-lithuanian-roberta-base": "Legal-lt-R-base",
+    "joelito/legal-maltese-roberta-base": "Legal-mt-R-base",
+    "joelito/legal-polish-roberta-base": "Legal-pl-R-base",
+    "joelito/legal-portuguese-roberta-base": "Legal-pt-R-base",
+    "joelito/legal-romanian-roberta-base": "Legal-ro-R-base",
+    "joelito/legal-slovak-roberta-base": "Legal-sk-R-base",
+    "joelito/legal-slovenian-roberta-base": "Legal-sl-R-base",
+    "joelito/legal-spanish-roberta-base": "Legal-es-R-base",
+    "joelito/legal-swedish-roberta-base": "Legal-sv-R-base",
+    "joelito/legal-swiss-roberta-base": "Legal-ch-R-base",
+    "joelito/legal-swiss-roberta-large": "Legal-ch-R-large",
+    "joelito/legal-swiss-longformer-base": "Legal-ch-LF-base",
+    "joelito/legal-xlm-roberta-base": "Legal-XLM-R-base",
+    "joelito/legal-xlm-roberta-large": "Legal-XLM-R-large",
+    "joelito/legal-xlm-longformer-base": "Legal-XLM-LF-base"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -148,7 +190,8 @@
     "eurlex": "MLTC",
     "scotus": "SLTC",
     "ledgar": "SLTC",
-    "unfair_tos": "MLTC"
+    "unfair_tos": "MLTC",
+    "case_hold": "SLTC"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [
@@ -395,6 +438,9 @@
     ],
     "unfair_tos": [
       "en"
+    ],
+    "case_hold": [
+      "en"
     ]
   },
   "config_to_dataset": {
@@ -432,7 +478,8 @@
     "eurlex": "eurlex",
     "scotus": "scotus",
     "ledgar": "ledgar",
-    "unfair_tos": "unfair_tos"
+    "unfair_tos": "unfair_tos",
+    "case_hold": "case_hold"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -509,6 +556,9 @@
     ],
     "unfair_tos": [
       "unfair_tos"
+    ],
+    "case_hold": [
+      "case_hold"
     ]
   },
   "task_default_arguments": {
