@@ -15,17 +15,31 @@ from traceback import print_exc
 from utilities import get_meta_infos
 import json as js
 
-file_name_for_joels_models = 'joels_models.xlsx'
 
-joels_models = pd.read_excel(os.path.join(
-    os.path.dirname(__file__), file_name_for_joels_models))
+class RevisionInserter:
 
+    def __init__(self, report_spec_name):
+        self.report_specs = self.read_report_specs(report_spec_name=report_spec_name)
+        self.revision_lookup_table = self.prepare_revision_lookup_table()
 
-def insert_revision(_name_or_path):
-    if _name_or_path in joels_models._name_or_path.tolist():
-        return joels_models[joels_models._name_or_path == _name_or_path].revision.tolist()[0]
-    else:
-        return 'main'
+    def read_report_specs(self, report_spec_name):
+        with open(f"report_specs/{report_spec_name}.json", 'r') as f:
+            report_spec = js.load(f)
+        return report_spec
+
+    def prepare_revision_lookup_table(self):
+        revision_lookup_table = dict()
+        for name_or_path_and_revision in self.report_specs['_name_or_path']:
+            _name_or_path, revision = name_or_path_and_revision.split('@')
+            revision_lookup_table[_name_or_path] = revision
+
+        return revision_lookup_table
+
+    def insert_revision(self, _name_or_path):
+        if _name_or_path in self.revision_lookup_table.keys():
+            return self.revision_lookup_table[_name_or_path]
+        else:
+            return 'main'
 
 
 meta_infos = get_meta_infos()
@@ -41,10 +55,11 @@ def insert_responsibilities(df):
     return df_merged
 
 
-class ResultAggregator:
+class ResultAggregator(RevisionInserter):
     meta_infos = meta_infos
 
     def __init__(self,
+                 report_spec_name,
                  only_completed_tasks=False,
                  path_to_csv_export=None,
                  project_name=None,
@@ -57,6 +72,7 @@ class ResultAggregator:
                  which_language=None,
                  required_seeds=[1, 2, 3]
                  ):
+        super().__init__(report_spec_name)
         """
         @type only_completed_tasks: bool
         @type path_to_csv_export: str
@@ -506,7 +522,7 @@ class ResultAggregator:
         if which_language is not None:
             report_df = self.filter_by_language(report_df, which_language)
 
-        report_df['revision'] = report_df._name_or_path.apply(insert_revision)
+        report_df['revision'] = report_df._name_or_path.apply(self.insert_revision)
 
         report_df = insert_responsibilities(report_df)
 
@@ -1201,12 +1217,13 @@ if __name__ == "__main__":
                           verbose_logging=args.verbose,
                           only_completed_tasks=False,
                           which_language=args.which_language,
-                          required_seeds=list_of_seeds)
+                          required_seeds=list_of_seeds,
+                          report_spec_name=args.report_spec)
 
     ra.get_info()
 
     ra.create_report(task_constraint=report_spec['finetuning_task'],
-                     model_constraint=report_spec['_name_or_path'],
+                     model_constraint=[_name_or_path.split('@')[0] for _name_or_path in report_spec['_name_or_path']],
                      only_completed_tasks=False)
 
     ra.get_dataset_aggregated_score(task_constraint=report_spec['finetuning_task'],
