@@ -10,15 +10,19 @@
     "case_hold"
   ],
   "_name_or_path": [
-    "distilbert-base-multilingual-cased",
-    "microsoft/Multilingual-MiniLM-L12-H384",
-    "microsoft/mdeberta-v3-base",
-    "xlm-roberta-base",
-    "xlm-roberta-large",
-    "joelito/legal-english-roberta-base",
-    "joelito/legal-english-roberta-large",
-    "joelito/legal-xlm-roberta-base",
-    "joelito/legal-xlm-roberta-large",
-    "joelito/legal-xlm-longformer-base"
+    "distilbert-base-multilingual-cased@main",
+    "microsoft/Multilingual-MiniLM-L12-H384@main",
+    "microsoft/mdeberta-v3-base@main",
+    "xlm-roberta-base@main",
+    "xlm-roberta-large@main",
+    "joelito/legal-english-roberta-base@main",
+    "joelito/legal-english-roberta-large@2f9df8ab391e3f21d9c798f1b89c23fdf3e586ee",
+    "joelito/legal-xlm-roberta-base@main",
+    "joelito/legal-xlm-roberta-large@ecead1364b3c346ee2ecf5ef4e1f6d9fd6529598",
+    "joelito/legal-xlm-longformer-base@main"
+  ],
+  "comments": [
+    "own base models: 1M steps",
+    "own large models: 300K steps"
   ]
 }

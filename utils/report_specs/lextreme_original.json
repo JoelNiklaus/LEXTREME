@@ -21,10 +21,10 @@
     "mapa_fine"
   ],
   "_name_or_path": [
-    "distilbert-base-multilingual-cased",
-    "microsoft/Multilingual-MiniLM-L12-H384",
-    "microsoft/mdeberta-v3-base",
-    "xlm-roberta-base",
-    "xlm-roberta-large"
+    "distilbert-base-multilingual-cased@main",
+    "microsoft/Multilingual-MiniLM-L12-H384@main",
+    "microsoft/mdeberta-v3-base@main",
+    "xlm-roberta-base@main",
+    "xlm-roberta-large@main"
   ]
 }

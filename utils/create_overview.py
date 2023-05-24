@@ -940,6 +940,13 @@ class ResultAggregator:
         self.config_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.config_aggregated_score, column_name=column_name)
 
+        for finetuning_task, abbreviation in self.meta_infos["task_abbreviations"].items():
+            try:
+                self.config_aggregated_score.rename(
+                    columns={finetuning_task: abbreviation}, inplace=True)
+            except:
+                pass
+
         if len(model_constraint) > 0:
             self.config_aggregated_score = self.config_aggregated_score[
                 self.config_aggregated_score.index.isin(model_constraint)]
@@ -1209,5 +1216,12 @@ if __name__ == "__main__":
                                      model_constraint=report_spec['_name_or_path'])
 
     # TODO maybe move all of this reporting functionality into a separate folder
+
+    # TODO port code from the notebook to this script
+    # TODO sortierung der modelle wie im report_spec
+    # TODO rundung der resultate
+    # TODO Agg score am schluss
+    # TODO ersetzung der Modell namen
+    # TODO automatische highlights der besten scores
 
     # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual
