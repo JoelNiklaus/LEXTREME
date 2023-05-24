@@ -754,7 +754,7 @@ def run_experiment(
     # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
     language_model_info = language_model_type.split('_')
     if len(language_model_info) != 3:  # we got a direct language model just use it
-        models_to_be_used = [language_model_type]
+        models_to_be_used = language_model_type.split(',') #This way we can comma-seperate several language models
     else:  # find out what models we want to run
         types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
 
