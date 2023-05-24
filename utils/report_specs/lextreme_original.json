@@ -21,8 +21,8 @@
     "mapa_fine"
   ],
   "_name_or_path": [
-    "distilbert-base-multilingual-cased@main",
     "microsoft/Multilingual-MiniLM-L12-H384@main",
+    "distilbert-base-multilingual-cased@main",
     "microsoft/mdeberta-v3-base@main",
     "xlm-roberta-base@main",
     "xlm-roberta-large@main"
