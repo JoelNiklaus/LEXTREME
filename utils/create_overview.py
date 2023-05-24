@@ -1284,11 +1284,5 @@ if __name__ == "__main__":
 
     # TODO maybe move all of this reporting functionality into a separate folder
 
-    # TODO port code from the notebook to this script
-    # TODO sortierung der modelle wie im report_spec
-    # TODO rundung der resultate
-    # TODO Agg score am schluss
-    # TODO ersetzung der Modell namen
-    # TODO automatische highlights der besten scores
 
     # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual
