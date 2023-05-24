@@ -817,8 +817,8 @@ class ResultAggregator(RevisionInserter):
         dataframe.fillna('', inplace=True)
         empty_columns = dataframe.columns[dataframe.eq('').all()]
         dataframe = dataframe.drop(empty_columns, axis=1)
-        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, '-'))
         dataframe = dataframe.applymap(lambda x: self.round_value(x))
+        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, np.nan))
         if self.model_order_acc_to_report_specs and len(self.model_order_acc_to_report_specs) == dataframe.shape[0]:
             dataframe = dataframe.reindex(self.model_order_acc_to_report_specs)
 
@@ -826,10 +826,6 @@ class ResultAggregator(RevisionInserter):
         if set(dataframe.index.tolist()) == set(self.model_order_acc_to_report_specs):
             dataframe = dataframe.rename(index=self.meta_infos["model_abbrevations"])
 
-        available_columns = dataframe.columns.tolist()
-        for col in available_columns:
-            dataframe = self.highligh_highest_value(dataframe=dataframe, column=col)
-            dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
         return dataframe
 
     def insert_model_abbreviation(self, model_name):
@@ -1018,14 +1014,14 @@ class ResultAggregator(RevisionInserter):
             if average_over_language == False:
                 config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_simple.csv')
-                config_aggregated_score.to_excel(
+                config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                     f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
                 self.make_latext_table(
                     config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
             if average_over_language == True:
                 config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
-                config_aggregated_score.to_excel(
+                config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
                 self.make_latext_table(config_aggregated_score,
                                        f'{self.output_dir}/config_aggregated_scores_average_over_language.tex')
@@ -1094,13 +1090,6 @@ class ResultAggregator(RevisionInserter):
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
 
-        '''for finetuning_task, abbreviation in self.meta_infos["dataset_abbreviations"].items():
-            try:
-                self.dataset_aggregated_score.rename(
-                    columns={finetuning_task: abbreviation}, inplace=True)
-            except:
-                pass'''
-
         if len(model_constraint) > 0:
             self.dataset_aggregated_score = self.dataset_aggregated_score[
                 self.dataset_aggregated_score.index.isin(model_constraint)]
@@ -1112,14 +1101,14 @@ class ResultAggregator(RevisionInserter):
             if average_over_language == False:
                 dataset_aggregated_score.to_csv(
                     f'{self.output_dir}/dataset_aggregated_scores_simple.csv')
-                dataset_aggregated_score.to_excel(
+                dataset_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                     f'{self.output_dir}/dataset_aggregated_scores_simple.xlsx')
                 self.make_latext_table(
                     dataset_aggregated_score, f'{self.output_dir}/dataset_aggregated_scores_simple.tex')
             if average_over_language == True:
                 dataset_aggregated_score.to_csv(
                     f'{self.output_dir}/dataset_aggregated_scores_average_over_language.csv')
-                dataset_aggregated_score.to_excel(
+                dataset_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                     f'{self.output_dir}/dataset_aggregated_scores_average_over_language.xlsx')
                 self.make_latext_table(dataset_aggregated_score,
                                        f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
@@ -1208,21 +1197,24 @@ class ResultAggregator(RevisionInserter):
         if write_to_csv:
             language_aggregated_score.to_csv(
                 f'{self.output_dir}/language_aggregated_scores.csv')
-            language_aggregated_score.to_excel(
+            language_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                 f'{self.output_dir}/language_aggregated_scores.xlsx')
             self.make_latext_table(language_aggregated_score,
                                    f'{self.output_dir}/language_aggregated_scores.tex')
 
-    def make_latext_table(self, df, file_name):
-
-        dataframe = deepcopy(df)
-
+    def make_latext_table(self, dataframe, file_name):
         dataframe.fillna('', inplace=True)
+        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, '-'))
+        available_columns = dataframe.columns.tolist()
+        for col in available_columns:
+            dataframe = self.highligh_highest_value(dataframe=dataframe, column=col)
+            dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
 
         with open(file_name, 'w') as f:
             print(self.prefix + dataframe.to_latex(index=True,
                                                    escape=False,
-                                                   column_format='r'*len(df.columns.tolist())) + self.suffix, file=f)
+                                                   column_format='r' * len(dataframe.columns.tolist())) + self.suffix,
+                  file=f)
 
 
 if __name__ == "__main__":
@@ -1283,6 +1275,5 @@ if __name__ == "__main__":
                                      model_constraint=model_constraint)
 
     # TODO maybe move all of this reporting functionality into a separate folder
-
 
     # export KMP_DUPLICATE_LIB_OK=TRUE && python create_overview.py -wak 16faa77953e6003f2150513ada85c66660bdb0f9 -pn swiss-legal-data/neurips2023 -wl multilingual
