@@ -21,6 +21,9 @@ class RevisionInserter:
     def __init__(self, report_spec_name):
         self.report_specs = self.read_report_specs(report_spec_name=report_spec_name)
         self.revision_lookup_table = self.prepare_revision_lookup_table()
+        if self.report_specs:
+            self.model_order_acc_to_report_specs = [_name_or_path.split('@')[0] for _name_or_path in
+                                                    self.report_specs['_name_or_path']]
 
     def read_report_specs(self, report_spec_name):
         with open(f"report_specs/{report_spec_name}.json", 'r') as f:
@@ -174,13 +177,8 @@ class ResultAggregator(RevisionInserter):
         # Add column to rows to indicate if this run pertains to completed tasks or not
         self.mark_incomplete_tasks()
 
-        self.prefix = '''\\begin{table*}[!ht]
-            \\centering
-            \\caption{Caption}
-            '''
-        self.suffix = '''\\caption{Table explanation text.}
-                        \\label{tab:table_label}
-                        \\end{table*}'''
+        self.prefix = "\\begin{table*}[!ht]\n\\centering\n"
+        self.suffix = "\\caption{Table explanation text.}\n\\label{tab:table_label}\n\\end{table*}"
 
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
@@ -780,6 +778,60 @@ class ResultAggregator(RevisionInserter):
 
         return mean_value
 
+    def insert_abbreviations(self, dataframe):
+        columns = dataframe.columns.tolist()
+        for c in columns:
+            if c in self.meta_infos['task_abbreviations'].keys():
+                dataframe.rename(columns={c: self.meta_infos['task_abbreviations'][c]}, inplace=True)
+            elif c in self.meta_infos['dataset_abbreviations'].keys():
+                dataframe.rename(columns={c: self.meta_infos['dataset_abbreviations'][c]}, inplace=True)
+
+        return dataframe
+
+    def round_value(self, value, places=2):
+        if isinstance(value, float):
+            return round(value * 100, places)
+        else:
+            return value
+
+    def replace_empty_string(self, value, placeholder):
+        if value == '':
+            return placeholder
+        else:
+            return value
+
+    def make_bold(self, values):
+        values_to_check = [v if isinstance(v, float) else 0 for v in values]
+        highest_value_index = np.argmax(values_to_check)
+        values[highest_value_index] = '\\bf{' + str(values[highest_value_index]) + '}'
+        return values
+
+    def highligh_highest_value(self, dataframe, column):
+        values = dataframe[column].tolist()
+        # if len([v for v in values if type(literal_eval(v))!=str])==len(values):
+        values = self.make_bold(values)
+        dataframe[column] = values
+        return dataframe
+
+    def postprocess_columns(self, dataframe):
+        dataframe.fillna('', inplace=True)
+        empty_columns = dataframe.columns[dataframe.eq('').all()]
+        dataframe = dataframe.drop(empty_columns, axis=1)
+        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, '-'))
+        dataframe = dataframe.applymap(lambda x: self.round_value(x))
+        if self.model_order_acc_to_report_specs and len(self.model_order_acc_to_report_specs) == dataframe.shape[0]:
+            dataframe = dataframe.reindex(self.model_order_acc_to_report_specs)
+
+        # Insert Model name abbreviations
+        if set(dataframe.index.tolist()) == set(self.model_order_acc_to_report_specs):
+            dataframe = dataframe.rename(index=self.meta_infos["model_abbrevations"])
+
+        available_columns = dataframe.columns.tolist()
+        for col in available_columns:
+            dataframe = self.highligh_highest_value(dataframe=dataframe, column=col)
+            dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
+        return dataframe
+
     def insert_model_abbreviation(self, model_name):
         if model_name in self.meta_infos["model_abbrevations"].keys():
             return self.meta_infos["model_abbrevations"][model_name]
@@ -835,9 +887,8 @@ class ResultAggregator(RevisionInserter):
             column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
-        first_column = [column_name]
-        dataframe = dataframe[first_column +
-                              [col for col in columns if col not in first_column]]
+        # first_column = [column_name]
+        # dataframe = dataframe[first_column + [col for col in columns if col not in first_column]]
 
         # Check if column with aggregated scores contains only numerical values
         # If yes, we can sort the column
@@ -934,7 +985,7 @@ class ResultAggregator(RevisionInserter):
         # overview_template.fillna("", inplace=True)
 
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
-                                    column_name="aggregated_score", task_constraint: list = [],
+                                    column_name="Agg.", task_constraint: list = [],
                                     model_constraint: list = []):
 
         # Insert aggregated mean for each model name
@@ -956,31 +1007,27 @@ class ResultAggregator(RevisionInserter):
         self.config_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.config_aggregated_score, column_name=column_name)
 
-        for finetuning_task, abbreviation in self.meta_infos["task_abbreviations"].items():
-            try:
-                self.config_aggregated_score.rename(
-                    columns={finetuning_task: abbreviation}, inplace=True)
-            except:
-                pass
-
         if len(model_constraint) > 0:
             self.config_aggregated_score = self.config_aggregated_score[
                 self.config_aggregated_score.index.isin(model_constraint)]
 
+        config_aggregated_score = deepcopy(self.config_aggregated_score)
+        config_aggregated_score = self.insert_abbreviations(config_aggregated_score)
+        config_aggregated_score = self.postprocess_columns(config_aggregated_score)
         if write_to_csv:
             if average_over_language == False:
-                self.config_aggregated_score.to_csv(
+                config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_simple.csv')
-                self.config_aggregated_score.to_excel(
+                config_aggregated_score.to_excel(
                     f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
                 self.make_latext_table(
-                    self.config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
+                    config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
             if average_over_language == True:
-                self.config_aggregated_score.to_csv(
+                config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
-                self.config_aggregated_score.to_excel(
+                config_aggregated_score.to_excel(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
-                self.make_latext_table(self.config_aggregated_score,
+                self.make_latext_table(config_aggregated_score,
                                        f'{self.output_dir}/config_aggregated_scores_average_over_language.tex')
 
     def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
@@ -1047,31 +1094,34 @@ class ResultAggregator(RevisionInserter):
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
 
-        for finetuning_task, abbreviation in self.meta_infos["dataset_abbreviations"].items():
+        '''for finetuning_task, abbreviation in self.meta_infos["dataset_abbreviations"].items():
             try:
                 self.dataset_aggregated_score.rename(
                     columns={finetuning_task: abbreviation}, inplace=True)
             except:
-                pass
+                pass'''
 
         if len(model_constraint) > 0:
             self.dataset_aggregated_score = self.dataset_aggregated_score[
                 self.dataset_aggregated_score.index.isin(model_constraint)]
 
         if write_to_csv:
+            dataset_aggregated_score = deepcopy(self.dataset_aggregated_score)
+            dataset_aggregated_score = self.insert_abbreviations(dataset_aggregated_score)
+            dataset_aggregated_score = self.postprocess_columns(dataset_aggregated_score)
             if average_over_language == False:
-                self.dataset_aggregated_score.to_csv(
+                dataset_aggregated_score.to_csv(
                     f'{self.output_dir}/dataset_aggregated_scores_simple.csv')
-                self.dataset_aggregated_score.to_excel(
+                dataset_aggregated_score.to_excel(
                     f'{self.output_dir}/dataset_aggregated_scores_simple.xlsx')
                 self.make_latext_table(
-                    self.dataset_aggregated_score, f'{self.output_dir}/dataset_aggregated_scores_simple.tex')
+                    dataset_aggregated_score, f'{self.output_dir}/dataset_aggregated_scores_simple.tex')
             if average_over_language == True:
-                self.dataset_aggregated_score.to_csv(
+                dataset_aggregated_score.to_csv(
                     f'{self.output_dir}/dataset_aggregated_scores_average_over_language.csv')
-                self.dataset_aggregated_score.to_excel(
+                dataset_aggregated_score.to_excel(
                     f'{self.output_dir}/dataset_aggregated_scores_average_over_language.xlsx')
-                self.make_latext_table(self.dataset_aggregated_score,
+                self.make_latext_table(dataset_aggregated_score,
                                        f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
 
     def get_aggregated_score_for_language(self, score_type, task_constraint: list = []):
@@ -1153,12 +1203,14 @@ class ResultAggregator(RevisionInserter):
             self.language_aggregated_score = self.language_aggregated_score[
                 self.language_aggregated_score.index.isin(model_constraint)]
 
+        language_aggregated_score = deepcopy(self.language_aggregated_score)
+        language_aggregated_score = self.postprocess_columns(language_aggregated_score)
         if write_to_csv:
-            self.language_aggregated_score.to_csv(
+            language_aggregated_score.to_csv(
                 f'{self.output_dir}/language_aggregated_scores.csv')
-            self.language_aggregated_score.to_excel(
+            language_aggregated_score.to_excel(
                 f'{self.output_dir}/language_aggregated_scores.xlsx')
-            self.make_latext_table(self.language_aggregated_score,
+            self.make_latext_table(language_aggregated_score,
                                    f'{self.output_dir}/language_aggregated_scores.tex')
 
     def make_latext_table(self, df, file_name):
@@ -1167,12 +1219,10 @@ class ResultAggregator(RevisionInserter):
 
         dataframe.fillna('', inplace=True)
 
-        for c in dataframe.columns.tolist():
-            dataframe.rename(columns={c: '\\textbf{' + c + '}'}, inplace=True)
-
         with open(file_name, 'w') as f:
             print(self.prefix + dataframe.to_latex(index=True,
-                                                   escape=False) + self.suffix, file=f)
+                                                   escape=False,
+                                                   column_format='r'*len(df.columns.tolist())) + self.suffix, file=f)
 
 
 if __name__ == "__main__":
@@ -1221,16 +1271,16 @@ if __name__ == "__main__":
                           report_spec_name=args.report_spec)
 
     ra.get_info()
-
+    model_constraint = [_name_or_path.split('@')[0] for _name_or_path in report_spec['_name_or_path']]
     ra.create_report(task_constraint=report_spec['finetuning_task'],
-                     model_constraint=[_name_or_path.split('@')[0] for _name_or_path in report_spec['_name_or_path']],
+                     model_constraint=model_constraint,
                      only_completed_tasks=False)
 
     ra.get_dataset_aggregated_score(task_constraint=report_spec['finetuning_task'],
-                                    model_constraint=report_spec['_name_or_path'])
+                                    model_constraint=model_constraint)
 
     ra.get_language_aggregated_score(task_constraint=report_spec['finetuning_task'],
-                                     model_constraint=report_spec['_name_or_path'])
+                                     model_constraint=model_constraint)
 
     # TODO maybe move all of this reporting functionality into a separate folder
 
