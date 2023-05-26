@@ -634,19 +634,27 @@ class ResultAggregator(RevisionInserter):
             self.score = old_score
 
         # Add column with best seed
+        df_pivot.fillna(-1, inplace=True)
         for i, _ in df_pivot.iterrows():
             all_seed_values = list()
             for seed in required_seeds:
                 seed_value = df_pivot.at[i, seed]
                 all_seed_values.append((seed, seed_value))
-            best_seed = sorted(all_seed_values, key=lambda x: x[1], reverse=True)[0][0]
-            best_seed_value = sorted(all_seed_values, key=lambda x: x[1], reverse=True)[0][1]
+            '''all_seed_values = [pair for pair in all_seed_values if
+                               isinstance(pair[1], float) and not pair[1] != np.nan]'''
+            if len(all_seed_values) > 0:
+                all_seed_values_sorted = sorted(all_seed_values, key=lambda x: x[1], reverse=True)
+                best_seed = all_seed_values_sorted[0][0]
+                best_seed_value = all_seed_values_sorted[0][1]
+            else:
+                best_seed = ''
+                best_seed_value = ''
             df_pivot.at[i, 'best_seed'] = best_seed
             df_pivot.at[i, 'best_seed_value'] = best_seed_value
-        df_pivot['standard_deviation'] = df_pivot[[1, 2, 3]].std(axis=1)
+            df_pivot['standard_deviation'] = df_pivot[required_seeds].std(axis=1)
 
-        if which_language is not None:
-            df_pivot = self.filter_by_language(df_pivot, which_language)
+            if which_language is not None:
+                df_pivot = self.filter_by_language(df_pivot, which_language)
 
         return df_pivot
 
@@ -708,6 +716,12 @@ class ResultAggregator(RevisionInserter):
 
         self.eval_macro_f1_overview = eval_macro_f1_overview
 
+        eval_micro_f1_overview = self.create_overview_of_results_per_seed(
+            score="eval/micro-f1", only_completed_tasks=only_completed_tasks, which_language=which_language,
+            task_constraint=task_constraint, model_constraint=model_constraint, required_seeds=required_seeds)
+
+        self.eval_micro_f1_overview = eval_micro_f1_overview
+
         # write to csv, so we can read it with a bash script
         self.seed_check.to_csv(
             f"{self.output_dir}/completeness_report.tsv", sep="\t", index=False)
@@ -726,6 +740,8 @@ class ResultAggregator(RevisionInserter):
                 writer, index=False, sheet_name=split_name + "_accuracy_normalized_overview")
             self.eval_macro_f1_overview.to_excel(
                 writer, index=False, sheet_name="eval_macro__f1_overview")
+            self.eval_micro_f1_overview.to_excel(
+                writer, index=False, sheet_name="eval_micro__f1_overview")
 
     def convert_numpy_float_to_python_float(self, value):
         if value == np.nan:
