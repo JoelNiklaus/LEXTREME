@@ -497,7 +497,6 @@ def generate_command_for_experiments(**data):
         elif data["do_fp16"]:
             command_template += ' --fp16 --fp16_full_eval'
 
-
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
         command_template += ' --logging_steps ' + \
                             str(data["logging_steps"]) + ' '
@@ -534,7 +533,8 @@ def generate_command_for_experiments(**data):
                                             LOGGING_STRATEGY=data["logging_strategy"],
                                             SAVE_STRATEGY=data["save_strategy"],
                                             REVISION=data["revision"],
-                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"]
+                                            EARLY_STOPPING_PATIENCE=data["early_stopping_patience"],
+                                            DO_FP16=data["do_fp16"]
                                             )
 
     file_name = './temporary_scripts/' + data["task"] + "_" + str(data["gpu_number"]) + "_" + str(
