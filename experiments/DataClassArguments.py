@@ -137,6 +137,12 @@ class DataTrainingArguments:
             "help": "Specify if you want to apply hyperparameter search."
         },
     )
+    do_fp16: bool = field(
+        default=None,
+        metadata={
+            "help": "Decide if you want to train and evaluate on fp16."
+        },
+    )
     search_type_method: str = field(
         default="grid",
         metadata={
