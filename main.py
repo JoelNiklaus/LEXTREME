@@ -131,7 +131,7 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         dataset_cache_dir=args.dataset_cache_dir,
         do_hyperparameter_search=make_boolean(args.do_hyperparameter_search),
-        do_fp16=args.do_fp16,
+        do_fp16=make_boolean(args.do_fp16),
         download_mode=args.download_mode,
         early_stopping_patience=args.early_stopping_patience,
         eval_steps=args.eval_steps,
