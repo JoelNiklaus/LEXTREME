@@ -409,6 +409,10 @@ class ResultAggregator(RevisionInserter):
         results = results[results['eval/loss']
                           .apply(self.loss_equals_nan) == False]
 
+        # Remove all cases where eval/loss is nan according to wandb
+        results = results[results['predict/_loss']
+                          .apply(self.loss_equals_nan) == False]
+
         # Keep only results from seed 1,2,3 and remove anything else
         results = results[results.seed.isin(self.required_seeds)]
 
