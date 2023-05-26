@@ -449,7 +449,8 @@ def generate_command_for_experiments(**data):
                        '--running_mode {RUNNING_MODE} ' \
                        '--save_strategy {SAVE_STRATEGY} ' \
                        '--save_total_limit 6 ' \
-                       '--seed {SEED} '
+                       '--seed {SEED} ' \
+                       '--do_fp16 {DO_FP16}'
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
@@ -477,21 +478,25 @@ def generate_command_for_experiments(**data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
-        if data["model_name"] == "microsoft/mdeberta-v3-base":
-            if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
-                command_template += ' --bf16 --bf16_full_eval'
-        elif 't5' not in data["model_name"]:
-            # It seems like fp16 triggers eval/loss nan with t5: https://discuss.huggingface.co/t/t5-variants-return-training-loss-0-and-validation-loss-nan-while-fine-tuning/30839/5
-            # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
-            # BUT, if the environment is set up correctly, also fp16_full_eval should work
-            if str(data["hierarchical"]).lower() == 'true':  # We perceived some issues with xlm-roberta-base and
-                # xlm-roberta-large. They returned a nan loss with fp16 in combination with hierarchical models
-                if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
-                    command_template += ' --fp16 --fp16_full_eval'
+        if data["do_fp16"] is None:
+            if data["model_name"] == "microsoft/mdeberta-v3-base":
+                if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
+                    command_template += ' --bf16 --bf16_full_eval'
+            elif 't5' not in data["model_name"]:
+                # It seems like fp16 triggers eval/loss nan with t5: https://discuss.huggingface.co/t/t5-variants-return-training-loss-0-and-validation-loss-nan-while-fine-tuning/30839/5
+                # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
+                # BUT, if the environment is set up correctly, also fp16_full_eval should work
+                if str(data["hierarchical"]).lower() == 'true':  # We perceived some issues with xlm-roberta-base and
+                    # xlm-roberta-large. They returned a nan loss with fp16 in combination with hierarchical models
+                    if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
+                        command_template += ' --fp16 --fp16_full_eval'
+                    else:
+                        command_template += ' --fp16 '
                 else:
-                    command_template += ' --fp16 '
-            else:
-                command_template += ' --fp16 --fp16_full_eval'
+                    command_template += ' --fp16 --fp16_full_eval'
+        elif data["do_fp16"]:
+            command_template += ' --fp16 --fp16_full_eval'
+
 
     if 'logging_steps' in data.keys() and data['logging_steps'] is not None:
         command_template += ' --logging_steps ' + \
@@ -687,6 +692,7 @@ def run_experiment(
         batch_size,
         dataset_cache_dir,
         do_hyperparameter_search,
+        do_fp16,
         download_mode,
         eval_steps,
         evaluation_strategy,
@@ -754,7 +760,7 @@ def run_experiment(
     # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
     language_model_info = language_model_type.split('_')
     if len(language_model_info) != 3:  # we got a direct language model just use it
-        models_to_be_used = language_model_type.split(',') #This way we can comma-seperate several language models
+        models_to_be_used = language_model_type.split(',')  # This way we can comma-seperate several language models
     else:  # find out what models we want to run
         types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
 
@@ -857,6 +863,7 @@ def run_experiment(
                     code=get_python_file_for_task(task),
                     dataset_cache_dir=dataset_cache_dir,
                     do_hyperparameter_search=do_hyperparameter_search,
+                    do_fp16=do_fp16,
                     download_mode=download_mode,
                     eval_steps=eval_steps,
                     evaluation_strategy=evaluation_strategy,
