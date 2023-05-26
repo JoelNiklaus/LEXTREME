@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('-bz', '--batch_size', help='Define the batch size.', default=None)
     parser.add_argument('-dhs', '--do_hyperparameter_search',
                         help="Specify if you want to apply hyperparameter search.", default=False)
+    parser.add_argument('-fp16', '--do_fp16', help='Decide if you want to train and evaluate on fp16.', default=None)
     parser.add_argument('-es', '--evaluation_strategy',
                         help="The evaluation strategy to adopt during training. Possible values are: no = No "
                              "evaluation is done during training; steps = Evaluation is done (and logged) every "
@@ -130,6 +131,7 @@ if __name__ == '__main__':
         batch_size=args.batch_size,
         dataset_cache_dir=args.dataset_cache_dir,
         do_hyperparameter_search=make_boolean(args.do_hyperparameter_search),
+        do_fp16=args.do_fp16,
         download_mode=args.download_mode,
         early_stopping_patience=args.early_stopping_patience,
         eval_steps=args.eval_steps,
