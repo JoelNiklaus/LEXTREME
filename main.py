@@ -60,6 +60,12 @@ if __name__ == '__main__':
                         help='Define the random seeds for which you want to run the experiments.',
                         default=None)
     parser.add_argument('-lr', '--learning_rate', help='Define the learning rate.', default=1e-5)
+    parser.add_argument('-wd', '--weight_decay',
+                        help='The weight decay to apply (if not zero) to all layers except all bias and LayerNorm weights in AdamW optimizer.',
+                        default=None)
+    parser.add_argument('-wur', '--warmup_ratio',
+                        help=' Ratio of total training steps used for a linear warmup from 0 to learning_rate.',
+                        default=None)
     parser.add_argument('-mfbm', '--metric_for_best_model',
                         help='Use in conjunction with load_best_model_at_end to specify the metric to use '
                              'to compare two different models. Must be the name of a metric '
@@ -156,5 +162,7 @@ if __name__ == '__main__':
         save_steps=args.save_steps,
         save_strategy=args.save_strategy,
         search_type_method=args.search_type_method,
-        task=args.task
+        task=args.task,
+        warmup_ratio=args.warmup_ratio,
+        weight_decay=args.weight_decay
     )

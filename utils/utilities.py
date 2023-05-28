@@ -506,6 +506,10 @@ def generate_command_for_experiments(**data):
         command_template += ' --save_steps ' + str(data["save_steps"]) + ' '
     if data["lower_case"]:
         command_template = command_template + ' --do_lower_case '
+    if data["weight_decay"] is not None:
+        command_template = command_template + ' --weight_decay ' + str(data["weight_decay"])
+    if data["warmup_ratio"] is not None:
+        command_template = command_template + ' --warmup_ratio ' + str(data["warmup_ratio"])
 
     # mdeberta does not work with fp16 because it was trained with bf16
     # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -717,7 +721,9 @@ def run_experiment(
         search_type_method,
         task,
         log_directory=None,
-        num_train_epochs=None
+        num_train_epochs=None,
+        weight_decay=None,
+        warmup_ratio=None
 ):
     # TODO I think it would be easier to just pass the whole data dictionary to the function
     #  so that we only have one parameter and do the same for the generate_command function
@@ -887,7 +893,9 @@ def run_experiment(
                     save_steps=save_steps,
                     save_strategy=save_strategy,
                     seed=seed,
-                    task=task
+                    task=task,
+                    warmup_ratio=warmup_ratio,
+                    weight_decay=weight_decay
                 )
 
                 if script_new is not None:
@@ -986,7 +994,9 @@ def run_experiment(
                     save_steps=save_steps,
                     save_strategy=save_strategy,
                     search_type_method=search_type_method,
-                    task=task
+                    task=task,
+                    warmup_ratio=warmup_ratio,
+                    weight_decay=weight_decay
                 )
 
                 if script_new is not None:
