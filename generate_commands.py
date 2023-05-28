@@ -12,10 +12,18 @@ lex_glue_tasks = [
     "ecthr_b"
 ]
 
+lextreme_tasks = ["brazilian_court_decisions_judgment", "brazilian_court_decisions_unanimity", "german_argument_mining",
+                  "greek_legal_code_chapter", "greek_legal_code_subject", "greek_legal_code_volume",
+                  "swiss_judgment_prediction", "online_terms_of_service_unfairness_levels",
+                  "online_terms_of_service_clause_topics", "covid19_emergency_event", "multi_eurlex_level_1",
+                  "multi_eurlex_level_2", "multi_eurlex_level_3", "greek_legal_ner", "legalnero", "lener_br",
+                  "mapa_coarse", "mapa_fine"
+                  ]
+
 df = pd.read_excel('utils/results/lextreme/paper_results/report.xlsx')
 # df = df[df.run == "x"]
-df = df[df._name_or_path.str.contains("longform")]
-df = df[df.finetuning_task.isin(lex_glue_tasks) == False]
+df = df[df._name_or_path.str.contains("joel.*large")]
+df = df[df.finetuning_task.isin(lextreme_tasks)]
 
 
 def generate_commands(gm, gn, ld):
