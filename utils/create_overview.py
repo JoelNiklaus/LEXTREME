@@ -249,8 +249,8 @@ class ResultAggregator(RevisionInserter):
                     entry["seed"] = x.config['seed']
                     entry["_name_or_path"] = x.config['_name_or_path']
                     entry['name'] = x.name
-                    if 'revision' in x.config.keys():
-                        entry['revision'] = x.config["revision"]
+                    if 'revision' in x.summary.keys():
+                        entry['revision'] = x.summary.revision
                     else:
                         entry['revision'] = 'main'
                     for sn in score_names:
