@@ -2,13 +2,9 @@ import pandas as pd
 import os
 
 
+
 tasks = [
-    "eurlex",
-    "scotus",
-    "ledgar",
-    "unfair_tos",
-    "case_hold",
-    "ecthr_a",
+    "ecthr_b"
 ]
 
 missing_runs = pd.read_excel('../utils/results/lextreme/paper_results/report.xlsx', sheet_name='completeness_report')

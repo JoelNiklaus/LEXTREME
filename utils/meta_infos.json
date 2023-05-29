@@ -191,7 +191,7 @@
     "scotus": "SLTC",
     "ledgar": "SLTC",
     "unfair_tos": "MLTC",
-    "case_hold": "SLTC"
+    "case_hold": "MCQA"
   },
   "task_language_mapping": {
     "brazilian_court_decisions_judgment": [

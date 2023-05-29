@@ -137,7 +137,7 @@ class DataTrainingArguments:
             "help": "Specify if you want to apply hyperparameter search."
         },
     )
-    do_fp16: bool = field(
+    do_fp16: any = field(
         default=None,
         metadata={
             "help": "Decide if you want to train and evaluate on fp16."

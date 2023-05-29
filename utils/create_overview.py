@@ -44,6 +44,15 @@ class RevisionInserter:
         else:
             return 'main'
 
+    def revision_does_match(self, _name_or_path, revision_from_wandb):
+        if _name_or_path in self.revision_lookup_table.keys():
+            if revision_from_wandb == self.revision_lookup_table[_name_or_path]:
+                return True
+            else:
+                return False
+        else:
+            return True
+
 
 meta_infos = get_meta_infos()
 
@@ -240,6 +249,10 @@ class ResultAggregator(RevisionInserter):
                     entry["seed"] = x.config['seed']
                     entry["_name_or_path"] = x.config['_name_or_path']
                     entry['name'] = x.name
+                    if 'revision' in x.summary.keys():
+                        entry['revision'] = x.summary.revision
+                    else:
+                        entry['revision'] = 'main'
                     for sn in score_names:
                         if sn in x.history_keys['keys'].keys():
                             entry[sn] = x.history_keys['keys'][sn]['previousValue']
@@ -430,6 +443,11 @@ class ResultAggregator(RevisionInserter):
         # results = results[results._name_or_path.str.contains('joelito') == False]
         results = results[
             results.finetuning_task.str.contains('turkish_constitutional_court_decisions_judgment') == False]
+
+        # Check if revisions match
+        results['revisions_match'] = results.apply(
+            lambda row: self.revision_does_match(row['_name_or_path'], row['revision']), axis=1)
+        results = results[results.revisions_match == True]
 
         return results
 
