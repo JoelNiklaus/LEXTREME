@@ -15,19 +15,21 @@ missing_runs = pd.read_excel(
     '../utils/results/lextreme/paper_results/report.xlsx', sheet_name='completeness_report')
 missing_runs = missing_runs[missing_runs.finetuning_task.isin(tasks)]
 missing_runs = missing_runs[missing_runs._name_or_path.str.contains(
-    'joelito.*large')]
+    'joelito.*base')]
 missing_models = list(missing_runs._name_or_path.unique())
+missing_tasks = list(missing_runs.finetuning_task.unique())
 missing_runs_new = list()
 
 for row in missing_runs.to_dict(orient="records"):
     for s in row["missing_seeds"].split(','):
         for mm in missing_models:
-            entry = dict()
-            entry["_name_or_path"] = mm
-            entry["revision"] = row["revision"]
-            entry['finetuning_task'] = row['finetuning_task']
-            entry["missing_seeds"] = s
-            missing_runs_new.append(entry)
+            for task in missing_tasks:
+                entry = dict()
+                entry["_name_or_path"] = mm
+                entry["revision"] = row["revision"]
+                entry['finetuning_task'] = task
+                entry["missing_seeds"] = s
+                missing_runs_new.append(entry)
 
 missing_runs_new = pd.DataFrame(missing_runs_new)
 missing_runs_new = missing_runs_new.drop_duplicates(
