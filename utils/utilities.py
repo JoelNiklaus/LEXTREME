@@ -681,7 +681,10 @@ def process_gpu_number(gpu_number, do_hyperparameter_search):
     else:
         if not do_hyperparameter_search:
             if type(gpu_number) == str:
-                gpu_number = gpu_number.split(',')
+                if '_' in gpu_number:
+                    gpu_number = [','.join(gpu_number.split('_'))]
+                else:
+                    gpu_number = gpu_number.split(',')
             elif type(gpu_number) == list:
                 gpu_number = gpu_number
         else:
@@ -803,6 +806,10 @@ def run_experiment(
         if task == 'all':
             all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used,
                              list_of_seeds]
+        elif isinstance(task, str) and ',' in task:
+            tasks = task.split(',')
+            all_variables = [[t.strip() for t in tasks], models_to_be_used,
+                             list_of_seeds]
         else:
             all_variables = [[task], models_to_be_used, list_of_seeds]
 
@@ -817,7 +824,7 @@ def run_experiment(
 
         for (gpu_id, task, model_name, seed) in all_variables_perturbations:
 
-            if bool(re.search(r'\d', str(gpu_id))):
+            if bool(re.search(r'^\d+$', str(gpu_id))):
                 gpu_id = int(gpu_id)
             seed = int(seed)
 
