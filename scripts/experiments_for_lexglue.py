@@ -44,6 +44,6 @@ for row in missing_runs_new.to_dict(orient="records"):
     ft = row['finetuning_task']
     seeds = row['missing_seeds']
     command = 'python main.py -gn 0_1 -gm 80 -los ' + seeds + \
-        ' --lower_case true -bz 8 -mfbm micro-f1 -nte 20 -lr 1e-5 -esp 3 -ld paper_results --weight_decay 0.06 --warmup_ratio 0.1 ' + \
+        ' --lower_case true -bz 4 -as 2 -mfbm micro-f1 -nte 20 -lr 1e-5 -esp 3 -ld paper_results --weight_decay 0.06 --warmup_ratio 0.1 ' + \
         '-t ' + ft + ' -lmt ' + name_or_path + ' -rev ' + revision
     os.system(command)
