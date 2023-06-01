@@ -2,14 +2,14 @@ import pandas as pd
 import os
 
 tasks = [
-    "scotus"
+    "unfair_tos", "ledgar"
 ]
 
 missing_runs = pd.read_excel(
     '../utils/results/lextreme/paper_results/report.xlsx', sheet_name='completeness_report')
-missing_runs = missing_runs[missing_runs.finetuning_task.isin(tasks)]
+# missing_runs = missing_runs[missing_runs.finetuning_task.isin(tasks)]
 missing_runs = missing_runs[missing_runs._name_or_path.str.contains(
-    'joelito.*large')]
+    'joelito.*base')]
 missing_models = list(missing_runs._name_or_path.unique())
 missing_tasks = list(missing_runs.finetuning_task.unique())
 missing_runs_new = list()
@@ -44,6 +44,6 @@ for row in missing_runs_new.to_dict(orient="records"):
     ft = row['finetuning_task']
     seeds = row['missing_seeds']
     command = 'python main.py -gn 0_1 -gm 80 -los ' + seeds + \
-        ' --lower_case true -bz 8 -mfbm micro-f1 -nte 20 -lr 1e-5 -esp 3 -ld paper_results --weight_decay 0.06 --warmup_ratio 0.1 ' + \
+        ' --lower_case true -bz 8 -mfbm micro-f1 -nte 20 -lr 3e-5 -esp 3 -ld paper_results ' + \
         '-t ' + ft + ' -lmt ' + name_or_path + ' -rev ' + revision
     os.system(command)
