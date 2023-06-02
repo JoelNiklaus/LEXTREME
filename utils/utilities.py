@@ -478,7 +478,7 @@ def generate_command_for_experiments(**data):
         # If no GPU available, we cannot make use of --fp16 --fp16_full_eval
         data["gpu_number"] = ""
     else:  # only when we have a GPU, we can run fp16 training
-        if data["do_fp16"] is None:
+        if data["do_fp16"] == False:
             if data["model_name"] == "microsoft/mdeberta-v3-base":
                 if int(data["gpu_memory"]) == 80:  # A100 also supports bf16
                     command_template += ' --bf16 --bf16_full_eval'
