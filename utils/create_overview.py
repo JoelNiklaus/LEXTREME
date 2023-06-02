@@ -14,6 +14,7 @@ import wandb
 from traceback import print_exc
 from utilities import get_meta_infos
 import json as js
+from scipy.stats import hmean
 
 
 class RevisionInserter:
@@ -50,10 +51,13 @@ class RevisionInserter:
 
     def revision_does_match(self, finetuning_task, _name_or_path, revision_from_wandb):
         if finetuning_task in self.revision_lookup_table.keys():
-            if revision_from_wandb == self.revision_lookup_table[finetuning_task][_name_or_path]:
-                return True
+            if _name_or_path in self.revision_lookup_table[finetuning_task].keys():
+                if revision_from_wandb == self.revision_lookup_table[finetuning_task][_name_or_path]:
+                    return True
+                else:
+                    return False
             else:
-                return False
+                return True
         else:
             return True
 
@@ -84,9 +88,11 @@ class ResultAggregator(RevisionInserter):
                  score='macro-f1',
                  split="predict",
                  verbose_logging=True,
+                 fill_with_wrong_revisions=False,
                  wandb_api_key=None,
                  which_language=None,
-                 required_seeds=[1, 2, 3]
+                 required_seeds=[1, 2, 3],
+                 mean_type=None
                  ):
         super().__init__(report_spec_name)
         """
@@ -118,7 +124,7 @@ class ResultAggregator(RevisionInserter):
         wandb_api_key: Default value is None. Insert the wandb api key for the project you are interested in.
 
         which_language: Default value is None. Choose which language should be considered for the overviews. If set to `monolingual`, only monolingual models will be considered. If set to `multilingual`, only multilingual models will be considered. Otherwise, only those models will be considered that belong to the defined language. For example, if you pass `de`, only German models will be considered.
-
+        fill_with_wrong_revisions: Default is False. If set to True, the code will check which runs are missing for which seed and try to fill these missing seeds with runs that actually do not fullfil, because the wrong revision was used.
         """
         # Create the result directory if not existent
         self.output_dir = output_dir
@@ -164,6 +170,8 @@ class ResultAggregator(RevisionInserter):
 
         self.required_seeds = required_seeds
 
+        self.fill_with_wrong_revisions = fill_with_wrong_revisions
+
         if type(wandb_api_key) == str and bool(re.search('\d', wandb_api_key)):
             os.environ["WANDB_API_KEY"] = self.wandb_api_key
 
@@ -193,6 +201,8 @@ class ResultAggregator(RevisionInserter):
         self.prefix = "\\begin{table*}[!ht]\n\\centering\n"
         self.suffix = "\\caption{Table explanation text.}\n\\label{tab:table_label}\n\\end{table*}"
 
+        self.mean_type = mean_type
+
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
         return self
@@ -207,7 +217,7 @@ class ResultAggregator(RevisionInserter):
         logging.info(self.results.finetuning_task.unique())
 
     def remove_slashes(self, string):
-        return re.sub('\/', '', string)
+        return re.sub(r'\/', '', string)
 
     def generate_concrete_score_name(self):
 
@@ -246,12 +256,26 @@ class ResultAggregator(RevisionInserter):
             entry = dict()
             try:
                 if x.state == "finished":
+                    already_added_fields = set()
+                    entry['project_name'] = project_name
                     entry['state'] = x.state
-                    entry["finetuning_task"] = x.config['finetuning_task']
-                    if entry["finetuning_task"] == 'case_hold':
-                        entry["finetuning_task"] = 'en_' + entry["finetuning_task"]
-                    entry["seed"] = x.config['seed']
-                    entry["_name_or_path"] = x.config['_name_or_path']
+                    if x.config["finetuning_task"] == 'case_hold':
+                        entry["finetuning_task"] = 'en_' + x.config["finetuning_task"]
+                    else:
+                        entry["finetuning_task"] = x.config['finetuning_task']
+
+                    already_added_fields.add('finetuning_task')
+
+                    if '_name_or_path' in x.config.keys():
+                        entry["_name_or_path"] = x.config['_name_or_path']
+                        already_added_fields.add('_name_or_path')
+                    else:
+                        entry["_name_or_path"] = x.summary['model_name_or_path']
+
+                    for field, value in x.config.items():
+                        if field not in already_added_fields:
+                            entry[field] = value
+                    # entry["seed"] = x.config['seed']
                     entry['name'] = x.name
                     if 'revision' in x.summary.keys():
                         entry['revision'] = x.summary.revision
@@ -272,6 +296,9 @@ class ResultAggregator(RevisionInserter):
         if project_name is None:
             project_name = "lextreme/paper_results"
         # results = wandb_summarizer.download.get_results(project_name=project_name)
+        # results = pd.DataFrame(self.fetch_data(project_name=project_name))
+        # results_old_lex_glue_runs = pd.DataFrame(self.fetch_data(project_name='old_lex_glue_runs'))
+        # results = pd.concat([results, results_old_lex_glue_runs])
         results = self.fetch_data(project_name=project_name)
         results = pd.DataFrame(results)
         results.to_csv(
@@ -399,6 +426,34 @@ class ResultAggregator(RevisionInserter):
 
         return '+' in str(loss)
 
+    def find_best_revisions(self, dataframe):
+        dataframe = dataframe.sort_values(['finetuning_task', '_name_or_path', 'seed', 'revision'])
+        dataframe_new = list()
+        for finetuning_task, infos in self.revision_lookup_table.items():
+            for _name_or_path, revision in infos.items():
+                sub_dataframe = dataframe[
+                    (dataframe.finetuning_task == finetuning_task) & (dataframe._name_or_path == _name_or_path)]
+                for row in sub_dataframe.to_dict(orient="records"):
+                    if row['_name_or_path'] == _name_or_path and row['finetuning_task'] == finetuning_task:
+                        if self.revision_does_match(finetuning_task=row['finetuning_task'],
+                                                    _name_or_path=row['_name_or_path'],
+                                                    revision_from_wandb=row['revision']):
+                            dataframe_new.append(row)
+                seeds_extracted = {row['seed'] for row in dataframe_new if
+                                   row['finetuning_task'] == finetuning_task and row['_name_or_path'] == _name_or_path}
+                if seeds_extracted != set(self.required_seeds):
+                    missing_seeds = [s for s in self.required_seeds if s not in seeds_extracted]
+                    print('Missing seeds: ', missing_seeds)
+                    for seed in missing_seeds:
+                        for row in sub_dataframe.to_dict(orient="records"):
+                            if row['_name_or_path'] == _name_or_path and row['finetuning_task'] == finetuning_task and \
+                                    row['seed'] == seed:
+                                dataframe_new.append(row)
+
+        dataframe_new = pd.DataFrame(dataframe_new)
+
+        return dataframe_new
+
     def edit_result_dataframe(self, results, name_editing=True):
         results = self.edit_column_names_in_df(results)
         results = results[results._name_or_path.str.contains(
@@ -450,8 +505,12 @@ class ResultAggregator(RevisionInserter):
             lambda row: self.revision_does_match(finetuning_task=row['finetuning_task'],
                                                  _name_or_path=row['_name_or_path'],
                                                  revision_from_wandb=row['revision']), axis=1)
-        results = results[results.revisions_match == True]
+        if self.fill_with_wrong_revisions:
+            results = self.find_best_revisions(results)
+        else:
+            results = results[results.revisions_match == True]
 
+        results = results.sort_values(["finetuning_task", "_name_or_path", "seed", "predict/_" + self.score])
         results = results.drop_duplicates(
             ["seed", "finetuning_task", "_name_or_path", "language"], keep='last')
 
@@ -779,9 +838,13 @@ class ResultAggregator(RevisionInserter):
         return final_value
 
     def get_mean_from_list_of_values(self, list_of_values):
-        list_of_values = [x for x in list_of_values if type(x) != str]
+        if self.mean_type == 'harmonic':
+            mean_function = hmean
+        elif self.mean_type is None:
+            mean_function = mean
+        list_of_values = [x for x in list_of_values if type(x) != str and x > 0]
         if len(list_of_values) > 0:
-            return self.convert_numpy_float_to_python_float(mean(list_of_values))
+            return self.convert_numpy_float_to_python_float(mean_function(list_of_values))
         else:
             return ""
 
@@ -1311,7 +1374,9 @@ if __name__ == "__main__":
                           only_completed_tasks=False,
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
-                          report_spec_name=args.report_spec)
+                          report_spec_name=args.report_spec,
+                          mean_type=None,
+                          fill_with_wrong_revisions=True)
 
     ra.get_info()
     model_constraint = [_name_or_path.split('@')[0] for _name_or_path in report_spec['_name_or_path']]
