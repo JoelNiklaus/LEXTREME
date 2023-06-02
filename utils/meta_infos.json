@@ -74,7 +74,8 @@
     "scotus": "SCO",
     "ledgar": "LED",
     "unfair_tos": "UTS",
-    "case_hold": "CAH"
+    "case_hold": "CAH",
+    "original": "ORIG"
   },
   "task_abbreviations": {
     "brazilian_court_decisions_judgment": "BCD-J",
@@ -112,7 +113,8 @@
     "scotus": "SCO",
     "ledgar": "LED",
     "unfair_tos": "UTS",
-    "case_hold": "CAH"
+    "case_hold": "CAH",
+    "original": "ORIG"
   },
   "model_abbrevations": {
     "distilbert-base-multilingual-cased": "DistilBERT",
@@ -175,6 +177,7 @@
     "lener_br": "NER",
     "mapa_coarse": "NER",
     "mapa_fine": "NER",
+    "original": "NER",
     "swiss_criticality_prediction_bge_facts": "SLTC",
     "swiss_criticality_prediction_bge_considerations": "SLTC",
     "swiss_criticality_prediction_citation_facts": "SLTC",
@@ -441,6 +444,11 @@
     ],
     "case_hold": [
       "en"
+    ],
+    "original": [
+      "de",
+      "fr",
+      "it"
     ]
   },
   "config_to_dataset": {
@@ -479,7 +487,8 @@
     "scotus": "scotus",
     "ledgar": "ledgar",
     "unfair_tos": "unfair_tos",
-    "case_hold": "case_hold"
+    "case_hold": "case_hold",
+    "original": "original"
   },
   "dataset_to_config": {
     "brazilian_court_decisions": [
@@ -559,7 +568,9 @@
     ],
     "case_hold": [
       "case_hold"
-    ]
+    ],
+    "original": [
+      "original"]
   },
   "task_default_arguments": {
     "greek_legal_ner": {
@@ -595,6 +606,14 @@
       }
     },
     "mapa_coarse": {
+      "DataTrainingArguments": {
+        "max_seq_length": 512
+      },
+      "ModelArguments": {
+        "hierarchical": false
+      }
+    },
+    "original": {
       "DataTrainingArguments": {
         "max_seq_length": 512
       },
@@ -1313,5 +1332,8 @@
     "ledgar",
     "unfair_tos",
     "case_hold"
+  ],
+  "rcds_swiss_citation_extraction_configs": [
+    "original"
   ]
 }
