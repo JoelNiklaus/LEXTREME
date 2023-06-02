@@ -58,6 +58,11 @@ def prepare_lexglue_dataset(dataset):
     return dataset
 
 
+def prepare_rcds_swiss_citation_extraction_dataset(dataset):
+    dataset = dataset.rename_columns({'considerations': 'input', 'NER_labels': 'labels'})
+    return dataset
+
+
 def return_language_prefix(language, finetuning_task):
     '''
         In wandb we log the name of the task with a prefix to distinguish the filtered languages.
@@ -81,6 +86,8 @@ def filter_dataset_by_language(dataset, language):
 def get_overall_dataset_name(finetuning_task):
     if finetuning_task in meta_infos["lexglue_configs"]:
         overall_dataset_name = "lex_glue"
+    elif finetuning_task in meta_infos["rcds_swiss_citation_extraction_configs"]:
+        overall_dataset_name = "rcds/swiss_citation_extraction"
     else:
         overall_dataset_name = "joelito/lextreme"
 
@@ -110,6 +117,9 @@ def make_efficient_split(data_args, split_name, ner_tasks):
     if overall_dataset_name == 'lex_glue':
         dataset = prepare_lexglue_dataset(dataset)
 
+    if overall_dataset_name == "rcds/swiss_citation_extraction":
+        dataset = prepare_rcds_swiss_citation_extraction_dataset(dataset)
+
     if bool(re.search('eurlex', data_args.finetuning_task)) and overall_dataset_name == "joelito/lextreme":
         dataset = split_into_languages(dataset)
 
@@ -137,6 +147,9 @@ def make_split_with_postfiltering(data_args, split_name, ner_tasks):
 
     if overall_dataset_name == 'lex_glue':
         dataset = prepare_lexglue_dataset(dataset)
+
+    if overall_dataset_name == "rcds/swiss_citation_extraction":
+        dataset = prepare_rcds_swiss_citation_extraction_dataset(dataset)
 
     if bool(re.search('eurlex', data_args.finetuning_task)) and overall_dataset_name == "joelito/lextreme":
         dataset = split_into_languages(dataset)
@@ -893,7 +906,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
     return model, tokenizer, config
 
 
-def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, num_labels):
+def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, training_args, num_labels):
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
         num_labels=num_labels,

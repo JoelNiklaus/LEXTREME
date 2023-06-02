@@ -1,0 +1,32 @@
+{
+  "wandb_project_name": "swiss-legal-data/swiss_citation_extraction",
+  "finetuning_task": [
+    "original"
+  ],
+  "_name_or_path": [
+    "microsoft/Multilingual-MiniLM-L12-H384@main",
+    "distilbert-base-multilingual-cased@main",
+    "microsoft/mdeberta-v3-base@main",
+    "xlm-roberta-base@main",
+    "xlm-roberta-large@main",
+    "ZurichNLP/swissbert@main",
+    "ZurichNLP/swissbert-xlm-vocab@main",
+    "joelito/legal-swiss-roberta-base@47048d047356032a7f3e322469744294a5923042",
+    "joelito/legal-swiss-roberta-large@7ab61a6431c9f6759d0a747b0257f23cc76d65c9",
+    "joelito/legal-swiss-longformer-base@main"
+  ],
+  "excluded_models": [
+    "joelito/legal-german-roberta-base@main",
+    "joelito/legal-german-roberta-large@2b7fa5f583c9771f3f78dc53e5f749bff8a6b9ac",
+    "joelito/legal-french-roberta-base@main",
+    "joelito/legal-french-roberta-large@18666c053a75718c1ce78184a9dbf40c2540d002",
+    "joelito/legal-italian-roberta-base@main",
+    "joelito/legal-italian-roberta-large@4238a87a6e58c2cc848bf6c66a7537f7b93c42cc"
+  ],
+  "comments": [
+    "swiss-base: 950K steps",
+    "swiss-large: 500K steps",
+    "monolingual base models: 1M steps",
+    "monolingual large models: 500K steps"
+  ]
+}
