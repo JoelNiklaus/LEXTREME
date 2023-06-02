@@ -167,7 +167,7 @@ optimal_batch_sizes = {
 
 def make_boolean(value):
     value_capitalized = str(value).lower().title()
-    if literal_eval(value_capitalized) in [True, False]:
+    if literal_eval(value_capitalized) in [True, False, None]:
         return literal_eval(str(value).title())
     else:
         return value
