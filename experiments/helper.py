@@ -1,3 +1,4 @@
+from utilities import get_meta_infos
 import datetime
 import dataclasses
 import json as js
@@ -31,7 +32,6 @@ utils_path = os.path.join(os.path.dirname(__file__), '../utils')
 
 sys.path.append(utils_path)
 
-from utilities import get_meta_infos
 
 meta_infos = get_meta_infos()
 
@@ -59,7 +59,8 @@ def prepare_lexglue_dataset(dataset):
 
 
 def prepare_rcds_swiss_citation_extraction_dataset(dataset):
-    dataset = dataset.rename_columns({'considerations': 'input', 'NER_labels': 'labels'})
+    dataset = dataset.rename_columns(
+        {'considerations': 'input', 'NER_labels': 'labels'})
     return dataset
 
 
@@ -166,7 +167,8 @@ def make_split_with_postfiltering(data_args, split_name, ner_tasks):
             dataset = dataset.select([n for n in range(0, 100)])
         if data_args.running_mode == "experimental":
             num_rows_10_percent = int(round(dataset.num_rows * 0.1, 0))
-            dataset = dataset.select([n for n in range(0, num_rows_10_percent)])
+            dataset = dataset.select(
+                [n for n in range(0, num_rows_10_percent)])
 
     elif len(dataset["input"]) > 100:
         if data_args.running_mode in ["debug", "experimental"]:
@@ -176,7 +178,8 @@ def make_split_with_postfiltering(data_args, split_name, ner_tasks):
 
 
 def make_split(data_args, split_name):
-    ner_tasks = ['greek_legal_ner', 'lener_br', 'legalnero', 'mapa_coarse', 'mapa_fine']
+    ner_tasks = ['greek_legal_ner', 'lener_br',
+                 'legalnero', 'mapa_coarse', 'mapa_fine']
 
     multilingual_datasets = ['swiss_judgment_prediction',
                              'swiss_criticality_prediction_bge_facts',
@@ -195,7 +198,8 @@ def make_split(data_args, split_name):
 
     if data_args.finetuning_task in multilingual_datasets and data_args.language not in ["all"]:
 
-        dataset = make_split_with_postfiltering(data_args, split_name, ner_tasks)
+        dataset = make_split_with_postfiltering(
+            data_args, split_name, ner_tasks)
 
     else:
 
@@ -214,7 +218,8 @@ def model_is_multilingual(model_name_or_path):
 def find_allowed_lang_ids(model_name_or_path):
     allowed_lang_ids_dict = dict()
     if model_name_or_path in ['ZurichNLP/swissbert', 'ZurichNLP/swissbert-xlm-vocab']:
-        allowed_lang_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']  # See https://huggingface.co/ZurichNLP/swissbert
+        # See https://huggingface.co/ZurichNLP/swissbert
+        allowed_lang_ids = ['de_CH', 'fr_CH', 'it_CH', 'rm_CH']
     elif model_name_or_path == "facebook/xmod-base":
         allowed_lang_ids = ['en_XX', 'id_ID', 'vi_VN', 'ru_RU', 'fa_IR', 'sv_SE', 'ja_XX', 'fr_XX', 'de_DE', 'ro_RO',
                             'ko_KR',
@@ -240,9 +245,11 @@ def find_allowed_lang_ids(model_name_or_path):
 
 def insert_lang_ids(dataset, model_name_or_path):
     if model_name_or_path in ['ZurichNLP/swissbert', 'ZurichNLP/swissbert-xlm-vocab', 'facebook/xmod-base']:
-        allowed_lang_ids_dict, allowed_lang_ids = find_allowed_lang_ids(model_name_or_path)
+        allowed_lang_ids_dict, allowed_lang_ids = find_allowed_lang_ids(
+            model_name_or_path)
         allowed_languages = list(allowed_lang_ids_dict.keys())
-        dataset_filtered = dataset.filter(lambda x: x['language'] in allowed_languages)
+        dataset_filtered = dataset.filter(
+            lambda x: x['language'] in allowed_languages)
         lang_ids = dataset_filtered['language']
         lang_ids = [allowed_lang_ids_dict[li] for li in lang_ids]
         lang_ids = [allowed_lang_ids.index(li) for li in lang_ids]
@@ -257,22 +264,23 @@ def get_data(training_args, data_args, model_args):
 
     if training_args.do_train:
         train_dataset = make_split(data_args=data_args, split_name="train")
-        train_dataset = insert_lang_ids(train_dataset, model_args.model_name_or_path)
+        train_dataset = insert_lang_ids(
+            train_dataset, model_args.model_name_or_path)
     if training_args.do_eval:
         eval_dataset = make_split(data_args=data_args, split_name="validation")
-        eval_dataset = insert_lang_ids(eval_dataset, model_args.model_name_or_path)
+        eval_dataset = insert_lang_ids(
+            eval_dataset, model_args.model_name_or_path)
 
     if training_args.do_predict:
         predict_dataset = make_split(data_args=data_args, split_name="test")
-        predict_dataset = insert_lang_ids(predict_dataset, model_args.model_name_or_path)
+        predict_dataset = insert_lang_ids(
+            predict_dataset, model_args.model_name_or_path)
 
     return train_dataset, eval_dataset, predict_dataset
 
 
 def get_label_list_from_ner_tasks(train_dataset, eval_dataset, predict_dataset):
-    label_list = sorted(list(set(
-        train_dataset.features['labels'].feature.names + eval_dataset.features['labels'].feature.names +
-        predict_dataset.features['labels'].feature.names)))
+    label_list = train_dataset.features['labels'].feature.names
 
     return label_list
 
@@ -284,7 +292,8 @@ def get_label_list_from_mltc_tasks(train_dataset, eval_dataset, predict_dataset)
             predict_dataset.features['label'].feature.names)))
     except:
         # Due to some changes with pandas, it seems like there is no feature "name" anymore
-        df = pd.concat([pd.DataFrame(train_dataset), pd.DataFrame(eval_dataset), pd.DataFrame(predict_dataset)])
+        df = pd.concat([pd.DataFrame(train_dataset), pd.DataFrame(
+            eval_dataset), pd.DataFrame(predict_dataset)])
         label_list = set()
         for labels in df.label.tolist():
             for l in labels:
@@ -304,13 +313,14 @@ def get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
 def append_zero_segments(case_encodings, pad_token_id, data_args):
     """appends a list of zero segments to the encodings to make up for missing segments"""
     return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
-            data_args.max_segments - len(case_encodings))
+        data_args.max_segments - len(case_encodings))
 
 
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     if len(id2label.keys()) > 1:  # Otherwise there might be some errors when filtering by language because of the class imbalance
         try:
-            train_dataset = do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args)
+            train_dataset = do_oversampling_to_multiclass_dataset(
+                train_dataset, id2label, data_args)
         except Exception as e:
             print(f"Exception: {e}")
 
@@ -335,11 +345,13 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     datasets = [train_dataset]
 
     num_full_minority_sets = int(majority_len / minority_len)
-    for i in range(num_full_minority_sets - 1):  # -1 because one is already included in the training dataset
+    # -1 because one is already included in the training dataset
+    for i in range(num_full_minority_sets - 1):
         datasets.append(label_datasets[minority_id])
 
     remaining_minority_samples = majority_len % minority_len
-    random_ids = np.random.choice(minority_len, remaining_minority_samples, replace=False)
+    random_ids = np.random.choice(
+        minority_len, remaining_minority_samples, replace=False)
     datasets.append(label_datasets[minority_id].select(random_ids))
     train_dataset = concatenate_datasets(datasets)
 
@@ -378,18 +390,24 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
                          ids[i] != pad_id]  # remove blocks containing only ids
             id_blocks[-1] = [id for id in id_blocks[-1] if
                              id != pad_id]  # remove remaining pad_tokens_ids from the last block
-            token_blocks = [tokenizer.convert_ids_to_tokens(ids) for ids in id_blocks]
-            string_blocks = [tokenizer.convert_tokens_to_string(tokens) for tokens in token_blocks]
+            token_blocks = [tokenizer.convert_ids_to_tokens(
+                ids) for ids in id_blocks]
+            string_blocks = [tokenizer.convert_tokens_to_string(
+                tokens) for tokens in token_blocks]
             batch['segments'].append(string_blocks)
 
         # Tokenize the text
-        tokenized = {'input_ids': [], 'attention_mask': [], 'token_type_ids': []}
+        tokenized = {'input_ids': [],
+                     'attention_mask': [], 'token_type_ids': []}
         for case in batch['segments']:
             case_encodings = tokenizer(case[:data_args.max_segments], padding=padding, truncation=True,
                                        max_length=data_args.max_seg_length, return_token_type_ids=True)
-            tokenized['input_ids'].append(append_zero_segments(case_encodings['input_ids'], pad_id, data_args))
-            tokenized['attention_mask'].append(append_zero_segments(case_encodings['attention_mask'], 0, data_args))
-            tokenized['token_type_ids'].append(append_zero_segments(case_encodings['token_type_ids'], 0, data_args))
+            tokenized['input_ids'].append(append_zero_segments(
+                case_encodings['input_ids'], pad_id, data_args))
+            tokenized['attention_mask'].append(append_zero_segments(
+                case_encodings['attention_mask'], 0, data_args))
+            tokenized['token_type_ids'].append(append_zero_segments(
+                case_encodings['token_type_ids'], 0, data_args))
 
         del batch['segments']
 
@@ -399,7 +417,8 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
             tokenized = tokenizer(
                 batch["input"],
                 padding=padding,
-                max_length=data_args.max_segments * data_args.max_seg_length if data_args.max_segments * data_args.max_seg_length <= 4096 else 4096,
+                max_length=data_args.max_segments * data_args.max_seg_length if data_args.max_segments *
+                data_args.max_seg_length <= 4096 else 4096,
                 truncation=True,
             )
         else:
@@ -507,20 +526,32 @@ def save_metrics(split, metric_results: dict, output_path: str):
 # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
 def compute_metrics_multi_label(p: EvalPrediction):
-    logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+    logits = p.predictions[0] if isinstance(
+        p.predictions, tuple) else p.predictions
     preds = (expit(logits) > 0.5).astype('int32')
 
-    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    accuracy_not_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
-    accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
-    precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    precision_weighted = precision_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    recall_score_macro = recall_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    recall_score_micro = recall_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    recall_score_weighted = recall_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                        average='macro', zero_division=0)
+    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                        average='micro', zero_division=0)
+    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                           average='weighted', zero_division=0)
+    accuracy_not_normalized = accuracy_score(
+        y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_normalized = accuracy_score(
+        y_true=p.label_ids, y_pred=preds, normalize=True)
+    precision_macro = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    precision_micro = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    precision_weighted = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    recall_score_macro = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    recall_score_micro = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    recall_score_weighted = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
 
     return {'macro-f1': macro_f1,
             'micro-f1': micro_f1,
@@ -539,19 +570,31 @@ def compute_metrics_multi_label(p: EvalPrediction):
 # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
 def compute_metrics_multi_class(p: EvalPrediction):
-    logits = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+    logits = p.predictions[0] if isinstance(
+        p.predictions, tuple) else p.predictions
     preds = np.argmax(logits, axis=1)
-    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    accuracy_not_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=False)
-    accuracy_normalized = accuracy_score(y_true=p.label_ids, y_pred=preds, normalize=True)
-    precision_macro = precision_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    precision_micro = precision_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    precision_weighted = precision_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
-    recall_score_macro = recall_score(y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
-    recall_score_micro = recall_score(y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
-    recall_score_weighted = recall_score(y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    macro_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                        average='macro', zero_division=0)
+    micro_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                        average='micro', zero_division=0)
+    weighted_f1 = f1_score(y_true=p.label_ids, y_pred=preds,
+                           average='weighted', zero_division=0)
+    accuracy_not_normalized = accuracy_score(
+        y_true=p.label_ids, y_pred=preds, normalize=False)
+    accuracy_normalized = accuracy_score(
+        y_true=p.label_ids, y_pred=preds, normalize=True)
+    precision_macro = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    precision_micro = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    precision_weighted = precision_score(
+        y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
+    recall_score_macro = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='macro', zero_division=0)
+    recall_score_micro = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='micro', zero_division=0)
+    recall_score_weighted = recall_score(
+        y_true=p.label_ids, y_pred=preds, average='weighted', zero_division=0)
     mcc = matthews_corrcoef(y_true=p.label_ids, y_pred=preds)
     return {'macro-f1': macro_f1,
             'micro-f1': micro_f1,
@@ -583,15 +626,18 @@ class Seqeval:
         # "IOE2", "IOBES", "BILOU"] By adding the prefix I- we make sure that the labels returned are the original
         # labels
         true_predictions = [
-            [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+            [self.label_list[p]
+                for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
         true_labels = [
-            [self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+            [self.label_list[l]
+                for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
 
-        results = self.metric.compute(predictions=true_predictions, references=true_labels, zero_division=0)
+        results = self.metric.compute(
+            predictions=true_predictions, references=true_labels, zero_division=0)
 
         macro_f1 = seqeval_f1_score(true_predictions, true_labels, average="macro", zero_division=0, mode='strict',
                                     scheme=IOB2)
@@ -647,7 +693,8 @@ def convert_id2label(label_output: list, id2label: dict) -> list:
         if lp == 1:
             label_output_indices_of_positive_values.append(n)
 
-    label_output_as_labels = [id2label[label_id] for label_id in label_output_indices_of_positive_values]
+    label_output_as_labels = [id2label[label_id]
+                              for label_id in label_output_indices_of_positive_values]
 
     return label_output_as_labels
 
@@ -669,7 +716,8 @@ def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, 
 
         for language in list_of_languages:
 
-            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == language)
+            predict_dataset_filtered = predict_dataset.filter(
+                lambda example: example['language'] == language)
 
             if len(predict_dataset_filtered['language']) > 0:
                 metric_prefix = language + "_predict/"
@@ -679,12 +727,15 @@ def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, 
 
                 language_specific_metrics.append(metrics)
 
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+    predictions, labels, metrics = trainer.predict(
+        predict_dataset, metric_key_prefix="predict/")
 
-    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
+    predictions = predictions[0] if isinstance(
+        predictions, tuple) else predictions
 
     max_predict_samples = (
-        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(
+            predict_dataset)
     )
     metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
 
@@ -696,7 +747,8 @@ def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, 
     trainer.save_metrics("predict", language_specific_metrics)
     wandb.log(language_specific_metrics)
 
-    output_predict_file = os.path.join(training_args.output_dir, "test_predictions.csv")
+    output_predict_file = os.path.join(
+        training_args.output_dir, "test_predictions.csv")
     if trainer.is_world_process_zero():
         with open(output_predict_file, "w") as writer:
             for index, pred_list in enumerate(predictions):
@@ -707,15 +759,22 @@ def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, 
 
     preds = np.argmax(predictions, axis=-1)
 
-    output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
-    output = pd.DataFrame(output, columns=['text', 'reference', 'predictions', 'logits'])
+    output = list(
+        zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
+    output = pd.DataFrame(
+        output, columns=['text', 'reference', 'predictions', 'logits'])
 
-    output['predictions_as_label'] = output.predictions.apply(lambda x: id2label[x])
-    output['reference_as_label'] = output.reference.apply(lambda x: id2label[x])
+    output['predictions_as_label'] = output.predictions.apply(
+        lambda x: id2label[x])
+    output['reference_as_label'] = output.reference.apply(
+        lambda x: id2label[x])
 
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output_predict_file_new_json = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.csv")
+    output.to_json(output_predict_file_new_json,
+                   orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
     return language_specific_metrics
@@ -728,11 +787,13 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
     if "language" in list(predict_dataset.features.keys()):
         if data_args.language == 'all':
             if not list_of_languages:
-                list_of_languages = sorted(list(set(predict_dataset['language'])))
+                list_of_languages = sorted(
+                    list(set(predict_dataset['language'])))
 
             for l in list_of_languages:
 
-                predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == l)
+                predict_dataset_filtered = predict_dataset.filter(
+                    lambda example: example['language'] == l)
 
                 if len(predict_dataset_filtered['language']) > 0:
                     metric_prefix = l + "_predict/"
@@ -742,12 +803,15 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 
                     language_specific_metrics.append(metrics)
 
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+    predictions, labels, metrics = trainer.predict(
+        predict_dataset, metric_key_prefix="predict/")
 
-    predictions = predictions[0] if isinstance(predictions, tuple) else predictions
+    predictions = predictions[0] if isinstance(
+        predictions, tuple) else predictions
 
     max_predict_samples = (
-        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(
+            predict_dataset)
     )
     metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
 
@@ -763,15 +827,22 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 
     preds = (expit(predictions) > 0.5).astype('int32')
 
-    output = list(zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
-    output = pd.DataFrame(output, columns=['sentence', 'reference', 'predictions', 'logits'])
+    output = list(
+        zip(predict_dataset_df[name_of_input_field].tolist(), labels, preds, predictions))
+    output = pd.DataFrame(
+        output, columns=['sentence', 'reference', 'predictions', 'logits'])
 
-    output['predictions_as_label'] = output.predictions.apply(lambda x: convert_id2label(x, id2label))
-    output['reference_as_label'] = output.reference.apply(lambda x: convert_id2label(x, id2label))
+    output['predictions_as_label'] = output.predictions.apply(
+        lambda x: convert_id2label(x, id2label))
+    output['reference_as_label'] = output.reference.apply(
+        lambda x: convert_id2label(x, id2label))
 
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output_predict_file_new_json = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.csv")
+    output.to_json(output_predict_file_new_json,
+                   orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
 
@@ -783,7 +854,8 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
 
         for language in list_of_languages:
 
-            predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == language)
+            predict_dataset_filtered = predict_dataset.filter(
+                lambda example: example['language'] == language)
 
             if len(predict_dataset_filtered['language']) > 0:
                 metric_prefix = language + "_predict/"
@@ -793,10 +865,12 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
 
                 language_specific_metrics.append(metrics)
 
-    predictions, labels, metrics = trainer.predict(predict_dataset, metric_key_prefix="predict/")
+    predictions, labels, metrics = trainer.predict(
+        predict_dataset, metric_key_prefix="predict/")
 
     max_predict_samples = (
-        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(predict_dataset)
+        data_args.max_predict_samples if data_args.max_predict_samples is not None else len(
+            predict_dataset)
     )
     metrics["predict_samples"] = min(max_predict_samples, len(predict_dataset))
 
@@ -809,7 +883,8 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
     wandb.log(language_specific_metrics)
 
     preds = np.argmax(predictions, axis=2)
-    textual_data = tokenizer.batch_decode(predict_dataset['input_ids'], skip_special_tokens=True)
+    textual_data = tokenizer.batch_decode(
+        predict_dataset['input_ids'], skip_special_tokens=True)
 
     words = list()
     preds_final = list()
@@ -830,14 +905,20 @@ def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2labe
         preds_final.append(p)
 
     output = list(zip(words, references, preds_final, predictions))
-    output = pd.DataFrame(output, columns=['words', 'references', 'predictions', 'logits'])
+    output = pd.DataFrame(
+        output, columns=['words', 'references', 'predictions', 'logits'])
 
-    output['predictions_as_label'] = output.predictions.apply(lambda label_ids: [id2label[_id] for _id in label_ids])
-    output['references_as_label'] = output.references.apply(lambda label_ids: [id2label[_id] for _id in label_ids])
+    output['predictions_as_label'] = output.predictions.apply(
+        lambda label_ids: [id2label[_id] for _id in label_ids])
+    output['references_as_label'] = output.references.apply(
+        lambda label_ids: [id2label[_id] for _id in label_ids])
 
-    output_predict_file_new_json = os.path.join(training_args.output_dir, "test_predictions_detailed.json")
-    output_predict_file_new_csv = os.path.join(training_args.output_dir, "test_predictions_detailed.csv")
-    output.to_json(output_predict_file_new_json, orient='records', force_ascii=False)
+    output_predict_file_new_json = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.json")
+    output_predict_file_new_csv = os.path.join(
+        training_args.output_dir, "test_predictions_detailed.csv")
+    output.to_json(output_predict_file_new_json,
+                   orient='records', force_ascii=False)
     output.to_csv(output_predict_file_new_csv)
 
 
@@ -889,7 +970,8 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
         revision=model_args.revision
     )
 
-    model_class = get_model_class_for_sequence_classification(config.model_type, model_args)
+    model_class = get_model_class_for_sequence_classification(
+        config.model_type, model_args)
 
     model = model_class.from_pretrained(
         model_args.model_name_or_path,
@@ -898,10 +980,12 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
         revision=model_args.revision
     )
 
-    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
+    tokenizer = get_tokenizer(
+        model_args.model_name_or_path, model_args.revision)
 
     if model_args.hierarchical and config.model_type != 'longformer':
-        model = build_hierarchical_model(model, data_args.max_segments, data_args.max_seg_length)
+        model = build_hierarchical_model(
+            model, data_args.max_segments, data_args.max_seg_length)
 
     return model, tokenizer, config
 
@@ -925,7 +1009,8 @@ def generate_Model_Tokenizer_for_TokenClassification(model_args, data_args, trai
         revision=model_args.revision
     )
 
-    tokenizer = get_tokenizer(model_args.model_name_or_path, model_args.revision)
+    tokenizer = get_tokenizer(
+        model_args.model_name_or_path, model_args.revision)
 
     # Hierarchical not applied for token classification taks
     # if model_args.hierarchical == True:
@@ -1014,8 +1099,10 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                 training_args.learning_rate = config.learning_rate
 
             # Specify the run-specific output directory with the hyperparameters chosen
-            run_specific_output_directory = get_the_run_name_for_hyperparameter_tuning(data_args, training_args)
-            training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
+            run_specific_output_directory = get_the_run_name_for_hyperparameter_tuning(
+                data_args, training_args)
+            training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + \
+                '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
 
             trainer = trainer_object(
                 model_init=model_init,
@@ -1046,7 +1133,8 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                                          predict_dataset=predict_dataset, id2label=id2label,
                                          name_of_input_field="input")
         elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "MLTC":
-            langs = train_dataset['language'] + eval_dataset['language'] + predict_dataset['language']
+            langs = train_dataset['language'] + \
+                eval_dataset['language'] + predict_dataset['language']
             langs = sorted(list(set(langs)))
             make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
                                          id2label=id2label, training_args=training_args, list_of_languages=langs)
