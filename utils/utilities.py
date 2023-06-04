@@ -268,12 +268,12 @@ task_type_mapping = meta_infos["task_type_mapping"]
 max_sequence_lengths = dict()
 for task in meta_infos["task_default_arguments"].keys():
     if "max_segments" in meta_infos["task_default_arguments"][task][
-        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
-        "DataTrainingArguments"]:
+            "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+            "DataTrainingArguments"]:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-                                         "max_segments"] * \
-                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-                                         "max_seg_length"]
+            "max_segments"] * \
+            meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+            "max_seg_length"]
     else:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
             "max_seq_length"]
@@ -454,11 +454,11 @@ def generate_command_for_experiments(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-                           ' --greater_is_better {GREATER_IS_BETTER} '
+            ' --greater_is_better {GREATER_IS_BETTER} '
 
     if (data["language"] is not None):
         command_template = command_template + ' --language {LANGUAGE} '
@@ -467,7 +467,7 @@ def generate_command_for_experiments(**data):
                                               'LANGUAGE}/seed_{SEED}'
     else:
         command_template = command_template + \
-                           ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
+            ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
@@ -486,9 +486,10 @@ def generate_command_for_experiments(**data):
                 # It seems like fp16 triggers eval/loss nan with t5: https://discuss.huggingface.co/t/t5-variants-return-training-loss-0-and-validation-loss-nan-while-fine-tuning/30839/5
                 # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
                 # BUT, if the environment is set up correctly, also fp16_full_eval should work
-                if str(data["hierarchical"]).lower() == 'true':  # We perceived some issues with xlm-roberta-base and
+                # We perceived some issues with xlm-roberta-base and
+                if str(data["hierarchical"]).lower() == 'true':
                     # xlm-roberta-large. They returned a nan loss with fp16 in combination with hierarchical models
-                    if not bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])):
+                    if not bool(re.search('-large', data["model_name"])):
                         command_template += ' --fp16 --fp16_full_eval'
                     else:
                         command_template += ' --fp16 '
@@ -507,9 +508,11 @@ def generate_command_for_experiments(**data):
     if data["lower_case"]:
         command_template = command_template + ' --do_lower_case '
     if data["weight_decay"] is not None:
-        command_template = command_template + ' --weight_decay ' + str(data["weight_decay"])
+        command_template = command_template + \
+            ' --weight_decay ' + str(data["weight_decay"])
     if data["warmup_ratio"] is not None:
-        command_template = command_template + ' --warmup_ratio ' + str(data["warmup_ratio"])
+        command_template = command_template + \
+            ' --warmup_ratio ' + str(data["warmup_ratio"])
 
     # mdeberta does not work with fp16 because it was trained with bf16
     # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -581,11 +584,11 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-                           ' --greater_is_better {GREATER_IS_BETTER} '
+            ' --greater_is_better {GREATER_IS_BETTER} '
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
@@ -608,7 +611,7 @@ def generate_command_for_hyperparameter_search(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
@@ -769,7 +772,8 @@ def run_experiment(
     # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
     language_model_info = language_model_type.split('_')
     if len(language_model_info) != 3:  # we got a direct language model just use it
-        models_to_be_used = language_model_type.split(',')  # This way we can comma-seperate several language models
+        # This way we can comma-seperate several language models
+        models_to_be_used = language_model_type.split(',')
     else:  # find out what models we want to run
         types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
 
