@@ -489,7 +489,7 @@ def generate_command_for_experiments(**data):
                 # We perceived some issues with xlm-roberta-base and
                 if str(data["hierarchical"]).lower() == 'true':
                     # xlm-roberta-large. They returned a nan loss with fp16 in combination with hierarchical models
-                    if not bool(re.search('-large', data["model_name"])):
+                    if not bool(re.search('(-large|ZurichNLP/swissbert)', data["model_name"])):
                         command_template += ' --fp16 --fp16_full_eval'
                     else:
                         command_template += ' --fp16 '
