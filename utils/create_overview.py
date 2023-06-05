@@ -20,7 +20,8 @@ from scipy.stats import hmean
 class RevisionInserter:
 
     def __init__(self, report_spec_name):
-        self.report_specs = self.read_report_specs(report_spec_name=report_spec_name)
+        self.report_specs = self.read_report_specs(
+            report_spec_name=report_spec_name)
         self.revision_lookup_table = self.prepare_revision_lookup_table()
         if self.report_specs:
             self.model_order_acc_to_report_specs = [_name_or_path.split('@')[0] for _name_or_path in
@@ -92,7 +93,7 @@ class ResultAggregator(RevisionInserter):
                  wandb_api_key=None,
                  which_language=None,
                  required_seeds=[1, 2, 3],
-                 mean_type=None
+                 mean_type='harmonic'
                  ):
         super().__init__(report_spec_name)
         """
@@ -260,7 +261,8 @@ class ResultAggregator(RevisionInserter):
                     entry['project_name'] = project_name
                     entry['state'] = x.state
                     if x.config["finetuning_task"] == 'case_hold':
-                        entry["finetuning_task"] = 'en_' + x.config["finetuning_task"]
+                        entry["finetuning_task"] = 'en_' + \
+                            x.config["finetuning_task"]
                     else:
                         entry["finetuning_task"] = x.config['finetuning_task']
 
@@ -427,7 +429,8 @@ class ResultAggregator(RevisionInserter):
         return '+' in str(loss)
 
     def find_best_revisions(self, dataframe):
-        dataframe = dataframe.sort_values(['finetuning_task', '_name_or_path', 'seed', 'revision'])
+        dataframe = dataframe.sort_values(
+            ['finetuning_task', '_name_or_path', 'seed', 'revision'])
         dataframe_new = list()
         for finetuning_task, infos in self.revision_lookup_table.items():
             for _name_or_path, revision in infos.items():
@@ -442,7 +445,8 @@ class ResultAggregator(RevisionInserter):
                 seeds_extracted = {row['seed'] for row in dataframe_new if
                                    row['finetuning_task'] == finetuning_task and row['_name_or_path'] == _name_or_path}
                 if seeds_extracted != set(self.required_seeds):
-                    missing_seeds = [s for s in self.required_seeds if s not in seeds_extracted]
+                    missing_seeds = [
+                        s for s in self.required_seeds if s not in seeds_extracted]
                     print('Missing seeds: ', missing_seeds)
                     for seed in missing_seeds:
                         for row in sub_dataframe.to_dict(orient="records"):
@@ -510,7 +514,8 @@ class ResultAggregator(RevisionInserter):
         else:
             results = results[results.revisions_match == True]
 
-        results = results.sort_values(["finetuning_task", "_name_or_path", "seed", "predict/_" + self.score])
+        results = results.sort_values(
+            ["finetuning_task", "_name_or_path", "seed", "predict/_" + self.score])
         results = results.drop_duplicates(
             ["seed", "finetuning_task", "_name_or_path", "language"], keep='last')
 
@@ -582,7 +587,7 @@ class ResultAggregator(RevisionInserter):
 
             for am in available_models:
                 list_of_seeds = set(self.results[(self.results.finetuning_task == task) & (
-                        self.results._name_or_path == am)].seed.unique())
+                    self.results._name_or_path == am)].seed.unique())
                 list_of_seeds = set([str(int(x)) for x in list_of_seeds])
                 if list_of_seeds.intersection(required_seeds) != required_seeds:
                     missing_seeds = set(
@@ -630,7 +635,7 @@ class ResultAggregator(RevisionInserter):
             "language"]
 
         self.results["look_up"] = self.results["finetuning_task"] + "_" + self.results["_name_or_path"] + "_" + \
-                                  self.results["language"]
+            self.results["language"]
 
         self.results['completed_task'] = np.where(
             self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
@@ -674,7 +679,7 @@ class ResultAggregator(RevisionInserter):
         if only_completed_tasks:
             # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
-                    self.results.finetuning_task.isin(incomplete_tasks) == False)][
+                self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
 
         else:
@@ -727,7 +732,8 @@ class ResultAggregator(RevisionInserter):
             '''all_seed_values = [pair for pair in all_seed_values if
                                isinstance(pair[1], float) and not pair[1] != np.nan]'''
             if len(all_seed_values) > 0:
-                all_seed_values_sorted = sorted(all_seed_values, key=lambda x: x[1], reverse=True)
+                all_seed_values_sorted = sorted(
+                    all_seed_values, key=lambda x: x[1], reverse=True)
                 best_seed = all_seed_values_sorted[0][0]
                 best_seed_value = all_seed_values_sorted[0][1]
             else:
@@ -735,7 +741,8 @@ class ResultAggregator(RevisionInserter):
                 best_seed_value = ''
             df_pivot.at[i, 'best_seed'] = best_seed
             df_pivot.at[i, 'best_seed_value'] = best_seed_value
-            df_pivot['standard_deviation'] = df_pivot[required_seeds].std(axis=1)
+            df_pivot['standard_deviation'] = df_pivot[required_seeds].std(
+                axis=1)
 
             if which_language is not None:
                 df_pivot = self.filter_by_language(df_pivot, which_language)
@@ -842,7 +849,8 @@ class ResultAggregator(RevisionInserter):
             mean_function = hmean
         elif self.mean_type is None:
             mean_function = mean
-        list_of_values = [x for x in list_of_values if type(x) != str and x > 0]
+        list_of_values = [
+            x for x in list_of_values if type(x) != str and x > 0]
         if len(list_of_values) > 0:
             return self.convert_numpy_float_to_python_float(mean_function(list_of_values))
         else:
@@ -890,9 +898,11 @@ class ResultAggregator(RevisionInserter):
         columns = dataframe.columns.tolist()
         for c in columns:
             if c in self.meta_infos['task_abbreviations'].keys():
-                dataframe.rename(columns={c: self.meta_infos['task_abbreviations'][c]}, inplace=True)
+                dataframe.rename(
+                    columns={c: self.meta_infos['task_abbreviations'][c]}, inplace=True)
             elif c in self.meta_infos['dataset_abbreviations'].keys():
-                dataframe.rename(columns={c: self.meta_infos['dataset_abbreviations'][c]}, inplace=True)
+                dataframe.rename(
+                    columns={c: self.meta_infos['dataset_abbreviations'][c]}, inplace=True)
 
         return dataframe
 
@@ -911,7 +921,8 @@ class ResultAggregator(RevisionInserter):
     def make_bold(self, values):
         values_to_check = [v if isinstance(v, float) else 0 for v in values]
         highest_value_index = np.argmax(values_to_check)
-        values[highest_value_index] = '\\bf{' + str(values[highest_value_index]) + '}'
+        values[highest_value_index] = '\\bf{' + \
+            str(values[highest_value_index]) + '}'
         return values
 
     def highligh_highest_value(self, dataframe, column):
@@ -926,13 +937,15 @@ class ResultAggregator(RevisionInserter):
         empty_columns = dataframe.columns[dataframe.eq('').all()]
         dataframe = dataframe.drop(empty_columns, axis=1)
         dataframe = dataframe.applymap(lambda x: self.round_value(x))
-        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, np.nan))
+        dataframe = dataframe.applymap(
+            lambda x: self.replace_empty_string(x, np.nan))
         if self.model_order_acc_to_report_specs and len(self.model_order_acc_to_report_specs) == dataframe.shape[0]:
             dataframe = dataframe.reindex(self.model_order_acc_to_report_specs)
 
         # Insert Model name abbreviations
         if set(dataframe.index.tolist()) == set(self.model_order_acc_to_report_specs):
-            dataframe = dataframe.rename(index=self.meta_infos["model_abbrevations"])
+            dataframe = dataframe.rename(
+                index=self.meta_infos["model_abbrevations"])
 
         return dataframe
 
@@ -983,12 +996,12 @@ class ResultAggregator(RevisionInserter):
                 logging.warning(
                     'Attention! ' + _name_or_path + 'has string values as mean score for the following '
                                                     'datasets/languages: ' + ', '.join(
-                        string_values_indices))
+                                                        string_values_indices))
 
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(
                 all_mean_macro_f1_scores_cleaned)
             dataframe.at[_name_or_path,
-            column_name] = all_mean_macro_f1_scores_mean
+                         column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
         # first_column = [column_name]
@@ -1022,7 +1035,7 @@ class ResultAggregator(RevisionInserter):
                     mean_macro_f1_score = self.get_average_score(
                         finetuning_task, _name_or_path)
                     overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                                         finetuning_task] = mean_macro_f1_score
 
         else:
             for _name_or_path in allowed_models:
@@ -1082,7 +1095,7 @@ class ResultAggregator(RevisionInserter):
                             mean_macro_f1_score = ""
 
                     overview_template.at[_name_or_path,
-                    finetuning_task] = mean_macro_f1_score
+                                         finetuning_task] = mean_macro_f1_score
 
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
@@ -1116,8 +1129,10 @@ class ResultAggregator(RevisionInserter):
                 self.config_aggregated_score.index.isin(model_constraint)]
 
         config_aggregated_score = deepcopy(self.config_aggregated_score)
-        config_aggregated_score = self.insert_abbreviations(config_aggregated_score)
-        config_aggregated_score = self.postprocess_columns(config_aggregated_score)
+        config_aggregated_score = self.insert_abbreviations(
+            config_aggregated_score)
+        config_aggregated_score = self.postprocess_columns(
+            config_aggregated_score)
         if write_to_csv:
             if average_over_language == False:
                 config_aggregated_score.to_csv(
@@ -1193,7 +1208,7 @@ class ResultAggregator(RevisionInserter):
                     dataset_mean = ''
 
                 self.dataset_aggregated_score.at[_name_or_path,
-                dataset] = dataset_mean
+                                                 dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -1204,8 +1219,10 @@ class ResultAggregator(RevisionInserter):
 
         if write_to_csv:
             dataset_aggregated_score = deepcopy(self.dataset_aggregated_score)
-            dataset_aggregated_score = self.insert_abbreviations(dataset_aggregated_score)
-            dataset_aggregated_score = self.postprocess_columns(dataset_aggregated_score)
+            dataset_aggregated_score = self.insert_abbreviations(
+                dataset_aggregated_score)
+            dataset_aggregated_score = self.postprocess_columns(
+                dataset_aggregated_score)
             if average_over_language == False:
                 dataset_aggregated_score.to_csv(
                     f'{self.output_dir}/dataset_aggregated_scores_simple.csv')
@@ -1225,7 +1242,7 @@ class ResultAggregator(RevisionInserter):
 
         tasks_relevant_for_language = list(
             self.results[(self.results[score_type].isnull() == False) & (
-                    self.results[score_type] != "")].finetuning_task.unique())
+                self.results[score_type] != "")].finetuning_task.unique())
 
         if len(task_constraint) > 0:
             tasks_relevant_for_language = [
@@ -1291,7 +1308,7 @@ class ResultAggregator(RevisionInserter):
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
                 self.language_aggregated_score.at[language_model,
-                language] = score
+                                                  language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -1303,10 +1320,12 @@ class ResultAggregator(RevisionInserter):
         # Order of columns
         column_order = sorted(self.language_aggregated_score.columns.tolist())
         column_order = [c for c in column_order if c != 'Agg.']
-        self.language_aggregated_score = self.language_aggregated_score[column_order + ['Agg.']]
+        self.language_aggregated_score = self.language_aggregated_score[column_order + [
+            'Agg.']]
 
         language_aggregated_score = deepcopy(self.language_aggregated_score)
-        language_aggregated_score = self.postprocess_columns(language_aggregated_score)
+        language_aggregated_score = self.postprocess_columns(
+            language_aggregated_score)
 
         if write_to_csv:
             language_aggregated_score.to_csv(
@@ -1318,10 +1337,12 @@ class ResultAggregator(RevisionInserter):
 
     def make_latext_table(self, dataframe, file_name):
         dataframe.fillna('', inplace=True)
-        dataframe = dataframe.applymap(lambda x: self.replace_empty_string(x, '-'))
+        dataframe = dataframe.applymap(
+            lambda x: self.replace_empty_string(x, '-'))
         available_columns = dataframe.columns.tolist()
         for col in available_columns:
-            dataframe = self.highligh_highest_value(dataframe=dataframe, column=col)
+            dataframe = self.highligh_highest_value(
+                dataframe=dataframe, column=col)
             dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
 
         with open(file_name, 'w') as f:
@@ -1375,11 +1396,11 @@ if __name__ == "__main__":
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
                           report_spec_name=args.report_spec,
-                          mean_type=None,
-                          fill_with_wrong_revisions=True)
+                          fill_with_wrong_revisions=False)
 
     ra.get_info()
-    model_constraint = [_name_or_path.split('@')[0] for _name_or_path in report_spec['_name_or_path']]
+    model_constraint = [_name_or_path.split(
+        '@')[0] for _name_or_path in report_spec['_name_or_path']]
     ra.create_report(task_constraint=report_spec['finetuning_task'],
                      model_constraint=model_constraint,
                      only_completed_tasks=False)
