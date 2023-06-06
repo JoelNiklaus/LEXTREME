@@ -883,9 +883,9 @@ class ResultAggregator(RevisionInserter):
             return ""  # There is nothing to be calculated
         else:
 
-            mean_value = pd.to_numeric(results_filtered[score]).mean()
+            mean_value = self.get_mean_from_list_of_values(results_filtered[score].tolist())
 
-            mean_value = self.convert_numpy_float_to_python_float(mean_value)
+            # mean_value = self.convert_numpy_float_to_python_float(mean_value)
 
             if mean_value in ["", np.nan]:
                 print('There is an error for ',
