@@ -45,10 +45,13 @@ class RevisionInserter:
         return revision_lookup_table
 
     def insert_revision(self, finetuning_task, _name_or_path):
-        if _name_or_path in self.revision_lookup_table.keys():
-            return self.revision_lookup_table[finetuning_task][_name_or_path]
+        if finetuning_task in self.revision_lookup_table.keys():
+            if _name_or_path in self.revision_lookup_table[finetuning_task].keys():
+                return self.revision_lookup_table[finetuning_task][_name_or_path]
+            else:
+                'no information'
         else:
-            return 'main'
+            return 'no information'
 
     def revision_does_match(self, finetuning_task, _name_or_path, revision_from_wandb):
         if finetuning_task in self.revision_lookup_table.keys():
@@ -262,7 +265,7 @@ class ResultAggregator(RevisionInserter):
                     entry['state'] = x.state
                     if x.config["finetuning_task"] == 'case_hold':
                         entry["finetuning_task"] = 'en_' + \
-                            x.config["finetuning_task"]
+                                                   x.config["finetuning_task"]
                     else:
                         entry["finetuning_task"] = x.config['finetuning_task']
 
@@ -306,6 +309,8 @@ class ResultAggregator(RevisionInserter):
         results.to_csv(
             f"{self.output_dir}/current_wandb_results_unprocessed.csv", index=False)
         results = self.edit_result_dataframe(results)
+        if self.which_language is not None:
+            results = self.filter_by_language(results, self.which_language)
         return results
 
     def edit_column_name(self, column_name):
@@ -587,7 +592,7 @@ class ResultAggregator(RevisionInserter):
 
             for am in available_models:
                 list_of_seeds = set(self.results[(self.results.finetuning_task == task) & (
-                    self.results._name_or_path == am)].seed.unique())
+                        self.results._name_or_path == am)].seed.unique())
                 list_of_seeds = set([str(int(x)) for x in list_of_seeds])
                 if list_of_seeds.intersection(required_seeds) != required_seeds:
                     missing_seeds = set(
@@ -635,7 +640,7 @@ class ResultAggregator(RevisionInserter):
             "language"]
 
         self.results["look_up"] = self.results["finetuning_task"] + "_" + self.results["_name_or_path"] + "_" + \
-            self.results["language"]
+                                  self.results["language"]
 
         self.results['completed_task'] = np.where(
             self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
@@ -666,7 +671,6 @@ class ResultAggregator(RevisionInserter):
                                               required_seeds=required_seeds, which_language=which_language)
 
         incomplete_tasks = set(seed_check.finetuning_task.unique())
-        print('Incomplete tasks are: ', incomplete_tasks)
 
         required_seeds = list(required_seeds)
         required_seeds = sorted(int(s) for s in required_seeds)
@@ -679,7 +683,7 @@ class ResultAggregator(RevisionInserter):
         if only_completed_tasks:
             # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
             df = self.results[(self.results.seed.isin(required_seeds)) & (
-                self.results.finetuning_task.isin(incomplete_tasks) == False)][
+                    self.results.finetuning_task.isin(incomplete_tasks) == False)][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
 
         else:
@@ -743,9 +747,6 @@ class ResultAggregator(RevisionInserter):
             df_pivot.at[i, 'best_seed_value'] = best_seed_value
             df_pivot['standard_deviation'] = df_pivot[required_seeds].std(
                 axis=1)
-
-            if which_language is not None:
-                df_pivot = self.filter_by_language(df_pivot, which_language)
 
         return df_pivot
 
@@ -844,19 +845,22 @@ class ResultAggregator(RevisionInserter):
 
         return final_value
 
-    def get_mean_from_list_of_values(self, list_of_values):
+    def get_mean_from_list_of_values(self, list_of_values, with_standard_deviation=False):
         if self.mean_type == 'harmonic':
             mean_function = hmean
         elif self.mean_type is None:
             mean_function = mean
         list_of_values = [
             x for x in list_of_values if type(x) != str and x > 0]
-        if len(list_of_values) > 0:
+        if len(list_of_values) > 0 and not with_standard_deviation:
             return self.convert_numpy_float_to_python_float(mean_function(list_of_values))
+        elif len(list_of_values) > 0 and with_standard_deviation:
+            return (mean_function(list_of_values), np.std(list_of_values))
         else:
             return ""
 
-    def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None) -> float:
+    def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None,
+                          with_standard_deviation: bool = False) -> float:
 
         if score is None:
             score = 'predict/_' + self.score
@@ -882,16 +886,16 @@ class ResultAggregator(RevisionInserter):
                          ' with the model ' + _name_or_path + " has no meaningful results.")
             return ""  # There is nothing to be calculated
         else:
-
-            mean_value = self.get_mean_from_list_of_values(results_filtered[score].tolist())
+            mean_value = self.get_mean_from_list_of_values(results_filtered[score].tolist(),
+                                                           with_standard_deviation=with_standard_deviation)
 
             # mean_value = self.convert_numpy_float_to_python_float(mean_value)
 
             if mean_value in ["", np.nan]:
-                print('There is an error for ',
-                      finetuning_task, _name_or_path, score)
+                print('There is an error for ', finetuning_task, _name_or_path, score)
                 print(results_filtered[score].tolist())
-
+        if isinstance(mean_value, str):
+            print('Erroooooooorrrrrr: ', finetuning_task, _name_or_path)
         return mean_value
 
     def insert_abbreviations(self, dataframe):
@@ -909,6 +913,11 @@ class ResultAggregator(RevisionInserter):
     def round_value(self, value, places=1):
         if isinstance(value, float):
             return round(value * 100, places)
+        elif isinstance(value, tuple) and isinstance(value[0], float) and isinstance(value[1], float):
+            # This is needed for cases where we insert standard deviation in the cells
+            score = round(value[0] * 100, places)
+            standard_deviation = round(value[1] * 100, places)
+            return (score, standard_deviation)
         else:
             return value
 
@@ -922,7 +931,7 @@ class ResultAggregator(RevisionInserter):
         values_to_check = [v if isinstance(v, float) else 0 for v in values]
         highest_value_index = np.argmax(values_to_check)
         values[highest_value_index] = '\\bf{' + \
-            str(values[highest_value_index]) + '}'
+                                      str(values[highest_value_index]) + '}'
         return values
 
     def highligh_highest_value(self, dataframe, column):
@@ -987,6 +996,7 @@ class ResultAggregator(RevisionInserter):
         for _name_or_path in dataframe.index.tolist():
             columns = dataframe.columns.tolist()
             all_mean_macro_f1_scores = dataframe.loc[_name_or_path].tolist()
+            all_mean_macro_f1_scores = [plm[0] if isinstance(plm, tuple) else plm for plm in all_mean_macro_f1_scores]
             all_mean_macro_f1_scores_cleaned = [
                 x for x in all_mean_macro_f1_scores if type(x) != str]
             string_values_indices = [columns[all_mean_macro_f1_scores.index(x)] for x in all_mean_macro_f1_scores if
@@ -996,12 +1006,10 @@ class ResultAggregator(RevisionInserter):
                 logging.warning(
                     'Attention! ' + _name_or_path + 'has string values as mean score for the following '
                                                     'datasets/languages: ' + ', '.join(
-                                                        string_values_indices))
+                        string_values_indices))
 
-            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(
-                all_mean_macro_f1_scores_cleaned)
-            dataframe.at[_name_or_path,
-                         column_name] = all_mean_macro_f1_scores_mean
+            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
+            dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
 
         columns = sorted(dataframe.columns.tolist())
         # first_column = [column_name]
@@ -1015,7 +1023,7 @@ class ResultAggregator(RevisionInserter):
         return dataframe
 
     def insert_config_average_scores(self, overview_template, average_over_language=True, task_constraint: list = [],
-                                     model_constraint: list = []):
+                                     model_constraint: list = [], with_standard_deviation: bool = False):
 
         logging.info("*** Calculating average scores ***")
         allowed_models = list(self.results._name_or_path.unique())
@@ -1032,10 +1040,10 @@ class ResultAggregator(RevisionInserter):
         if not average_over_language:
             for _name_or_path in allowed_models:
                 for finetuning_task in allowed_tasks:
-                    mean_macro_f1_score = self.get_average_score(
-                        finetuning_task, _name_or_path)
-                    overview_template.at[_name_or_path,
-                                         finetuning_task] = mean_macro_f1_score
+                    mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
+                                                                 _name_or_path=_name_or_path,
+                                                                 with_standard_deviation=with_standard_deviation)
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         else:
             for _name_or_path in allowed_models:
@@ -1043,11 +1051,11 @@ class ResultAggregator(RevisionInserter):
 
                     # We check of the finetuning task has more than one language
                     # If not, we can process with the normal predict/_macro-f1 that stands for the entire config
-                    # If yes, we loop through all avalaible language-specific macro-f1 scores
+                    # If yes, we loop through all available language-specific macro-f1 scores
 
                     if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
-                        mean_macro_f1_score = self.get_average_score(
-                            finetuning_task, _name_or_path)
+                        mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
+                                                                     _name_or_path=_name_or_path)
 
                     elif len(self.meta_infos["task_language_mapping"][finetuning_task]) > 1:
                         predict_language_mean_collected = list()
@@ -1059,22 +1067,25 @@ class ResultAggregator(RevisionInserter):
                             if language in self.meta_infos["task_language_mapping"][finetuning_task]:
                                 if self.meta_infos["model_language_lookup_table"][_name_or_path] == language or \
                                         self.meta_infos["model_language_lookup_table"][_name_or_path] == 'all':
-                                    predict_language_mean = self.get_average_score(
-                                        finetuning_task, _name_or_path, aps)
+                                    predict_language_mean = self.get_average_score(finetuning_task=finetuning_task,
+                                                                                   _name_or_path=_name_or_path,
+                                                                                   score=aps)
                                     # This is to avoid string values; if there were no scores available I returned an
                                     # empty string, because 0.0 would be missleading
                                     if predict_language_mean not in ["", np.nan]:
-                                        predict_language_mean_collected.append(
-                                            predict_language_mean)
-                                        predict_language_collected.append(
-                                            language)
-                                    # else:
+                                        predict_language_mean_collected.append(predict_language_mean)
+                                        predict_language_collected.append(language)
+                                    else:
+                                        print(_name_or_path,finetuning_task, ' has no values!')
                                     # TODO: Add logger informartion
 
                         if len(predict_language_mean_collected) > 0:
 
-                            mean_macro_f1_score = self.get_mean_from_list_of_values(
-                                predict_language_mean_collected)
+                            predict_language_mean_collected = [plm[0] if isinstance(plm, tuple) else plm for plm in
+                                                               predict_language_mean_collected]
+
+                            mean_macro_f1_score = self.get_mean_from_list_of_values(predict_language_mean_collected,
+                                                                                    with_standard_deviation=with_standard_deviation)
 
                             if set(predict_language_collected) != set(
                                     self.meta_infos["task_language_mapping"][finetuning_task]):
@@ -1094,8 +1105,7 @@ class ResultAggregator(RevisionInserter):
                         else:
                             mean_macro_f1_score = ""
 
-                    overview_template.at[_name_or_path,
-                                         finetuning_task] = mean_macro_f1_score
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
 
         # if overview_template.isnull().values.any():
         # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
@@ -1103,7 +1113,7 @@ class ResultAggregator(RevisionInserter):
 
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
                                     column_name="Agg.", task_constraint: list = [],
-                                    model_constraint: list = []):
+                                    model_constraint: list = [], with_standard_deviation=False):
 
         # Insert aggregated mean for each model name
 
@@ -1119,7 +1129,8 @@ class ResultAggregator(RevisionInserter):
         self.insert_config_average_scores(overview_template=self.config_aggregated_score,
                                           average_over_language=average_over_language,
                                           task_constraint=task_constraint,
-                                          model_constraint=model_constraint)
+                                          model_constraint=model_constraint,
+                                          with_standard_deviation=with_standard_deviation)
 
         self.config_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.config_aggregated_score, column_name=column_name)
@@ -1137,15 +1148,23 @@ class ResultAggregator(RevisionInserter):
             if average_over_language == False:
                 config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_simple.csv')
-                config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                    f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
+                if not with_standard_deviation:
+                    config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
+                        f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
+                if with_standard_deviation:
+                    config_aggregated_score.to_excel(
+                        f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
                 self.make_latext_table(
                     config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
             if average_over_language == True:
                 config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
-                config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                    f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
+                if not with_standard_deviation:
+                    config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
+                        f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
+                if with_standard_deviation:
+                    config_aggregated_score.to_excel(
+                        f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
                 self.make_latext_table(config_aggregated_score,
                                        f'{self.output_dir}/config_aggregated_scores_average_over_language.tex')
 
@@ -1208,7 +1227,7 @@ class ResultAggregator(RevisionInserter):
                     dataset_mean = ''
 
                 self.dataset_aggregated_score.at[_name_or_path,
-                                                 dataset] = dataset_mean
+                dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -1238,11 +1257,11 @@ class ResultAggregator(RevisionInserter):
                 self.make_latext_table(dataset_aggregated_score,
                                        f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
 
-    def get_aggregated_score_for_language(self, score_type, task_constraint: list = []):
+    def get_aggregated_score_for_language(self, score_type, task_constraint: list = [], with_standard_deviation=False):
 
         tasks_relevant_for_language = list(
             self.results[(self.results[score_type].isnull() == False) & (
-                self.results[score_type] != "")].finetuning_task.unique())
+                    self.results[score_type] != "")].finetuning_task.unique())
 
         if len(task_constraint) > 0:
             tasks_relevant_for_language = [
@@ -1257,7 +1276,8 @@ class ResultAggregator(RevisionInserter):
         for ft in tasks_relevant_for_language:
             for lm in languge_models_relevant_for_language:
                 # print(ft, lm, score_type)
-                result = self.get_average_score(ft, lm, score_type)
+                result = self.get_average_score(finetuning_task=ft, _name_or_path=lm, score=score_type,
+                                                with_standard_deviation=with_standard_deviation)
                 if result not in ["", np.nan]:
                     dataset_for_finetuning_task = self.meta_infos['config_to_dataset'][ft]
                     if dataset_for_finetuning_task not in language_model_config_score_dict[lm].keys():
@@ -1308,7 +1328,7 @@ class ResultAggregator(RevisionInserter):
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
                 self.language_aggregated_score.at[language_model,
-                                                  language] = score
+                language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -1396,7 +1416,7 @@ if __name__ == "__main__":
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
                           report_spec_name=args.report_spec,
-                          fill_with_wrong_revisions=False)
+                          fill_with_wrong_revisions=True)
 
     ra.get_info()
     model_constraint = [_name_or_path.split(
@@ -1410,6 +1430,13 @@ if __name__ == "__main__":
 
     ra.get_language_aggregated_score(task_constraint=report_spec['finetuning_task'],
                                      model_constraint=model_constraint)
+
+    # Commend the method below out if you do not want config aggregate scores with standard deviation
+    ra.get_config_aggregated_score(average_over_language=True,
+                                   write_to_csv=True,
+                                   model_constraint=model_constraint,
+                                   task_constraint=report_spec['finetuning_task'],
+                                   with_standard_deviation=True)
 
     # TODO maybe move all of this reporting functionality into a separate folder
 
