@@ -155,7 +155,9 @@
     "joelito/legal-swiss-longformer-base": "Legal-ch-LF-base",
     "joelito/legal-xlm-roberta-base": "Legal-XLM-R-base",
     "joelito/legal-xlm-roberta-large": "Legal-XLM-R-large",
-    "joelito/legal-xlm-longformer-base": "Legal-XLM-LF-base"
+    "joelito/legal-xlm-longformer-base": "Legal-XLM-LF-base",
+    "facebook/xmod-base": "X-MOD-base",
+    "ZurichNLP/swissbert-xlm-vocab": "SwissBERT (xlm-vocab)"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",

@@ -7,8 +7,6 @@
     "swiss_criticality_prediction_citation_facts",
     "swiss_judgment_prediction_xl_considerations",
     "swiss_judgment_prediction_xl_facts",
-    "swiss_law_area_prediction_facts",
-    "swiss_law_area_prediction_considerations",
     "swiss_law_area_prediction_sub_area_considerations",
     "swiss_law_area_prediction_sub_area_facts"
   ],
@@ -18,23 +16,27 @@
     "microsoft/mdeberta-v3-base@main",
     "xlm-roberta-base@main",
     "xlm-roberta-large@main",
-    "google/mt5-small@main",
-    "google/mt5-base@main",
-    "google/mt5-large@main",
     "facebook/xmod-base@main",
-    "ZurichNLP/swissbert@main",
     "ZurichNLP/swissbert-xlm-vocab@main",
     "joelito/legal-swiss-roberta-base@47048d047356032a7f3e322469744294a5923042",
     "joelito/legal-swiss-roberta-large@7ab61a6431c9f6759d0a747b0257f23cc76d65c9",
     "joelito/legal-swiss-longformer-base@main"
   ],
   "excluded_models": [
+    "google/mt5-small@main",
+    "google/mt5-base@main",
+    "google/mt5-large@main",
+    "ZurichNLP/swissbert@main",
     "joelito/legal-german-roberta-base@main",
     "joelito/legal-german-roberta-large@2b7fa5f583c9771f3f78dc53e5f749bff8a6b9ac",
     "joelito/legal-french-roberta-base@main",
     "joelito/legal-french-roberta-large@18666c053a75718c1ce78184a9dbf40c2540d002",
     "joelito/legal-italian-roberta-base@main",
     "joelito/legal-italian-roberta-large@4238a87a6e58c2cc848bf6c66a7537f7b93c42cc"
+  ],
+  "excluded_tasks": [
+    "swiss_law_area_prediction_facts",
+    "swiss_law_area_prediction_considerations"
   ],
   "comments": [
     "swiss-base: 950K steps",
