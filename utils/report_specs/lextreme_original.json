@@ -25,6 +25,9 @@
     "distilbert-base-multilingual-cased@main",
     "microsoft/mdeberta-v3-base@main",
     "xlm-roberta-base@main",
-    "xlm-roberta-large@main"
+    "xlm-roberta-large@main",
+    "google/mt5-small@main",
+    "google/mt5-base@main",
+    "google/mt5-large@main"
   ]
 }
