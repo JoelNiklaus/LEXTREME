@@ -245,7 +245,7 @@ def get_meta_infos():
                     model_type_mapping[m] = model_type
     meta_infos["model_type_mapping"] = model_type_mapping
 
-    _TYPES = sorted(list(set(meta_infos["model_type_mapping"])))
+    _TYPES = sorted(list(set(meta_infos["model_type_mapping"].values())))
     _LANGUAGES = sorted(
         list(set(meta_infos['model_language_lookup_table'].values())))
     _SIZES = sorted(list(set(meta_infos['model_size_mapping'].values())))
@@ -792,6 +792,7 @@ def run_experiment(
 
         models_to_be_used = []
         for t in types:
+            print(t)
             for l in languages:
                 for s in sizes:
                     if l in meta_infos["language_models"][t]:
