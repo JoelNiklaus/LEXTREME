@@ -90,8 +90,8 @@ if __name__ == '__main__':
                              'See the options in: '
                              'https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html#download-mode',
                         default='reuse_dataset_if_exists')  # reuses raw downloaded files but makes dataset freshly
-    parser.add_argument('-t', '--task', help='Choose a task.', default='all',
-                        choices=['all'] + sorted(list(meta_infos["task_type_mapping"].keys())))
+    parser.add_argument('-t', '--task', help='Choose a task.', default='all'i)
+                        #choices=['all'] + sorted(list(meta_infos["task_type_mapping"].keys())))
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',
