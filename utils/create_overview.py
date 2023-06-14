@@ -15,11 +15,12 @@ from traceback import print_exc
 from utilities import get_meta_infos
 import json as js
 from scipy.stats import hmean
+from typing import List, Dict, AnyStr, Union, Literal, Optional, Set
 
 meta_infos = get_meta_infos()
 
 
-def insert_responsibilities(df):
+def insert_responsibilities(df: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
     response = pd.read_excel(os.path.join(
         os.path.dirname(__file__), 'run_responsibility.xlsx'))
     response = response[['finetuning_task', '_name_or_path', 'responsible', 'gpu']]
@@ -30,19 +31,19 @@ def insert_responsibilities(df):
 
 class RevisionInserter:
 
-    def __init__(self, report_spec_name):
+    def __init__(self, report_spec_name: dict) -> None:
         self.report_specs = self.read_report_specs(report_spec_name=report_spec_name)
         self.revision_lookup_table = self.prepare_revision_lookup_table()
         if self.report_specs:
             self.model_order_acc_to_report_specs = [_name_or_path.split('@')[0] for _name_or_path in
                                                     self.report_specs['_name_or_path']]
 
-    def read_report_specs(self, report_spec_name):
-        with open(f"report_specs/{report_spec_name}.json", 'r') as f:
-            report_spec = js.load(f)
+    def read_report_specs(self, report_spec_name: str) -> dict:
+        with open(f"report_specs/{report_spec_name}.json", 'r') as fname:
+            report_spec = js.load(fname)
         return report_spec
 
-    def prepare_revision_lookup_table(self):
+    def prepare_revision_lookup_table(self) -> dict:
 
         revision_lookup_table = dict()
         for name_or_path_and_revision in self.report_specs['_name_or_path']:
@@ -50,13 +51,13 @@ class RevisionInserter:
             revision_lookup_table[_name_or_path] = revision
         return revision_lookup_table
 
-    def insert_revision(self, _name_or_path):
+    def insert_revision(self, _name_or_path: str) -> str:
         if _name_or_path in self.revision_lookup_table.keys():
             return self.revision_lookup_table[_name_or_path]
         else:
             'no information'
 
-    def revision_does_match(self, _name_or_path, revision_from_wandb):
+    def revision_does_match(self, _name_or_path: str, revision_from_wandb: str) -> Union[bool, str]:
         if _name_or_path in self.revision_lookup_table.keys():
             if revision_from_wandb == self.revision_lookup_table[_name_or_path]:
                 return True
@@ -70,19 +71,19 @@ class ResultAggregator(RevisionInserter):
     meta_infos = meta_infos
 
     def __init__(self,
-                 report_spec_name,
-                 only_completed_tasks=False,
-                 path_to_csv_export=None,
-                 project_name=None,
-                 output_dir='results',
-                 log_dir='logs',
-                 score='macro-f1',
-                 split="predict",
-                 verbose_logging=True,
-                 fill_with_wrong_revisions=False,
-                 wandb_api_key=None,
-                 which_language=None,
-                 required_seeds=None,
+                 report_spec_name: str,
+                 only_completed_tasks: bool = False,
+                 path_to_csv_export: str = None,
+                 project_name: str = None,
+                 output_dir: str = 'results',
+                 log_dir: str = 'logs',
+                 score: str = 'macro-f1',
+                 split: str = "predict",
+                 verbose_logging: bool = True,
+                 fill_with_wrong_revisions: bool = False,
+                 wandb_api_key: Optional[str] = None,
+                 which_language: Optional[str] = None,
+                 required_seeds: Optional[List[int]] = None,
                  mean_type='harmonic'
                  ):
         super().__init__(report_spec_name)
@@ -147,7 +148,7 @@ class ResultAggregator(RevisionInserter):
                 logging.FileHandler(name_of_log_file),
                 logging.StreamHandler()
             ]
-        elif verbose_logging == False:
+        elif not verbose_logging:
             handlers = [
                 logging.FileHandler(name_of_log_file)
             ]
@@ -166,7 +167,7 @@ class ResultAggregator(RevisionInserter):
 
         self.fill_with_wrong_revisions = fill_with_wrong_revisions
 
-        if type(wandb_api_key) == str and bool(re.search('\d', wandb_api_key)):
+        if type(wandb_api_key) == str and bool(re.search(r'\d', wandb_api_key)):
             os.environ["WANDB_API_KEY"] = self.wandb_api_key
 
         self._path = name_of_log_file
@@ -179,15 +180,11 @@ class ResultAggregator(RevisionInserter):
             results = self.edit_result_dataframe(results, name_editing=False)
         results = results[results.finetuning_task.isnull() == False]
 
-        # filter out all rows where the finetuning_task is not in config_to_dataset
-        self.results = results[results.finetuning_task.isin(
-            self.meta_infos['config_to_dataset'].keys())]
+        self.results = results
 
-        available_predict_scores = [col for col in self.results if bool(
-            re.search(r'^\w+_predict/_' + self.score, col))]
+        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_' + self.score, col))]
         self.available_predict_scores = sorted(available_predict_scores)
-        self.available_predict_scores_original = deepcopy(
-            self.available_predict_scores)
+        self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
         # Add column to rows to indicate if this run pertains to completed tasks or not
         self.mark_incomplete_tasks()
@@ -210,10 +207,23 @@ class ResultAggregator(RevisionInserter):
             "The current export contains results for the following tasks:")
         logging.info(self.results.finetuning_task.unique())
 
-    def remove_slashes(self, string):
+    def remove_slashes(self, string: str) -> str:
+
+        """
+        The function will remove any slash in a string. This is necessary sometimes, e.g. in excel sheet names must
+        not contain slashes.
+        @param string: String value that might contain a slash.
+        @return: String value without slash.
+        """
+
         return re.sub(r'/', '', string)
 
-    def generate_concrete_score_name(self):
+    def generate_concrete_score_name(self) -> Set[str]:
+
+        """
+        The function will generate the names of all necessary metrics that are logged to wandb and that might be used
+        for analyses.
+        """
 
         languages = {'hu', 'en', 'sv', 'da', 'nl', 'pl', 'de', 'mt', 'it', 'cs', 'ro', 'lt',
                      'sk', 'hr', 'fi', 'nb', 'lv', 'el', 'bg', 'pt', 'et', 'sl', 'fr', 'es', 'ga'}
@@ -233,17 +243,24 @@ class ResultAggregator(RevisionInserter):
                     score_name = spl + s
                     score_names.add(score_name)
 
+        score_names.add('eval/loss')
+        score_names.add('predict/_loss')
+
         return score_names
 
-    def fetch_data(self, project_name):
+    def fetch_data(self, project_name: str) -> List[dict]:
+
+        """
+        Fetches the data from the wandb project and saves them to a list of dictionaries.
+
+        @param project_name: name of the wandb project
+        @return: List of dictionaries with the necessary logs from the wandb project
+        """
 
         # Project is specified by <entity/project-name>
         runs = self.api.runs(project_name)
 
         score_names = self.generate_concrete_score_name()
-
-        score_names.add('eval/loss')
-        score_names.add('predict/_loss')
 
         results = list()
         for x in runs:
@@ -287,38 +304,47 @@ class ResultAggregator(RevisionInserter):
 
         return results
 
-    def get_wandb_overview(self, project_name: str = None):
-        if project_name is None:
-            project_name = "lextreme/paper_results"
+    def get_wandb_overview(self, project_name: str) -> pd.core.frame.DataFrame:
+        """
+        Covers several other functions that fetch the data from wandb and preprocess it.
+        @param project_name: Name of the wandb project
+        @return: pd.core.frame.DataFrame
+        """
+        # if project_name is None:
+        # project_name = "lextreme/paper_results"
         # results = wandb_summarizer.download.get_results(project_name=project_name)
         # results = pd.DataFrame(self.fetch_data(project_name=project_name))
         # results_old_lex_glue_runs = pd.DataFrame(self.fetch_data(project_name='old_lex_glue_runs'))
         # results = pd.concat([results, results_old_lex_glue_runs])
         results = self.fetch_data(project_name=project_name)
         results = pd.DataFrame(results)
-        results.to_csv(
-            f"{self.output_dir}/current_wandb_results_unprocessed.csv", index=False)
+        results.to_csv(f"{self.output_dir}/current_wandb_results_unprocessed.csv", index=False)
         results = self.edit_result_dataframe(results)
         if self.which_language is not None:
             results = self.filter_by_language(results, self.which_language)
         return results
 
-    def edit_column_name(self, column_name):
+    def edit_column_name(self, column_name: str) -> str:
         if column_name.startswith('config_'):
             column_name = re.sub('^config_', '', column_name)
         if column_name.startswith('end'):
             column_name = re.sub('^end_', '', column_name)
         return column_name
 
-    def insert_hierarchical(self, run_name: str):
-        "Infos whether the run was hierarchical were not logged to wandb in the beginning. But this information is in the name of the run. This function will extract this information."
+    def insert_hierarchical(self, run_name: str) -> bool:
+        """
+        Infos whether the run was hierarchical were not logged to wandb in the beginning of the project.
+        But this information is contained in the name of the run.
+        This function will extract this information.
+        Newer runs do contain a field named hierarchical.
+        """
 
         if 'hierarchical_True' in run_name:
             return True
         elif 'hierarchical_False' in run_name:
             return False
 
-    def edit_column_names_in_df(self, dataframe):
+    def edit_column_names_in_df(self, dataframe: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
         columns = dataframe.columns.tolist()
 
         for col in columns:
@@ -327,9 +353,16 @@ class ResultAggregator(RevisionInserter):
 
         return dataframe
 
-    def update_language_specifc_predict_columns(self, dataframe, score=None):
-        """ For multilinugal datasets we insert the overall macro-f1 score into the column for the language specific
-        macro-f1 score if a monolingual model was finetuned on them."""
+    def update_language_specifc_predict_columns(self, dataframe: pd.core.frame.DataFrame,
+                                                score=None) -> pd.core.frame.DataFrame:
+        """
+        For multilingual datasets we insert the overall macro-f1 score into the column for the language-specific
+        macro-f1 score, if a monolingual model was fine-tuned on them.
+        Similarly, for monolingual datasets we insert the overall macro-f1 into the field for the language-specific
+        macro-f1 score.
+        For example, if a German model was fine-tuned on mapa_fine, we filter mapa_fine by German examples.
+        Therefore, the value for predict/_micro-f1 holds true for de_predict/_micro-f1 as well.
+        """
 
         if score is None:
             score = self.split + self.score
@@ -371,21 +404,33 @@ class ResultAggregator(RevisionInserter):
 
         return dataframe
 
-    def language_and_model_match(self, language_model, language):
+    def language_and_model_match(self, _name_or_path: str, finetuning_task: str, language: str) -> bool:
 
-        if self.meta_infos["model_language_lookup_table"][language_model] == "all":
-            return True
+        """
+        Caution: This function was introduced, because in the beginning we wanted to fine-tune multilingual models
+        on monolingual subsets of multilingual datasets. This meant, that the language of the model and the language of
+        the dataset would not match, because we would have a multilingual model (with the language 'all')
+        and, for example, a German subset of a multilingual dataset with the language 'de'. But later, we decided that
+        we would not do that which is why we need to filter out these cases.
+
+        @param language_model: Name of the language model
+        @finetuning_task: Name of the finetuning task
+        @param language: Value of the field 'language'
+        @return: bool
+        """
+        if len(self.meta_infos["task_language_mapping"][finetuning_task]) > 1:
+            return self.meta_infos["model_language_lookup_table"][_name_or_path] == language
         else:
-            return self.meta_infos["model_language_lookup_table"][language_model] == language
+            return True
 
     def correct_language(self, finetuning_task, language_model, language):
-        '''
+        """
         Sometimes the language column is wrong.
         For example, for greek_legal_code_subject_level in combination with distilbert-base-multilingual-cased,
         the run names start with “all_” instead of “el_” which should not be.
         This code will check if a language model is multilingual and if a task is monolingual.
         If the language is all, it must be corrected to the language of the monolingual model.
-        '''
+        """
         if self.meta_infos["model_language_lookup_table"][language_model] == "all":
             task_lang_mapping = self.meta_infos["task_language_mapping"]
             if finetuning_task in task_lang_mapping and len(task_lang_mapping[finetuning_task]) == 1:
@@ -397,31 +442,39 @@ class ResultAggregator(RevisionInserter):
                     return new_language
         return language
 
-    def check_for_model_language_consistency(self, dataframe):
-
+    def check_for_model_language_consistency(self, dataframe: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
         dataframe['language'] = dataframe.apply(
             lambda x: self.correct_language(x["finetuning_task"], x["_name_or_path"], x["language"]), axis=1)
 
         dataframe['model_language_consistency'] = dataframe.apply(
-            lambda x: self.language_and_model_match(x["_name_or_path"], x["language"]), axis=1)
+            lambda x: self.language_and_model_match(_name_or_path=x["_name_or_path"],
+                                                    finetuning_task=x["finetuning_task"],
+                                                    language=x["language"]), axis=1)
 
+        # Remove this part if you want to consider multilingual models trained on monolingual subsets of multilingual models
         dataframe = dataframe[dataframe.model_language_consistency == True]
         del dataframe["model_language_consistency"]
 
         return dataframe
 
-    def loss_equals_nan(self, loss):
-        '''
+    def loss_equals_nan(self, loss: float) -> bool:
+
+        """
         For some reason, when wandb shows loss == nan, you will not get a nan value from the API.
-        Instead, it returns a very low value in scientifc notation.
+        Instead, it returns a very low value in scientific notation.
         This functions tries to detect these cases.
         A manuel evaluation showed that the predictions are worse in these cases, so we need to rerun the experiments again.
 
-        '''
+        """
 
         return '+' in str(loss)
 
-    def find_best_revisions(self, dataframe):
+    def find_best_revisions(self, dataframe: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
+
+        """
+        @param dataframe: pandas dataframe that contains the fetched wandb data.
+        @return: pandas dataframe
+        """
         dataframe = dataframe.sort_values(['finetuning_task', '_name_or_path', 'seed', 'revision'])
         dataframe_new = list()
         available_finetuning_tasks = dataframe.finetuning_task.unique()
@@ -532,7 +585,6 @@ class ResultAggregator(RevisionInserter):
 
     def check_seed_per_task(self, task_constraint: list = [], model_constraint: list = [], which_language=None,
                             required_seeds=None):
-
         if required_seeds is None:
             required_seeds = self.required_seeds
         if which_language is None:
@@ -609,7 +661,6 @@ class ResultAggregator(RevisionInserter):
         return report_df
 
     def mark_incomplete_tasks(self):
-
         seed_check = self.check_seed_per_task()
 
         seed_check["look_up"] = seed_check["finetuning_task"] + "_" + seed_check["_name_or_path"] + "_" + seed_check[
@@ -629,7 +680,6 @@ class ResultAggregator(RevisionInserter):
                                             task_constraint: list = [],
                                             model_constraint: list = [],
                                             required_seeds=None):
-
         if required_seeds is None:
             required_seeds = self.required_seeds
         if only_completed_tasks is None:
@@ -732,7 +782,6 @@ class ResultAggregator(RevisionInserter):
     def create_report(self, only_completed_tasks=None, which_language=None, task_constraint: list = [],
                       model_constraint: list = [],
                       required_seeds=None):
-
         if required_seeds is None:
             required_seeds = self.required_seeds
 
@@ -840,7 +889,6 @@ class ResultAggregator(RevisionInserter):
 
     def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None,
                           with_standard_deviation: bool = False) -> float:
-
         if score is None:
             score = 'predict/_' + self.score
 
@@ -969,7 +1017,6 @@ class ResultAggregator(RevisionInserter):
         return overview_template
 
     def insert_aggregated_score_over_language_models(self, dataframe, column_name="Agg."):
-
         dataframe[column_name] = ""
 
         for _name_or_path in dataframe.index.tolist():
@@ -1003,7 +1050,6 @@ class ResultAggregator(RevisionInserter):
 
     def insert_config_average_scores(self, overview_template, average_over_language=True, task_constraint: list = [],
                                      model_constraint: list = [], with_standard_deviation: bool = False):
-
         logging.info("*** Calculating average scores ***")
         allowed_models = list(self.results._name_or_path.unique())
         allowed_tasks = list(self.results.finetuning_task.unique())
@@ -1093,7 +1139,6 @@ class ResultAggregator(RevisionInserter):
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
                                     column_name="Agg.", task_constraint: list = [],
                                     model_constraint: list = [], with_standard_deviation=False):
-
         # Insert aggregated mean for each model name
 
         columns = list()
@@ -1149,7 +1194,6 @@ class ResultAggregator(RevisionInserter):
 
     def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
                                      model_constraint: list = []):
-
         self.get_config_aggregated_score(
             average_over_language=average_over_language, write_to_csv=write_to_csv, model_constraint=model_constraint,
             task_constraint=task_constraint)
@@ -1237,7 +1281,6 @@ class ResultAggregator(RevisionInserter):
                                        f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
 
     def get_aggregated_score_for_language(self, score_type, task_constraint: list = [], with_standard_deviation=False):
-
         tasks_relevant_for_language = list(
             self.results[(self.results[score_type].isnull() == False) & (
                     self.results[score_type] != "")].finetuning_task.unique())
@@ -1290,7 +1333,6 @@ class ResultAggregator(RevisionInserter):
         return results_averaged_over_datasets
 
     def get_language_aggregated_score(self, write_to_csv=True, task_constraint: list = [], model_constraint: list = []):
-
         all_languages = set()
 
         for languages in self.meta_infos['task_language_mapping'].values():
