@@ -19,6 +19,7 @@ from typing import List, Dict, AnyStr, Union, Literal, Optional, Set
 
 meta_infos = get_meta_infos()
 
+
 # TODO consider creating an entire folder for this file and splitting it up into different classes
 #  (one for completeness report, latex tables etc.)
 
@@ -180,8 +181,7 @@ class ResultAggregator(RevisionInserter):
         else:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results, name_editing=False)
-        results = results[results.finetuning_task.isnull()
-        ]
+        results = results[results.finetuning_task.isnull() == False]
 
         self.results = results
 
@@ -563,7 +563,7 @@ class ResultAggregator(RevisionInserter):
     def remove_languages(self, languages):
         if type(languages) == str:
             self.available_predict_scores = [score for score in self.available_predict_scores if
-                                             not score.startswith(languages)]
+                                             score.startswith(languages) == False]
         elif type(languages) == list:
             for lang in languages:
                 # TODO make it more pythonic: "not" instead of == False
@@ -1191,6 +1191,7 @@ class ResultAggregator(RevisionInserter):
                 config_aggregated_score.to_csv(
                     f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
                 if not with_standard_deviation:
+                    print(config_aggregated_score)
                     config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                         f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
                 if with_standard_deviation:
