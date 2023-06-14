@@ -19,6 +19,8 @@ from typing import List, Dict, AnyStr, Union, Literal, Optional, Set
 
 meta_infos = get_meta_infos()
 
+# TODO consider creating an entire folder for this file and splitting it up into different classes
+#  (one for completeness report, latex tables etc.)
 
 def insert_responsibilities(df: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
     response = pd.read_excel(os.path.join(
@@ -178,7 +180,8 @@ class ResultAggregator(RevisionInserter):
         else:
             results = pd.read_csv(Path(path_to_csv_export))
             results = self.edit_result_dataframe(results, name_editing=False)
-        results = results[results.finetuning_task.isnull() == False]
+        results = results[results.finetuning_task.isnull()
+        ]
 
         self.results = results
 
@@ -224,7 +227,7 @@ class ResultAggregator(RevisionInserter):
         The function will generate the names of all necessary metrics that are logged to wandb and that might be used
         for analyses.
         """
-
+        # TODO make constant out of this
         languages = {'hu', 'en', 'sv', 'da', 'nl', 'pl', 'de', 'mt', 'it', 'cs', 'ro', 'lt',
                      'sk', 'hr', 'fi', 'nb', 'lv', 'el', 'bg', 'pt', 'et', 'sl', 'fr', 'es', 'ga'}
         scores = ['macro-f1', 'micro-f1', 'weighted-f1', 'macro-precision', 'macro-recall', 'micro-recall',
@@ -560,9 +563,10 @@ class ResultAggregator(RevisionInserter):
     def remove_languages(self, languages):
         if type(languages) == str:
             self.available_predict_scores = [score for score in self.available_predict_scores if
-                                             score.startswith(languages) == False]
+                                             not score.startswith(languages)]
         elif type(languages) == list:
             for lang in languages:
+                # TODO make it more pythonic: "not" instead of == False
                 self.available_predict_scores = [score for score in self.available_predict_scores if
                                                  score.startswith(lang) == False]
 
@@ -571,6 +575,7 @@ class ResultAggregator(RevisionInserter):
             self.available_predict_scores_original)
 
     def filter_by_language(self, dataframe, which_language):
+        # TODO make enum out of this
         if which_language == 'monolingual':
             dataframe = dataframe[
                 dataframe._name_or_path.apply(lambda x: meta_infos['model_language_lookup_table'][x] != 'all')]
@@ -595,10 +600,12 @@ class ResultAggregator(RevisionInserter):
         for task, languages in self.meta_infos["task_language_mapping"].items():
             required_models = list()
 
+            # TODO consider extracting a method for this for loop
             for model_name, language in self.meta_infos['model_language_lookup_table'].items():
                 if language == "all":
                     required_models.append(model_name)
                 else:
+                    # TODO consider converting it into a list comprehension
                     for lang in languages:
                         if lang == language:
                             required_models.append(model_name)
@@ -1369,6 +1376,7 @@ class ResultAggregator(RevisionInserter):
             language_aggregated_score)
 
         if write_to_csv:
+            # Extract "language_aggregated_scores" as variable or constant
             language_aggregated_score.to_csv(
                 f'{self.output_dir}/language_aggregated_scores.csv')
             language_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
@@ -1400,6 +1408,7 @@ if __name__ == "__main__":
                         action='store_true', default=False)
     parser.add_argument('-pce', '--path_to_csv_export', help='Insert the path to the exported csv file from wandb',
                         default=None)
+    # TODO consider renaming to just language
     parser.add_argument('-wl', '--which_language',
                         help='Default value is None. Choose which language should be considered for the overviews. '
                              'If set to `monolingual`, only monolingual models will be considered. '
@@ -1452,7 +1461,7 @@ if __name__ == "__main__":
     ra.get_language_aggregated_score(task_constraint=report_spec['finetuning_task'],
                                      model_constraint=model_constraint)
 
-    # Commend the method below out if you do not want config aggregate scores with standard deviation
+    # Comment the method below out if you do not want config aggregate scores with standard deviation
     ra.get_config_aggregated_score(average_over_language=True,
                                    write_to_csv=True,
                                    model_constraint=model_constraint,
