@@ -254,6 +254,15 @@ def get_meta_infos():
     meta_infos['_LANGUAGES'] = _LANGUAGES
     meta_infos['_SIZES'] = _SIZES
 
+    all_available_models = []
+    for domain, model_infos in meta_infos['language_models'].items():
+        for language, size_and_models in model_infos.items():
+            for models in size_and_models.values():
+                for _name_or_path in models:
+                    all_available_models.append(_name_or_path)
+
+    meta_infos["all_available_models"] = all_available_models
+
     return meta_infos
 
 
@@ -268,12 +277,12 @@ task_type_mapping = meta_infos["task_type_mapping"]
 max_sequence_lengths = dict()
 for task in meta_infos["task_default_arguments"].keys():
     if "max_segments" in meta_infos["task_default_arguments"][task][
-            "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
-            "DataTrainingArguments"]:
+        "DataTrainingArguments"].keys() and "max_seg_length" in meta_infos["task_default_arguments"][task][
+        "DataTrainingArguments"]:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-            "max_segments"] * \
-            meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
-            "max_seg_length"]
+                                         "max_segments"] * \
+                                     meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
+                                         "max_seg_length"]
     else:
         max_sequence_lengths[task] = meta_infos["task_default_arguments"][task]["DataTrainingArguments"][
             "max_seq_length"]
@@ -454,11 +463,11 @@ def generate_command_for_experiments(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-            ' --greater_is_better {GREATER_IS_BETTER} '
+                           ' --greater_is_better {GREATER_IS_BETTER} '
 
     if (data["language"] is not None):
         command_template = command_template + ' --language {LANGUAGE} '
@@ -467,7 +476,7 @@ def generate_command_for_experiments(**data):
                                               'LANGUAGE}/seed_{SEED}'
     else:
         command_template = command_template + \
-            ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
+                           ' --output_dir {LOG_DIRECTORY}/{TASK}/{MODEL_NAME}/seed_{SEED} '
 
     command_template = 'CUDA_VISIBLE_DEVICES={GPU_NUMBER} ' + command_template
 
@@ -509,10 +518,10 @@ def generate_command_for_experiments(**data):
         command_template = command_template + ' --do_lower_case '
     if data["weight_decay"] is not None:
         command_template = command_template + \
-            ' --weight_decay ' + str(data["weight_decay"])
+                           ' --weight_decay ' + str(data["weight_decay"])
     if data["warmup_ratio"] is not None:
         command_template = command_template + \
-            ' --warmup_ratio ' + str(data["warmup_ratio"])
+                           ' --warmup_ratio ' + str(data["warmup_ratio"])
 
     # mdeberta does not work with fp16 because it was trained with bf16
     # probably similar for MobileBERT: https://github.com/huggingface/transformers/issues/11327
@@ -584,11 +593,11 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["dataset_cache_dir"] is not None:
         command_template = command_template + \
-            ' --dataset_cache_dir {DATASET_CACHE_DIR}'
+                           ' --dataset_cache_dir {DATASET_CACHE_DIR}'
 
     if data['greater_is_better'] is not None:
         command_template = command_template + \
-            ' --greater_is_better {GREATER_IS_BETTER} '
+                           ' --greater_is_better {GREATER_IS_BETTER} '
 
     if data["language"] is not None:
         command_template = command_template + ' --language {LANGUAGE} '
@@ -611,7 +620,7 @@ def generate_command_for_hyperparameter_search(**data):
             # --fp16_full_eval removed because they cause errors: transformers RuntimeError: expected scalar type Half but found Float
             # BUT, if the environment is set up correctly, also fp16_full_eval should work
             if str(data[
-                    "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
+                       "hierarchical"]).lower() == 'true':  # We percieved some issues with xlm-roberta-base and
                 # xlm-roberta-large. They returned a nan loss with fp16 in comnination with hierarchical models
                 if bool(re.search('(xlm-roberta-base|xlm-roberta-large)', data["model_name"])) == False:
                     command_template += ' --fp16 --fp16_full_eval'
