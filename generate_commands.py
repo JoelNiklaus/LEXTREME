@@ -20,13 +20,35 @@ lextreme_tasks = ["brazilian_court_decisions_judgment", "brazilian_court_decisio
                   "mapa_coarse", "mapa_fine"
                   ]
 
-df = pd.read_excel('utils/results/lextreme/paper_results/report.xlsx')
-# df = df[df.run == "x"]
-df = df[df._name_or_path.str.contains("joel.*large")]
-df = df[df.finetuning_task.isin(lextreme_tasks)]
+allowed_finetuning_tasks = []
+excluded_finetuning_tasks = []
+allowed_name_or_path = []
+excluded_name_or_path = []
 
 
-def generate_commands(gm, gn, ld):
+
+def generate_commands(gm: str, gn: str, ld: str, rs: str) -> None:
+    """
+
+    @param gm: gpu memory
+    @param gn: gpu numbers
+    @param ld: logging directory
+    @param rs: report_specs
+    @return:
+    """
+    os.system(' python utils/table_generator/create_overview.py --rs ' + rs)
+
+    df = pd.read_excel(f'utils/tables/lextreme/{rs}/report.xlsx')
+
+    if len(allowed_finetuning_tasks) > 0:
+        df = df[df.finetuning_task.isin(allowed_finetuning_tasks)]
+    if len(excluded_finetuning_tasks) > 0:
+        df = df[df.finetuning_task.isin(excluded_finetuning_tasks) == False]
+    if len(allowed_name_or_path) > 0:
+        df = df[df._name_or_path.isin(allowed_name_or_path)]
+    if len(excluded_name_or_path) > 0:
+        df = df[df._name_or_path.isin(excluded_name_or_path) == False]
+
     commands = list()
     for r in df.to_dict(orient="records"):
         comm = 'python main.py -gm ' + str(gm) + ' -gn ' + str(gn) + ' -t ' + r["finetuning_task"] + ' -lmt ' + \
@@ -43,6 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('-gn')
     parser.add_argument('-gm')
     parser.add_argument('-ld')
+    parser.add_argument('-rs')
 
     args = parser.parse_args()
 
