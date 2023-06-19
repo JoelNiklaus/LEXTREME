@@ -21,7 +21,7 @@ lextreme_tasks = ["brazilian_court_decisions_judgment", "brazilian_court_decisio
                   ]
 
 allowed_finetuning_tasks = []
-excluded_finetuning_tasks = []
+excluded_finetuning_tasks = ["multi_eurlex_level_1","multi_eurlex_level_2", "multi_eurlex_level_3","greek_legal_code_chapter", "greek_legal_code_subject", "greek_legal_code_volume"]
 allowed_name_or_path = []
 excluded_name_or_path = []
 
@@ -36,7 +36,7 @@ def generate_commands(gm: str, gn: str, ld: str, rs: str) -> None:
     @param rs: report_specs
     @return:
     """
-    os.system(' python utils/table_generator/create_overview.py --rs ' + rs)
+    # os.system(' python utils/table_generator/create_overview.py --rs ' + rs)
 
     df = pd.read_excel(f'utils/tables/lextreme/{rs}/report.xlsx')
 
@@ -69,6 +69,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    commands = generate_commands(args.gm, args.gn, args.ld)
+    commands = generate_commands(args.gm, args.gn, args.ld, args.rs)
 
     os.system(commands)
