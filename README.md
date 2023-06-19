@@ -62,7 +62,12 @@ For a detailed description of each task and dataset, see [Niklaus et al. (2023)]
 | MAP-C (mapa_coarse)                                | NER                              | 27823 / 3354 / 10590        | 13 / 11 / 11              |
 | MAP-F (mapa_fine)                                  | NER                              | 27823 / 3354 / 10590        | 44 / 26 / 34              |
 
-## LEXTREME Scores
+## Leaderboard
+
+### LEXTREME Scores
+
+The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score, thus weighing datasets and languages equally, promoting model fairness and robustness
+following [Shavrina and Malykh (2021)](https://openreview.net/pdf?id=PPGfoNJnLKd) and [Chalkidis et al,](https://github.com/coastalcph/lex-glue). 
 
 We evaluated multilingual models as well as monolingual models. The multilingual models are the following:
 
@@ -75,8 +80,6 @@ We evaluated multilingual models as well as monolingual models. The multilingual
 | [XLM-R large](https://huggingface.co/xlm-roberta-large)                 | [Conneau et al. (2020)](https://aclanthology.org/2020.acl-main.747.pdf)                                | 560M           | 250K                | 1.5M steps / BS 8192  | 2.5T CC100 data         | 100                       |
 
 In the following, we will provide the results on the basis of the multilingual models.
-
-The final LEXTREME score is computed using the harmonic mean of the dataset and the language aggregate score.
 
 ### Dataset aggregate scores for multilingual models. The best scores are in bold.
 
