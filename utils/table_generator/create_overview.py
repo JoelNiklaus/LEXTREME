@@ -6,7 +6,7 @@ from collections import defaultdict
 from copy import deepcopy
 from helper import insert_responsibilities
 from revision_handler import RevisionHandler
-from scipy.stats import hmean
+from scipy.stats import hmean, gmean
 from traceback import print_exc
 from typing import List, Dict, AnyStr, Union, Literal, Optional, Set
 import json as js
@@ -17,7 +17,7 @@ import pandas as pd
 import re
 import sys
 import wandb
-from helper import TABLE_TO_REPORT_SPECS, TABLE_OUTPUT_PATH, MONOLINGUAL, MULTILINGUAL
+from helper import *
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -78,7 +78,7 @@ class ResultAggregator(RevisionHandler):
         fill_with_wrong_revisions: Default is False. If set to True, the code will check which runs are missing for which seed and try to fill these missing seeds with runs that actually do not fullfil, because the wrong revision was used.
         """
         # Create the result directory if not existent
-        self.output_dir = output_dir
+        self.output_dir = os.path.join(output_dir, f'results_based_on_{mean_type}_mean')
         os.makedirs(self.output_dir, exist_ok=True)
 
         self.log_dir = log_dir
@@ -144,9 +144,6 @@ class ResultAggregator(RevisionHandler):
         available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_' + self.score, col))]
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
-
-        # Add column to rows to indicate if this run pertains to completed tasks or not
-        self.mark_incomplete_tasks()
 
         self.prefix = "\\begin{table*}[!ht]\n\\centering\n"
         self.suffix = "\\caption{Table explanation text.}\n\\label{tab:table_label}\n\\end{table*}"
@@ -594,12 +591,14 @@ class ResultAggregator(RevisionHandler):
                             required_seeds=None) -> pd.core.frame.DataFrame:
 
         """
+        Will create a dataframe of incomplete finetuning tasks that contains the name of the fnetuning task, the model name,
+        the required revision and the missing seeds.
 
         @param task_constraint: List of tasks that we want to check.
         @param model_constraint:  List of language models that we want to check.
         @param which_language (optional) : Either `monolingual`, `multilingual` or ISO 639-1 to filter by language.
         @param required_seeds (optional): List of seed that want to consider. If None, the default value will be taken.
-        @return:
+        @return: pd.core.frame.DataFrame
         """
         if required_seeds is None:
             required_seeds = self.required_seeds
@@ -665,26 +664,45 @@ class ResultAggregator(RevisionHandler):
 
         return report_df
 
-    def mark_incomplete_tasks(self):
-        seed_check = self.check_seed_per_task()
+    def get_list_of_incomplete_tasks(self, which_language: str = None,
+                                     task_constraint: list = [],
+                                     model_constraint: list = [],
+                                     required_seeds: list = None) -> list:
 
-        seed_check["look_up"] = seed_check["finetuning_task"] + "_" + seed_check["_name_or_path"] + "_" + seed_check[
-            "language"]
+        """
+        Returns a list of finetuning tasks that still have missing seeds.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @param which_language (optional) : Either `monolingual`, `multilingual` or ISO 639-1 to filter by language.
+        @param required_seeds (optional): List of seed that want to consider. If None, the default value will be taken.
+        @return: List[int]
+        """
 
-        self.results["look_up"] = self.results["finetuning_task"] + "_" + self.results["_name_or_path"] + "_" + \
-                                  self.results["language"]
+        seed_check = self.check_seed_per_task(task_constraint=task_constraint, model_constraint=model_constraint,
+                                              required_seeds=required_seeds, which_language=which_language)
 
-        self.results['completed_task'] = np.where(
-            self.results.look_up.isin(seed_check["look_up"].tolist()), False, True)
+        incomplete_tasks = set(seed_check.finetuning_task.unique())
 
-        del self.results['look_up']
+        return incomplete_tasks
 
-    def create_overview_of_results_per_seed(self, score=None,
-                                            only_completed_tasks=None,
-                                            which_language=None,
+    def create_overview_of_results_per_seed(self, score: str = None,
+                                            only_completed_tasks: bool = None,
+                                            which_language: str = None,
                                             task_constraint: list = [],
                                             model_constraint: list = [],
-                                            required_seeds=None):
+                                            required_seeds: list = None) -> pd.core.frame.DataFrame:
+
+        """
+        Returns a dataframe with the score for each seed for each fine-tuning task with each model.
+
+        @param score: str: Name of the score you wish to be displayed. Available scores can be found under self.available_predict_scores_original
+        @param only_completed_tasks: boolean: Define whether you want to consider only complete tasks or not.
+        @param which_language (optional) : Either `monolingual`, `multilingual` or ISO 639-1 to filter by language.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @param required_seeds (optional): List of seed that want to consider. If None, the default value will be taken.
+        @return: -> pd.core.frame.DataFrame
+        """
         if required_seeds is None:
             required_seeds = self.required_seeds
         if only_completed_tasks is None:
@@ -701,26 +719,29 @@ class ResultAggregator(RevisionHandler):
             old_score = deepcopy(self.score)
             self.score = score
 
-        seed_check = self.check_seed_per_task(task_constraint=task_constraint, model_constraint=model_constraint,
-                                              required_seeds=required_seeds, which_language=which_language)
-
-        incomplete_tasks = set(seed_check.finetuning_task.unique())
-
         required_seeds = list(required_seeds)
         required_seeds = sorted(int(s) for s in required_seeds)
 
+        # If score contains the name of the split in the name, no further postprocessing is required.
         if bool(re.search('(eval|train)', score)):
             score_to_filter = score
         else:
             score_to_filter = self.split + score
 
-        if only_completed_tasks:
+        if only_completed_tasks == True:
+            incomplete_tasks = self.get_list_of_incomplete_tasks(task_constraint=task_constraint,
+                                                                 model_constraint=model_constraint,
+                                                                 required_seeds=required_seeds,
+                                                                 which_language=which_language)
             # Caution! If there is no completed task, it can happen that the resulting dataframe is empty!
-            df = self.results[(self.results.seed.isin(required_seeds)) & (
-                    self.results.finetuning_task.isin(incomplete_tasks) == False)][
-                ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
+            df = self.results[(self.results.seed.isin(required_seeds)) &
+                              (self.results.finetuning_task.isin(incomplete_tasks) == False)][['finetuning_task',
+                                                                                               '_name_or_path',
+                                                                                               'language',
+                                                                                               'seed',
+                                                                                               score_to_filter]]
 
-        else:
+        elif only_completed_tasks == False:
             df = self.results[(self.results.seed.isin(required_seeds))][
                 ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
 
@@ -754,8 +775,7 @@ class ResultAggregator(RevisionHandler):
                             'task_type', '_name_or_path', 'language']
         relevant_columns.extend(required_seeds)
         df_pivot = df_pivot[relevant_columns]
-        df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
-        df_pivot['mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
+        df_pivot['arithmetic_mean_over_seeds'] = df_pivot.mean(axis=1, numeric_only=True)
 
         if old_score:
             self.score = old_score
@@ -767,8 +787,7 @@ class ResultAggregator(RevisionHandler):
             for seed in required_seeds:
                 seed_value = df_pivot.at[i, seed]
                 all_seed_values.append((seed, seed_value))
-            '''all_seed_values = [pair for pair in all_seed_values if
-                               isinstance(pair[1], float) and not pair[1] != np.nan]'''
+
             if len(all_seed_values) > 0:
                 all_seed_values_sorted = sorted(
                     all_seed_values, key=lambda x: x[1], reverse=True)
@@ -784,11 +803,23 @@ class ResultAggregator(RevisionHandler):
 
         return df_pivot
 
-    def create_report(self, only_completed_tasks=None,
-                      which_language=None,
+    def create_report(self, only_completed_tasks: bool = None,
+                      which_language: str = None,
                       task_constraint: list = [],
                       model_constraint: list = [],
-                      required_seeds=None):
+                      required_seeds: list = None) -> pd.core.frame.DataFrame:
+
+        """
+        Will create several overviews of different scores, such as macor-f1, micro-f1 etc. and save them in an excel file.
+
+        @param only_completed_tasks: boolean: Define whether you want to consider only complete tasks or not.
+        @param which_language (optional) : Either `monolingual`, `multilingual` or ISO 639-1 to filter by language.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @param required_seeds (optional): List of seed that want to consider. If None, the default value will be taken.
+        @return: -> pd.core.frame.DataFrame
+        """
+
         if required_seeds is None:
             required_seeds = self.required_seeds
 
@@ -870,7 +901,33 @@ class ResultAggregator(RevisionHandler):
             self.eval_micro_f1_overview.to_excel(
                 writer, index=False, sheet_name="eval_micro__f1_overview")
 
-    def convert_numpy_float_to_python_float(self, value):
+    def postprocess_columns(self, dataframe: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
+
+        """
+        Applies some postprocessing of the results in a dataframe before exporting the dataframe to a latex table.
+        @param dataframe: pd.core.frame.DataFrame.
+        @return: pd.core.frame.DataFrame
+        """
+        dataframe.fillna('', inplace=True)
+        empty_columns = dataframe.columns[dataframe.eq('').all()]
+        dataframe = dataframe.drop(empty_columns, axis=1)
+        dataframe = dataframe.applymap(lambda x: round_value(x))
+        dataframe = dataframe.applymap(lambda x: replace_empty_string(x, np.nan))
+        if self.model_order_acc_to_report_specs and len(self.model_order_acc_to_report_specs) == dataframe.shape[0]:
+            dataframe = dataframe.reindex(self.model_order_acc_to_report_specs)
+
+        # Insert Model name abbreviations
+        if set(dataframe.index.tolist()) == set(self.model_order_acc_to_report_specs):
+            dataframe = dataframe.rename(index=self.meta_infos["model_abbrevations"])
+
+        return dataframe
+
+    def convert_numpy_float_to_python_float(self, value) -> Union[int, str]:
+
+        """
+        @param value: Any value.
+        @return:
+        """
         if value == np.nan:
             final_value = ""
         elif isinstance(value, np.floating):
@@ -880,131 +937,112 @@ class ResultAggregator(RevisionHandler):
 
         return final_value
 
-    def get_mean_from_list_of_values(self, list_of_values, with_standard_deviation=False):
+    def get_mean_from_list_of_values(self, list_of_values: List[float],
+                                     with_standard_deviation: bool = False) -> Union[tuple, int, str]:
+
+        """
+        Returns the mean from a list of floats.
+
+        @param list_of_values: List with floats.
+        @param with_standard_deviation: Boolean value. If set to True, it will return the standard deviations.
+        @return:
+        """
         if self.mean_type == 'harmonic':
             mean_function = hmean
-        elif self.mean_type is None:
+        elif self.mean_type == 'geometric':
+            mean_function = gmean
+        elif self.mean_type is None or self.mean_type == 'arithmetic':
             mean_function = mean
         # There used to be this condition and x > 0, but sometimes there are really scores of 0
         list_of_values = [x for x in list_of_values if isinstance(x, float) and not pd.isnull(x)]
-        if len(list_of_values) > 0 and not with_standard_deviation:
+
+        if len(list_of_values) > 0 and with_standard_deviation == False:
             return self.convert_numpy_float_to_python_float(mean_function(list_of_values))
-        elif len(list_of_values) > 0 and with_standard_deviation:
+        elif len(list_of_values) > 0 and with_standard_deviation == True:
             return (mean_function(list_of_values), np.std(list_of_values))
         else:
             return ""
+
+    def write_to_files(self, dataframe_with_aggregate_scores: pd.core.frame.DataFrame,
+                       filename: str,
+                       average_over_language: bool = True,
+                       with_standard_deviation: bool = False) -> None:
+
+        if average_over_language == False:
+            dataframe_with_aggregate_scores.to_csv(
+                f'{self.output_dir}/{filename}_simple.csv')
+            if with_standard_deviation == False:
+                dataframe_with_aggregate_scores.style.highlight_max(color='lightgreen', axis=0).to_excel(
+                    f'{self.output_dir}/{filename}_simple.xlsx')
+            if with_standard_deviation == True:
+                dataframe_with_aggregate_scores.to_excel(
+                    f'{self.output_dir}/{filename}_simple.xlsx')
+            self.make_latext_table(
+                dataframe_with_aggregate_scores, f'{self.output_dir}/{filename}_simple.tex')
+        if average_over_language == True:
+            dataframe_with_aggregate_scores.to_csv(
+                f'{self.output_dir}/{filename}_average_over_language.csv')
+            if with_standard_deviation == False:
+                dataframe_with_aggregate_scores.style.highlight_max(color='lightgreen', axis=0).to_excel(
+                    f'{self.output_dir}/{filename}_average_over_language.xlsx')
+            if with_standard_deviation == True:
+                dataframe_with_aggregate_scores.to_excel(
+                    f'{self.output_dir}/{filename}_average_over_language.xlsx')
+            self.make_latext_table(dataframe_with_aggregate_scores,
+                                   f'{self.output_dir}/{filename}_average_over_language.tex')
 
     def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None,
                           with_standard_deviation: bool = False) -> float:
         if score is None:
             score = 'predict/_' + self.score
 
-        results_filtered = \
-            self.results[
-                (self.results.finetuning_task == finetuning_task) & (self.results._name_or_path == _name_or_path)][
-                ["seed", score]]
+        results_filtered = self.results[(self.results.finetuning_task == finetuning_task)
+                                        & (self.results._name_or_path == _name_or_path)][["seed", score]]
 
         if len(results_filtered.seed.unique()) < 3:
             logging.warning(
-                "Attention. For task " + finetuning_task + " with model name " + _name_or_path + " you have " + str(
+                "Attention. For the fine-tuning task " + finetuning_task + " with model name " + _name_or_path + " you have " + str(
                     len(results_filtered.seed.unique())) + " instead of 3 seeds! The mean will be calculated anyway.")
 
         if len(results_filtered.seed.unique()) != len(results_filtered.seed.tolist()):
             logging.warning(
-                'Attention! It seems you have duplicate seeds for task ' + finetuning_task + " with the model " + _name_or_path)
+                'Attention! It seems you have duplicate seeds for the fine-tuning task ' + finetuning_task + " with the model " + _name_or_path)
             logging.info(
                 'Duplicate values will be removed based on the seed number.')
 
         if len(results_filtered.seed.tolist()) == 0:
-            logging.info('It seems you have duplicate seeds task ' + finetuning_task +
+            logging.info('The fine-tuning task ' + finetuning_task +
                          ' with the model ' + _name_or_path + " has no meaningful results.")
             return ""  # There is nothing to be calculated
         else:
             mean_value = self.get_mean_from_list_of_values(results_filtered[score].tolist(),
                                                            with_standard_deviation=with_standard_deviation)
 
-            # mean_value = self.convert_numpy_float_to_python_float(mean_value)
-
-            if mean_value in ["", np.nan]:
-                print('There is an error for ', finetuning_task, _name_or_path, score)
-                print(results_filtered[score].tolist())
-        if isinstance(mean_value, str):
-            print('Erroooooooorrrrrr: ', finetuning_task, _name_or_path)
+        if mean_value in ["", np.nan]:
+            logging.warning(
+                f'There is an error for the fine-tuning task {finetuning_task} with the model {_name_or_path} and the score {score}. '
+                f'There are no useful values to calculate an mean score. ')
+        elif isinstance(mean_value, str):
+            logging.warning(
+                f'There is an error for the fine-tuning task {finetuning_task} with the model {_name_or_path} and the score {score}. '
+                f'There are no useful values to calculate an mean score. ')
         return mean_value
 
-    def insert_abbreviations(self, dataframe):
-        columns = dataframe.columns.tolist()
-        for c in columns:
-            if c in self.meta_infos['task_abbreviations'].keys():
-                dataframe.rename(
-                    columns={c: self.meta_infos['task_abbreviations'][c]}, inplace=True)
-            elif c in self.meta_infos['dataset_abbreviations'].keys():
-                dataframe.rename(
-                    columns={c: self.meta_infos['dataset_abbreviations'][c]}, inplace=True)
+    def create_template(self, columns: list = None) -> pd.core.frame.DataFrame:
 
-        return dataframe
+        """
+        Creates an empty dataframe with predefined indices and column names that will be used to create the dataframe
+        with the aggregate scores.
 
-    def round_value(self, value, places=1):
-        if isinstance(value, float):
-            return round(value * 100, places)
-        elif isinstance(value, tuple) and isinstance(value[0], float) and isinstance(value[1], float):
-            # This is needed for cases where we insert standard deviation in the cells
-            score = round(value[0] * 100, places)
-            standard_deviation = round(value[1] * 100, places)
-            return (score, standard_deviation)
-        else:
-            return value
+        @param columns: List of column names that you want to add.
+        @return: pd.core.frame.DataFrame
+        """
 
-    def replace_empty_string(self, value, placeholder):
-        if value == '':
-            return placeholder
-        else:
-            return value
-
-    def make_bold(self, values):
-        values_to_check = [v if isinstance(v, float) else 0 for v in values]
-        highest_value_index = np.argmax(values_to_check)
-        values[highest_value_index] = '\\bf{' + \
-                                      str(values[highest_value_index]) + '}'
-        return values
-
-    def highligh_highest_value(self, dataframe, column):
-        values = dataframe[column].tolist()
-        # if len([v for v in values if type(literal_eval(v))!=str])==len(values):
-        values = self.make_bold(values)
-        dataframe[column] = values
-        return dataframe
-
-    def postprocess_columns(self, dataframe):
-        dataframe.fillna('', inplace=True)
-        empty_columns = dataframe.columns[dataframe.eq('').all()]
-        dataframe = dataframe.drop(empty_columns, axis=1)
-        dataframe = dataframe.applymap(lambda x: self.round_value(x))
-        dataframe = dataframe.applymap(
-            lambda x: self.replace_empty_string(x, np.nan))
-        if self.model_order_acc_to_report_specs and len(self.model_order_acc_to_report_specs) == dataframe.shape[0]:
-            dataframe = dataframe.reindex(self.model_order_acc_to_report_specs)
-
-        # Insert Model name abbreviations
-        if set(dataframe.index.tolist()) == set(self.model_order_acc_to_report_specs):
-            dataframe = dataframe.rename(
-                index=self.meta_infos["model_abbrevations"])
-
-        return dataframe
-
-    def insert_model_abbreviation(self, model_name):
-        if model_name in self.meta_infos["model_abbrevations"].keys():
-            return self.meta_infos["model_abbrevations"][model_name]
-        else:
-            return model_name
-
-    def create_template(self, columns=None):
         # Create empty dataframe
         overview_template = pd.DataFrame()
 
         # Se the list of model names as index
-        overview_template = overview_template.set_axis(
-            self.results._name_or_path.unique())
+        overview_template = overview_template.set_axis(self.results._name_or_path.unique())
 
         # Name the index axis as Model
         overview_template.index.names = ['Model']
@@ -1023,130 +1061,20 @@ class ResultAggregator(RevisionHandler):
 
         return overview_template
 
-    def insert_aggregated_score_over_language_models(self, dataframe, column_name="Agg."):
-        dataframe[column_name] = ""
-
-        for _name_or_path in dataframe.index.tolist():
-            columns = dataframe.columns.tolist()
-            all_mean_macro_f1_scores = dataframe.loc[_name_or_path].tolist()
-            all_mean_macro_f1_scores = [plm[0] if isinstance(plm, tuple) else plm for plm in all_mean_macro_f1_scores]
-            all_mean_macro_f1_scores_cleaned = [
-                x for x in all_mean_macro_f1_scores if type(x) != str]
-            string_values_indices = [columns[all_mean_macro_f1_scores.index(x)] for x in all_mean_macro_f1_scores if
-                                     type(x) == str]
-            string_values_indices = list(set(string_values_indices))
-            if all_mean_macro_f1_scores_cleaned != all_mean_macro_f1_scores:
-                logging.warning(
-                    'Attention! ' + _name_or_path + 'has string values as mean score for the following '
-                                                    'datasets/languages: ' + ', '.join(
-                        string_values_indices))
-
-            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
-            dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
-
-        columns = sorted(dataframe.columns.tolist())
-        # first_column = [column_name]
-        # dataframe = dataframe[first_column + [col for col in columns if col not in first_column]]
-
-        # Check if column with aggregated scores contains only numerical values
-        # If yes, we can sort the column
-        # if len([x for x in dataframe[column_name].tolist() if type(x)==float])==len(dataframe[column_name].tolist()):
-        # dataframe = dataframe.sort_values(column_name, ascending = False)
-
-        return dataframe
-
-    def insert_config_average_scores(self, overview_template, average_over_language=True, task_constraint: list = [],
-                                     model_constraint: list = [], with_standard_deviation: bool = False):
-        logging.info("*** Calculating average scores ***")
-        allowed_models = list(self.results._name_or_path.unique())
-        allowed_tasks = list(self.results.finetuning_task.unique())
-
-        if len(model_constraint) > 0:
-            allowed_models = [
-                am for am in allowed_models if am in model_constraint]
-
-        if len(task_constraint) > 0:
-            allowed_tasks = [
-                at for at in allowed_tasks if at in task_constraint]
-
-        if average_over_language == False:
-            for _name_or_path in allowed_models:
-                for finetuning_task in allowed_tasks:
-                    mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
-                                                                 _name_or_path=_name_or_path,
-                                                                 with_standard_deviation=with_standard_deviation)
-                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
-
-        else:
-            for _name_or_path in allowed_models:
-                for finetuning_task in allowed_tasks:
-
-                    # We check of the finetuning task has more than one language
-                    # If not, we can process with the normal predict/_macro-f1 that stands for the entire config
-                    # If yes, we loop through all available language-specific macro-f1 scores
-
-                    if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
-                        mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
-                                                                     _name_or_path=_name_or_path)
-
-                    elif len(self.meta_infos["task_language_mapping"][finetuning_task]) > 1:
-                        predict_language_mean_collected = list()
-                        predict_language_collected = list()
-
-                        # Average over languages
-                        for aps in self.available_predict_scores:
-                            language = aps.split('_')[0]
-                            if language in self.meta_infos["task_language_mapping"][finetuning_task]:
-                                if self.meta_infos["model_language_lookup_table"][_name_or_path] == language or \
-                                        self.meta_infos["model_language_lookup_table"][_name_or_path] == 'all':
-                                    predict_language_mean = self.get_average_score(finetuning_task=finetuning_task,
-                                                                                   _name_or_path=_name_or_path,
-                                                                                   score=aps)
-                                    # This is to avoid string values; if there were no scores available I returned an
-                                    # empty string, because 0.0 would be missleading
-                                    if predict_language_mean not in ["", np.nan]:
-                                        predict_language_mean_collected.append(predict_language_mean)
-                                        predict_language_collected.append(language)
-                                    else:
-                                        print(_name_or_path, finetuning_task, ' has no values!')
-                                    # TODO: Add logger informartion
-
-                        if len(predict_language_mean_collected) > 0:
-
-                            predict_language_mean_collected = [plm[0] if isinstance(plm, tuple) else plm for plm in
-                                                               predict_language_mean_collected]
-
-                            mean_macro_f1_score = self.get_mean_from_list_of_values(predict_language_mean_collected,
-                                                                                    with_standard_deviation=with_standard_deviation)
-
-                            if set(predict_language_collected) != set(
-                                    self.meta_infos["task_language_mapping"][finetuning_task]):
-                                if set(self.meta_infos["model_language_lookup_table"][_name_or_path]) != set(
-                                        predict_language_collected):
-                                    logging.error(
-                                        "We do not have the prediction results for all languages for finetuning task " + finetuning_task + " with language model " + _name_or_path)
-                                    logging.info("We have results for the following languages: " + ", ".join(
-                                        sorted(predict_language_collected)))
-                                    logging.info("But we need results for the following languages: " + ", ".join(
-                                        sorted(self.meta_infos["task_language_mapping"][finetuning_task])))
-                                    logging.info(
-                                        "The the results for the following language(s) are mssing: " + ', '.join(
-                                            [l for l in self.meta_infos["task_language_mapping"][finetuning_task] if
-                                             l not in predict_language_collected]))
-
-                        else:
-                            mean_macro_f1_score = ""
-
-                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
-
-        # if overview_template.isnull().values.any():
-        # logging.warning('Attention! For some cases we do not have an aggregated score! These cases will be converted to nan.')
-        # overview_template.fillna("", inplace=True)
-
     def get_config_aggregated_score(self, average_over_language=True, write_to_csv=False,
                                     column_name="Agg.", task_constraint: list = [],
                                     model_constraint: list = [], with_standard_deviation=False):
-        # Insert aggregated mean for each model name
+
+        """
+        Creates the dataframe with the config aggregate scores.
+
+        @param average_over_language: Boolean Value. If set to 'True', we will average over languages. Default is True.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @param with_standard_deviation: Boolean value. Default is False. Whether you want to add standard deviation or not.
+        @param column_name: Name of the column that presents the aggregate score.
+        @return: None.
+        """
 
         columns = list()
         for _, configs in self.meta_infos["dataset_to_config"].items():
@@ -1171,36 +1099,153 @@ class ResultAggregator(RevisionHandler):
                 self.config_aggregated_score.index.isin(model_constraint)]
 
         config_aggregated_score = deepcopy(self.config_aggregated_score)
-        config_aggregated_score = self.insert_abbreviations(
-            config_aggregated_score)
-        config_aggregated_score = self.postprocess_columns(
-            config_aggregated_score)
+        config_aggregated_score = insert_abbreviations_in_columns(config_aggregated_score)
+        config_aggregated_score = self.postprocess_columns(config_aggregated_score)
         if write_to_csv:
-            if average_over_language == False:
-                config_aggregated_score.to_csv(
-                    f'{self.output_dir}/config_aggregated_scores_simple.csv')
-                if with_standard_deviation == False:
-                    config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                        f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
-                if with_standard_deviation == True:
-                    config_aggregated_score.to_excel(
-                        f'{self.output_dir}/config_aggregated_scores_simple.xlsx')
-                self.make_latext_table(
-                    config_aggregated_score, f'{self.output_dir}/config_aggregated_scores_simple.tex')
-            if average_over_language == True:
-                config_aggregated_score.to_csv(
-                    f'{self.output_dir}/config_aggregated_scores_average_over_language.csv')
-                if with_standard_deviation == False:
-                    config_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                        f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
-                if with_standard_deviation == True:
-                    config_aggregated_score.to_excel(
-                        f'{self.output_dir}/config_aggregated_scores_average_over_language.xlsx')
-                self.make_latext_table(config_aggregated_score,
-                                       f'{self.output_dir}/config_aggregated_scores_average_over_language.tex')
+            self.write_to_files(dataframe_with_aggregate_scores=config_aggregated_score,
+                                filename='config_aggregated_scores',
+                                average_over_language=average_over_language,
+                                with_standard_deviation=with_standard_deviation)
+
+    def insert_config_average_scores(self, overview_template: pd.core.frame.DataFrame,
+                                     average_over_language: bool = True,
+                                     task_constraint: list = [],
+                                     model_constraint: list = [],
+                                     with_standard_deviation: bool = False) -> None:
+        """
+
+        @param overview_template: Template for the dataframe that contains the scores.
+        @param average_over_language: Boolean Value. If set to 'True', we will average over languages. Default is True.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @param with_standard_deviation: Boolean value. Default is False. Whether you want to add standard deviation or not.
+        @return: None.
+        """
+        logging.info("*** Calculating average scores ***")
+        allowed_models = list(self.results._name_or_path.unique())
+        allowed_tasks = list(self.results.finetuning_task.unique())
+
+        if len(model_constraint) > 0:
+            allowed_models = [
+                am for am in allowed_models if am in model_constraint]
+
+        if len(task_constraint) > 0:
+            allowed_tasks = [
+                at for at in allowed_tasks if at in task_constraint]
+
+        if average_over_language == False:
+            for _name_or_path in allowed_models:
+                for finetuning_task in allowed_tasks:
+                    mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
+                                                                 _name_or_path=_name_or_path,
+                                                                 with_standard_deviation=with_standard_deviation)
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
+
+        elif average_over_language == True:
+            for _name_or_path in allowed_models:
+                for finetuning_task in allowed_tasks:
+
+                    # We check of the fine-tuning task has more than one language
+                    # If not, we can process with the normal predict/_macro-f1 that stands for the entire config
+                    # If yes, we loop through all available language-specific macro-f1 scores
+
+                    if len(self.meta_infos["task_language_mapping"][finetuning_task]) == 1:
+                        mean_macro_f1_score = self.get_average_score(finetuning_task=finetuning_task,
+                                                                     _name_or_path=_name_or_path,
+                                                                     with_standard_deviation=with_standard_deviation)
+
+                    elif len(self.meta_infos["task_language_mapping"][finetuning_task]) > 1:
+                        predict_language_mean_collected = list()
+                        predict_language_collected = list()
+
+                        # Average over languages
+                        for aps in self.available_predict_scores:
+                            language = aps.split('_')[0]
+                            if language in self.meta_infos["task_language_mapping"][finetuning_task]:
+                                if self.meta_infos["model_language_lookup_table"][_name_or_path] == language or \
+                                        self.meta_infos["model_language_lookup_table"][_name_or_path] == 'all':
+                                    predict_language_mean = self.get_average_score(finetuning_task=finetuning_task,
+                                                                                   _name_or_path=_name_or_path,
+                                                                                   score=aps)
+                                    # This is to avoid string values; if there were no scores available I returned an
+                                    # empty string, because 0.0 would be misleading
+                                    if predict_language_mean not in ["", np.nan]:
+                                        predict_language_mean_collected.append(predict_language_mean)
+                                        predict_language_collected.append(language)
+                                    else:
+                                        logging.warning(
+                                            f'There is an error for the fine-tuning task {finetuning_task} with the model {_name_or_path} and the score {aps}. '
+                                            f'There are no useful values to calculate an mean score. ')
+
+                        if len(predict_language_mean_collected) > 0:
+
+                            predict_language_mean_collected = [plm[0] if isinstance(plm, tuple) else plm for plm in
+                                                               predict_language_mean_collected]
+
+                            mean_macro_f1_score = self.get_mean_from_list_of_values(predict_language_mean_collected,
+                                                                                    with_standard_deviation=with_standard_deviation)
+
+                            if set(predict_language_collected) != set(
+                                    self.meta_infos["task_language_mapping"][finetuning_task]):
+                                if set(self.meta_infos["model_language_lookup_table"][_name_or_path]) != set(
+                                        predict_language_collected):
+                                    logging.error(
+                                        f"We do not have the prediction results for all languages for fine-tuning task {finetuning_task} with language model {_name_or_path}")
+                                    logging.info("We have results for the following languages: " + ", ".join(
+                                        sorted(predict_language_collected)))
+                                    logging.info("But we need results for the following languages: " + ", ".join(
+                                        sorted(self.meta_infos["task_language_mapping"][finetuning_task])))
+                                    logging.info(
+                                        "The the results for the following language(s) are mssing: " + ', '.join(
+                                            [l for l in self.meta_infos["task_language_mapping"][finetuning_task] if
+                                             l not in predict_language_collected]))
+
+                        else:
+                            mean_macro_f1_score = ""
+
+                    overview_template.at[_name_or_path, finetuning_task] = mean_macro_f1_score
+
+    def insert_aggregated_score_over_language_models(self, dataframe: pd.core.frame.DataFrame,
+                                                     column_name: str = "Agg.") -> pd.core.frame.DataFrame:
+
+        """
+        @param dataframe: pd.core.frame.DataFrame
+        @param column_name: Name of the column that presents the aggregate score.
+        @return: pd.core.frame.DataFrame
+        """
+        dataframe[column_name] = ""
+
+        for _name_or_path in dataframe.index.tolist():
+            columns = dataframe.columns.tolist()
+            all_mean_macro_f1_scores = dataframe.loc[_name_or_path].tolist()
+            all_mean_macro_f1_scores = [plm[0] if isinstance(plm, tuple) else plm for plm in all_mean_macro_f1_scores]
+            all_mean_macro_f1_scores_cleaned = [x for x in all_mean_macro_f1_scores if type(x) != str]
+            string_values_indices = [columns[all_mean_macro_f1_scores.index(x)] for x in all_mean_macro_f1_scores if
+                                     type(x) == str]
+            string_values_indices = list(set(string_values_indices))
+            if all_mean_macro_f1_scores_cleaned != all_mean_macro_f1_scores:
+                logging.warning(
+                    'Attention! ' + _name_or_path + 'has string values as mean score for the following '
+                                                    'datasets/languages: ' + ', '.join(
+                        string_values_indices))
+
+            all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
+            dataframe.at[_name_or_path, column_name] = all_mean_macro_f1_scores_mean
+
+        return dataframe
 
     def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
                                      model_constraint: list = []):
+
+        """
+        Creates the dataframe with the dataset aggregate scores.
+
+        @param average_over_language: Boolean Value. If set to 'True', we will average over languages. Default is True.
+        @param task_constraint: List of tasks that we want to check.
+        @param model_constraint:  List of language models that we want to check.
+        @return: None.
+        """
+
         self.get_config_aggregated_score(
             average_over_language=average_over_language, write_to_csv=write_to_csv, model_constraint=model_constraint,
             task_constraint=task_constraint)
@@ -1268,24 +1313,13 @@ class ResultAggregator(RevisionHandler):
 
         if write_to_csv == True:
             dataset_aggregated_score = deepcopy(self.dataset_aggregated_score)
-            dataset_aggregated_score = self.insert_abbreviations(
+            dataset_aggregated_score = insert_abbreviations_in_columns(
                 dataset_aggregated_score)
             dataset_aggregated_score = self.postprocess_columns(
                 dataset_aggregated_score)
-            if average_over_language == False:
-                dataset_aggregated_score.to_csv(
-                    f'{self.output_dir}/dataset_aggregated_scores_simple.csv')
-                dataset_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                    f'{self.output_dir}/dataset_aggregated_scores_simple.xlsx')
-                self.make_latext_table(
-                    dataset_aggregated_score, f'{self.output_dir}/dataset_aggregated_scores_simple.tex')
-            if average_over_language == True:
-                dataset_aggregated_score.to_csv(
-                    f'{self.output_dir}/dataset_aggregated_scores_average_over_language.csv')
-                dataset_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
-                    f'{self.output_dir}/dataset_aggregated_scores_average_over_language.xlsx')
-                self.make_latext_table(dataset_aggregated_score,
-                                       f'{self.output_dir}/dataset_aggregated_scores_average_over_language.tex')
+            self.write_to_files(dataframe_with_aggregate_scores=dataset_aggregated_score,
+                                filename='dataset_aggregated_scores',
+                                average_over_language=average_over_language)
 
     def get_aggregated_score_for_language(self, score_type, task_constraint: list = [], with_standard_deviation=False):
         tasks_relevant_for_language = list(
@@ -1355,8 +1389,7 @@ class ResultAggregator(RevisionHandler):
             lookup_table = self.get_aggregated_score_for_language(
                 score_type, task_constraint)
             for language_model, score in lookup_table.items():
-                self.language_aggregated_score.at[language_model,
-                language] = score
+                self.language_aggregated_score.at[language_model, language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -1368,8 +1401,7 @@ class ResultAggregator(RevisionHandler):
         # Order of columns
         column_order = sorted(self.language_aggregated_score.columns.tolist())
         column_order = [c for c in column_order if c != 'Agg.']
-        self.language_aggregated_score = self.language_aggregated_score[column_order + [
-            'Agg.']]
+        self.language_aggregated_score = self.language_aggregated_score[column_order + ['Agg.']]
 
         language_aggregated_score = deepcopy(self.language_aggregated_score)
         language_aggregated_score = self.postprocess_columns(
@@ -1387,11 +1419,10 @@ class ResultAggregator(RevisionHandler):
     def make_latext_table(self, dataframe, file_name):
         dataframe.fillna('', inplace=True)
         dataframe = dataframe.applymap(
-            lambda x: self.replace_empty_string(x, '-'))
+            lambda x: replace_empty_string(x, '-'))
         available_columns = dataframe.columns.tolist()
         for col in available_columns:
-            dataframe = self.highligh_highest_value(
-                dataframe=dataframe, column=col)
+            dataframe = highligh_highest_value(dataframe=dataframe, column=col)
             dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
 
         with open(file_name, 'w') as f:
@@ -1446,7 +1477,8 @@ if __name__ == "__main__":
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
                           report_spec_name=args.report_spec,
-                          fill_with_wrong_revisions=False)
+                          fill_with_wrong_revisions=False,
+                          mean_type='geometric')
 
     ra.get_info()
     model_constraint = [_name_or_path.split(
