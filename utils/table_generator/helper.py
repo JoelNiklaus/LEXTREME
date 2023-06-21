@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import sys
+from copy import deepcopy
 
 TABLE_TO_REPORT_SPECS = os.path.join(os.path.dirname(__file__), '../report_specs')
 TABLE_OUTPUT_PATH = os.path.join(os.path.dirname(__file__), '../tables')
@@ -14,6 +15,9 @@ meta_infos = get_meta_infos()
 
 MONOLINGUAL = 'monolingual'
 MULTILINGUAL = 'multilingual'
+
+LATEXT_TABLE_PREFIX = "\\begin{table*}[!ht]\n\\centering\n"
+LATEXT_TABLE_SUFFIX = "\\caption{Table explanation text.}\n\\label{tab:table_label}\n\\end{table*}"
 
 
 def insert_responsibilities(dataframe: pd.core.frame.DataFrame) -> pd.core.frame.DataFrame:
@@ -76,3 +80,35 @@ def highligh_highest_value(dataframe: pd.core.frame.DataFrame, column: str) -> p
     values = make_highest_value_latex_bold(values)
     dataframe[column] = values
     return dataframe
+
+
+def make_latext_table(dataframe: pd.core.frame.DataFrame, file_name: str):
+    dataframe.fillna('', inplace=True)
+    dataframe = dataframe.applymap(
+        lambda x: replace_empty_string(x, '-'))
+    available_columns = dataframe.columns.tolist()
+    for col in available_columns:
+        dataframe = highligh_highest_value(dataframe=dataframe, column=col)
+        dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
+
+    with open(file_name, 'w') as f:
+        print(LATEXT_TABLE_PREFIX + dataframe.to_latex(index=True,
+                                                       escape=False,
+                                                       column_format='r' * len(
+                                                           dataframe.columns.tolist())) + LATEXT_TABLE_SUFFIX, file=f)
+
+
+def remove_outliers(list_of_values: list):
+    removed_values = list()
+    list_of_values_copy = list()
+    if len(list_of_values) >= 3:
+        standard_deviation = np.std(list_of_values)
+        for value in list_of_values:
+            if value < standard_deviation:
+                removed_values.append(value)
+            else:
+                list_of_values_copy.append(value)
+    if len(list_of_values_copy) == 0:
+        list_of_values_copy = deepcopy(list_of_values)
+        removed_values = []
+    return list_of_values_copy, removed_values

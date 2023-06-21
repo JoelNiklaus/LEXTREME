@@ -17,6 +17,7 @@ import pandas as pd
 import re
 import sys
 import wandb
+from pprint import pprint
 from helper import *
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
@@ -43,7 +44,8 @@ class ResultAggregator(RevisionHandler):
                  wandb_api_key: Optional[str] = None,
                  which_language: Optional[str] = None,
                  required_seeds: Optional[List[int]] = None,
-                 mean_type='harmonic'
+                 mean_type='harmonic',
+                 remove_outliers: bool = False
                  ):
         super().__init__(report_spec_name)
         """
@@ -145,10 +147,11 @@ class ResultAggregator(RevisionHandler):
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
-        self.prefix = "\\begin{table*}[!ht]\n\\centering\n"
-        self.suffix = "\\caption{Table explanation text.}\n\\label{tab:table_label}\n\\end{table*}"
-
         self.mean_type = mean_type
+
+        self.remove_outliers = remove_outliers
+
+        self.removed_values_dict = defaultdict(dict)
 
     def __enter__(self):
         sys.stdout = open(self._path, mode="w")
@@ -947,6 +950,7 @@ class ResultAggregator(RevisionHandler):
         @param with_standard_deviation: Boolean value. If set to True, it will return the standard deviations.
         @return:
         """
+
         if self.mean_type == 'harmonic':
             mean_function = hmean
         elif self.mean_type == 'geometric':
@@ -977,8 +981,7 @@ class ResultAggregator(RevisionHandler):
             if with_standard_deviation == True:
                 dataframe_with_aggregate_scores.to_excel(
                     f'{self.output_dir}/{filename}_simple.xlsx')
-            self.make_latext_table(
-                dataframe_with_aggregate_scores, f'{self.output_dir}/{filename}_simple.tex')
+            make_latext_table(dataframe_with_aggregate_scores, f'{self.output_dir}/{filename}_simple.tex')
         if average_over_language == True:
             dataframe_with_aggregate_scores.to_csv(
                 f'{self.output_dir}/{filename}_average_over_language.csv')
@@ -986,10 +989,9 @@ class ResultAggregator(RevisionHandler):
                 dataframe_with_aggregate_scores.style.highlight_max(color='lightgreen', axis=0).to_excel(
                     f'{self.output_dir}/{filename}_average_over_language.xlsx')
             if with_standard_deviation == True:
-                dataframe_with_aggregate_scores.to_excel(
-                    f'{self.output_dir}/{filename}_average_over_language.xlsx')
-            self.make_latext_table(dataframe_with_aggregate_scores,
-                                   f'{self.output_dir}/{filename}_average_over_language.tex')
+                dataframe_with_aggregate_scores.to_excel(f'{self.output_dir}/{filename}_average_over_language.xlsx')
+            make_latext_table(dataframe_with_aggregate_scores,
+                              f'{self.output_dir}/{filename}_average_over_language.tex')
 
     def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None,
                           with_standard_deviation: bool = False) -> float:
@@ -1015,7 +1017,14 @@ class ResultAggregator(RevisionHandler):
                          ' with the model ' + _name_or_path + " has no meaningful results.")
             return ""  # There is nothing to be calculated
         else:
-            mean_value = self.get_mean_from_list_of_values(results_filtered[score].tolist(),
+            if self.remove_outliers == True:
+                list_of_values, removed_values = remove_outliers(list_of_values=results_filtered[score].tolist())
+                if len(removed_values) > 0:
+                    self.removed_values_dict[finetuning_task][_name_or_path] = removed_values
+            elif self.remove_outliers == False:
+                list_of_values = results_filtered[score].tolist()
+
+            mean_value = self.get_mean_from_list_of_values(list_of_values,
                                                            with_standard_deviation=with_standard_deviation)
 
         if mean_value in ["", np.nan]:
@@ -1209,10 +1218,14 @@ class ResultAggregator(RevisionHandler):
                                                      column_name: str = "Agg.") -> pd.core.frame.DataFrame:
 
         """
+        For each language model it will collect all aggregated scores for each fine-tuning task/dataset and
+        calculate the aggregate score for each language model.
+
         @param dataframe: pd.core.frame.DataFrame
         @param column_name: Name of the column that presents the aggregate score.
         @return: pd.core.frame.DataFrame
         """
+
         dataframe[column_name] = ""
 
         for _name_or_path in dataframe.index.tolist():
@@ -1225,8 +1238,7 @@ class ResultAggregator(RevisionHandler):
             string_values_indices = list(set(string_values_indices))
             if all_mean_macro_f1_scores_cleaned != all_mean_macro_f1_scores:
                 logging.warning(
-                    'Attention! ' + _name_or_path + 'has string values as mean score for the following '
-                                                    'datasets/languages: ' + ', '.join(
+                    f'Attention! {_name_or_path} has string values as mean score for the following datasets/languages: ' + ', '.join(
                         string_values_indices))
 
             all_mean_macro_f1_scores_mean = self.get_mean_from_list_of_values(all_mean_macro_f1_scores_cleaned)
@@ -1235,7 +1247,7 @@ class ResultAggregator(RevisionHandler):
         return dataframe
 
     def get_dataset_aggregated_score(self, average_over_language=True, write_to_csv=True, task_constraint: list = [],
-                                     model_constraint: list = []):
+                                     model_constraint: list = []) -> None:
 
         """
         Creates the dataframe with the dataset aggregate scores.
@@ -1262,47 +1274,36 @@ class ResultAggregator(RevisionHandler):
         relevant_models = self.results._name_or_path.unique()
 
         if len(model_constraint) > 0:
-            relevant_models = [
-                rm for rm in relevant_models if rm in model_constraint]
+            relevant_models = [rm for rm in relevant_models if rm in model_constraint]
 
         for _name_or_path in relevant_models:
             for dataset in columns:
                 configs = self.meta_infos["dataset_to_config"][dataset]
-
-                dataset_mean = list()
+                list_for_dataset_mean = list()
                 for conf in configs:
                     # Look if there are results for that config. If not, skip it.
                     if conf in self.config_aggregated_score.columns.tolist():
                         config_mean = self.config_aggregated_score.at[_name_or_path, conf]
-                        if config_mean == "":  # This is to avoid string values; if there were no scores available I
-                            # returned an empty string, because 0.0 would be missleading
-                            logging.info(
-                                "There is no config mean for config " + conf + " with language model " + _name_or_path)
-                        elif type(config_mean) == float:
-                            dataset_mean.append(config_mean)
-                        else:
-                            logging.error(
-                                "Processed interrupted due to wrong mean value that is not a float. The mean value is: " + str(
-                                    config_mean))
-                            break
+                        if not isinstance(config_mean, float):
+                            logging.warning(
+                                f"There is no config mean for config {conf} with language model {_name_or_path}")
+                        list_for_dataset_mean.append(config_mean)
                     else:
-                        logging.info(
-                            "There seem to be no results for the configuration " + conf + " with language model " + _name_or_path)
-                if len(dataset_mean) > 0:
-                    if len(dataset_mean) != len(configs):
+                        logging.warning(
+                            f"There seem to be no results for the configuration {conf} with language model {_name_or_path}")
+                if len(list_for_dataset_mean) > 0:
+                    if len(list_for_dataset_mean) != len(configs):
                         logging.error(
-                            'Attention! It seems for dataset ' + dataset +
-                            'you do not have the average values for '
-                            'configs. The average score will be '
+                            f'Attention! It seems for dataset {dataset}' +
+                            'you do not have the average values for all '
+                            'configs/fine-tuning task. The average score will be '
                             'calculated on the basis of incomplete '
                             'information.')
-                    dataset_mean = self.get_mean_from_list_of_values(
-                        dataset_mean)
+                    dataset_mean = self.get_mean_from_list_of_values(list_for_dataset_mean)
                 else:
                     dataset_mean = ''
 
-                self.dataset_aggregated_score.at[_name_or_path,
-                dataset] = dataset_mean
+                self.dataset_aggregated_score.at[_name_or_path, dataset] = dataset_mean
 
         self.dataset_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.dataset_aggregated_score)
@@ -1321,75 +1322,22 @@ class ResultAggregator(RevisionHandler):
                                 filename='dataset_aggregated_scores',
                                 average_over_language=average_over_language)
 
-    def get_aggregated_score_for_language(self, score_type, task_constraint: list = [], with_standard_deviation=False):
-        tasks_relevant_for_language = list(
-            self.results[(self.results[score_type].isnull() == False) & (
-                    self.results[score_type] != "")].finetuning_task.unique())
-
-        if len(task_constraint) > 0:
-            tasks_relevant_for_language = [
-                t for t in tasks_relevant_for_language if t in task_constraint]
-
-        languge_models_relevant_for_language = list(
-            self.results[(self.results[score_type].isnull() == False) & (self.results[score_type] != "")][
-                "_name_or_path"].unique())
-
-        # Collect all average scores for each config grouped by dataset
-        language_model_config_score_dict = defaultdict(dict)
-        for ft in tasks_relevant_for_language:
-            for lm in languge_models_relevant_for_language:
-                # print(ft, lm, score_type)
-                result = self.get_average_score(finetuning_task=ft, _name_or_path=lm, score=score_type,
-                                                with_standard_deviation=with_standard_deviation)
-                if result not in ["", np.nan]:
-                    dataset_for_finetuning_task = self.meta_infos['config_to_dataset'][ft]
-                    if dataset_for_finetuning_task not in language_model_config_score_dict[lm].keys():
-                        language_model_config_score_dict[lm][dataset_for_finetuning_task] = list(
-                        )
-                    language_model_config_score_dict[lm][dataset_for_finetuning_task].append(
-                        result)
-
-        language_model_config_score_dict = dict(
-            language_model_config_score_dict)
-
-        # Average over configs per dataset
-        results_averaged_over_configs = defaultdict(dict)
-
-        for language_model, dataset_and_config_scores in language_model_config_score_dict.items():
-            for dataset, config_scores in dataset_and_config_scores.items():
-                results_averaged_over_configs[language_model][dataset] = self.get_mean_from_list_of_values(
-                    config_scores)
-
-        results_averaged_over_configs = dict(results_averaged_over_configs)
-
-        # Average over datasets within language model
-        results_averaged_over_datasets = dict()
-
-        for language_model, dataset_and_score in results_averaged_over_configs.items():
-            results_averaged_over_datasets[language_model] = self.get_mean_from_list_of_values(
-                list(dataset_and_score.values()))
-
-        results_averaged_over_datasets = dict(results_averaged_over_datasets)
-
-        return results_averaged_over_datasets
-
     def get_language_aggregated_score(self, write_to_csv=True, task_constraint: list = [], model_constraint: list = []):
         all_languages = set()
 
         for languages in self.meta_infos['task_language_mapping'].values():
-            for l in languages:
+            for lang in languages:
                 # TODO: Remove this constraint in the future
-                if l not in ['tr', 'nb']:
-                    all_languages.add(l)
+                if lang not in ['tr', 'nb']:
+                    all_languages.add(lang)
 
         self.language_aggregated_score = self.create_template(all_languages)
 
         for score_type in self.available_predict_scores:
             language = score_type.split('_')[0]
-            lookup_table = self.get_aggregated_score_for_language(
-                score_type, task_constraint)
-            for language_model, score in lookup_table.items():
-                self.language_aggregated_score.at[language_model, language] = score
+            lookup_table = self.get_aggregated_score_for_language(score_type, task_constraint)
+            for _name_or_path, score in lookup_table.items():
+                self.language_aggregated_score.at[_name_or_path, language] = score
 
         self.language_aggregated_score = self.insert_aggregated_score_over_language_models(
             self.language_aggregated_score)
@@ -1413,23 +1361,67 @@ class ResultAggregator(RevisionHandler):
                 f'{self.output_dir}/language_aggregated_scores.csv')
             language_aggregated_score.style.highlight_max(color='lightgreen', axis=0).to_excel(
                 f'{self.output_dir}/language_aggregated_scores.xlsx')
-            self.make_latext_table(language_aggregated_score,
-                                   f'{self.output_dir}/language_aggregated_scores.tex')
+            make_latext_table(language_aggregated_score, f'{self.output_dir}/language_aggregated_scores.tex')
 
-    def make_latext_table(self, dataframe, file_name):
-        dataframe.fillna('', inplace=True)
-        dataframe = dataframe.applymap(
-            lambda x: replace_empty_string(x, '-'))
-        available_columns = dataframe.columns.tolist()
-        for col in available_columns:
-            dataframe = highligh_highest_value(dataframe=dataframe, column=col)
-            dataframe.rename(columns={col: '\\bf{' + col + '}'}, inplace=True)
+    def get_aggregated_score_for_language(self, score_type: str, task_constraint: list = [],
+                                          with_standard_deviation: bool = False) -> dict:
 
-        with open(file_name, 'w') as f:
-            print(self.prefix + dataframe.to_latex(index=True,
-                                                   escape=False,
-                                                   column_format='r' * len(dataframe.columns.tolist())) + self.suffix,
-                  file=f)
+        """
+        For each score type the relevant model names are selected as well as the relevant finetuning tasks.
+        Then, for each score type (language-specific score) the average of configs is calculated.
+        Then, for each score type (language-specific score) the average over datasets (from the config aggregates) is calculated.
+
+        @param score_type: Name of the score, such as de_predict/_macro-f1.
+        @param task_constraint: List of tasks that we want to check.
+        @param with_standard_deviation: Boolean value. Default is False. Whether you want to add standard deviation or not.
+        @return: dict
+        """
+
+        tasks_relevant_for_language = list(self.results[(self.results[score_type].isnull() == False) & (
+                self.results[score_type] != "")].finetuning_task.unique())
+
+        if len(task_constraint) > 0:
+            tasks_relevant_for_language = [t for t in tasks_relevant_for_language if t in task_constraint]
+
+        languge_models_relevant_for_language = list(
+            self.results[(self.results[score_type].isnull() == False) & (self.results[score_type] != "")][
+                "_name_or_path"].unique())
+
+        # Collect all average scores for each config grouped by dataset
+        language_model_config_score_dict = defaultdict(dict)
+        for finetuning_task in tasks_relevant_for_language:
+            for _name_or_path in languge_models_relevant_for_language:
+                result = self.get_average_score(finetuning_task=finetuning_task,
+                                                _name_or_path=_name_or_path,
+                                                score=score_type,
+                                                with_standard_deviation=with_standard_deviation)
+                if result not in ["", np.nan]:
+                    dataset_for_finetuning_task = self.meta_infos['config_to_dataset'][finetuning_task]
+                    if dataset_for_finetuning_task not in language_model_config_score_dict[_name_or_path].keys():
+                        language_model_config_score_dict[_name_or_path][dataset_for_finetuning_task] = list()
+                    language_model_config_score_dict[_name_or_path][dataset_for_finetuning_task].append(result)
+
+        language_model_config_score_dict = dict(language_model_config_score_dict)
+
+        # Average over configs per dataset
+        results_averaged_over_configs = defaultdict(dict)
+
+        for _name_or_path, dataset_and_config_scores in language_model_config_score_dict.items():
+            for dataset, config_scores in dataset_and_config_scores.items():
+                results_averaged_over_configs[_name_or_path][dataset] = self.get_mean_from_list_of_values(config_scores)
+
+        results_averaged_over_configs = dict(results_averaged_over_configs)
+
+        # Average over datasets within language model
+        results_averaged_over_datasets = dict()
+
+        for _name_or_path, dataset_and_score in results_averaged_over_configs.items():
+            results_averaged_over_datasets[_name_or_path] = self.get_mean_from_list_of_values(
+                list(dataset_and_score.values()))
+
+        results_averaged_over_datasets = dict(results_averaged_over_datasets)
+
+        return results_averaged_over_datasets
 
 
 if __name__ == "__main__":
@@ -1477,8 +1469,7 @@ if __name__ == "__main__":
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
                           report_spec_name=args.report_spec,
-                          fill_with_wrong_revisions=False,
-                          mean_type='geometric')
+                          fill_with_wrong_revisions=False)
 
     ra.get_info()
     model_constraint = [_name_or_path.split(
@@ -1499,6 +1490,8 @@ if __name__ == "__main__":
                                    model_constraint=model_constraint,
                                    task_constraint=report_spec['finetuning_task'],
                                    with_standard_deviation=True)
+
+    pprint(ra.removed_values_dict)
 
     # TODO maybe move all of this reporting functionality into a separate folder
 
