@@ -1018,7 +1018,8 @@ class ResultAggregator(RevisionHandler):
             return ""  # There is nothing to be calculated
         else:
             if self.remove_outliers == True:
-                list_of_values, removed_values = remove_outliers(list_of_values=results_filtered[score].tolist())
+                list_of_values, removed_values = remove_outliers_in_values(
+                    list_of_values=results_filtered[score].tolist())
                 if len(removed_values) > 0:
                     self.removed_values_dict[finetuning_task][_name_or_path] = removed_values
             elif self.remove_outliers == False:
@@ -1469,7 +1470,9 @@ if __name__ == "__main__":
                           which_language=args.which_language,
                           required_seeds=list_of_seeds,
                           report_spec_name=args.report_spec,
-                          fill_with_wrong_revisions=False)
+                          fill_with_wrong_revisions=False,
+                          mean_type='harmonic',
+                          remove_outliers=True)
 
     ra.get_info()
     model_constraint = [_name_or_path.split(
@@ -1491,7 +1494,8 @@ if __name__ == "__main__":
                                    task_constraint=report_spec['finetuning_task'],
                                    with_standard_deviation=True)
 
-    pprint(ra.removed_values_dict)
+    with open(ra.output_dir + '/removed_outliers.json', 'w') as f:
+        js.dump(ra.removed_values_dict, fp=f, indent=2)
 
     # TODO maybe move all of this reporting functionality into a separate folder
 

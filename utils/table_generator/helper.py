@@ -98,7 +98,7 @@ def make_latext_table(dataframe: pd.core.frame.DataFrame, file_name: str):
                                                            dataframe.columns.tolist())) + LATEXT_TABLE_SUFFIX, file=f)
 
 
-def remove_outliers(list_of_values: list):
+def remove_outliers_in_values(list_of_values: list):
     removed_values = list()
     list_of_values_copy = list()
     if len(list_of_values) >= 3:
