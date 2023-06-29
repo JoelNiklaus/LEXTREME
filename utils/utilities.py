@@ -165,6 +165,13 @@ optimal_batch_sizes = {
 }
 
 
+def find_optimal_learning_rate(model_name_or_path: str):
+    if model_name_or_path in ['google/mt5-small', 'google/mt5-base', 'google/mt5-large']:
+        return "1e-4"
+    else:
+        return "1e-5"
+
+
 def make_boolean(value):
     value_capitalized = str(value).lower().title()
     if literal_eval(value_capitalized) in [True, False, None]:
@@ -432,6 +439,8 @@ def generate_command_for_experiments(**data):
 
     if data["hierarchical"] is None:
         data["hierarchical"] = get_hierarchical(data["task"])
+    if data["learning_rate"] is None:
+        data["learning_rate"] = find_optimal_learning_rate(data["model_name"])
 
     command_template = 'python3 ./experiments/{CODE} ' \
                        '--do_eval ' \
@@ -567,6 +576,8 @@ def generate_command_for_hyperparameter_search(**data):
 
     if data["hierarchical"] is None:
         data["hierarchical"] = get_hierarchical(data["task"])
+    if data["learning_rate"] is None:
+        data["learning_rate"] = find_optimal_learning_rate(data["model_name"])
 
     command_template = 'python3 ./experiments/{CODE} ' \
                        '--do_eval ' \

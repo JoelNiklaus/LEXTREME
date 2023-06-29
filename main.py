@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument('-los', '--list_of_seeds',
                         help='Define the random seeds for which you want to run the experiments.',
                         default=None)
-    parser.add_argument('-lr', '--learning_rate', help='Define the learning rate.', default=1e-5)
+    parser.add_argument('-lr', '--learning_rate', help='Define the learning rate.', default=None)
     parser.add_argument('-wd', '--weight_decay',
                         help='The weight decay to apply (if not zero) to all layers except all bias and LayerNorm weights in AdamW optimizer.',
                         default=None)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                              'https://huggingface.co/docs/datasets/v1.5.0/loading_datasets.html#download-mode',
                         default='reuse_dataset_if_exists')  # reuses raw downloaded files but makes dataset freshly
     parser.add_argument('-t', '--task', help='Choose a task.', default='all')
-                        #choices=['all'] + sorted(list(meta_infos["task_type_mapping"].keys())))
+    # choices=['all'] + sorted(list(meta_infos["task_type_mapping"].keys())))
     parser.add_argument('-ld', '--log_directory',
                         help='Specify the directory where you want to save your logs. '
                              'The directory at the end of the tree is used as the project name for wandb.',
