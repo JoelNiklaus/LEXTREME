@@ -14,6 +14,8 @@ from models.xlm_roberta import HierXLMRobertaForSequenceClassification
 from models.camembert import HierCamembertForSequenceClassification
 from models.mt5 import MT5ForSequenceClassification, HierMT5ForSequenceClassification, MT5ForTokenClassification
 from models.xmod import HierXmodForSequenceClassification
+from models.bloom import HierBloomForSequenceClassification
+from copy import deepcopy
 
 
 @dataclass
@@ -36,7 +38,7 @@ def sinusoidal_init(num_embeddings: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert', 'mt5', 'xmod']
+supported_models = ['bert', 'distilbert', 'roberta', 'xlm-roberta', 'deberta-v2', 'camembert', 'mt5', 'xmod', 'bloom']
 
 
 class HierarchicalBert(nn.Module):
@@ -76,6 +78,14 @@ class HierarchicalBert(nn.Module):
             # for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
             dropout = encoder.config.dropout_rate
             layer_norm_eps = 1e-5  # 1e-5 is default
+        elif encoder.config.model_type in ['bloom']:
+            # for some reason, intermediate_size is called differently in DistilBertConfig
+            dim_feedforward = encoder.config.hidden_size
+            # for some reason, hidden_act is called activation in DistilBertConfig
+            activation = 'gelu'
+            # for some reason, hidden_dropout_prob is called dropout in DistilBertConfig
+            dropout = encoder.config.hidden_dropout
+            layer_norm_eps = 1e-5  # 1e-5 is default
         else:
             dim_feedforward = encoder.config.intermediate_size
             activation = encoder.config.hidden_act
@@ -111,6 +121,8 @@ class HierarchicalBert(nn.Module):
                 attention_mask=None,
                 token_type_ids=None,
                 lang_ids=None,  # This was introduced for ZurichNLP/swissbert which is a xmod model that needs lang_ids
+                past_key_values=None,
+                use_cache=None,
                 position_ids=None,
                 head_mask=None,
                 inputs_embeds=None,
@@ -125,6 +137,10 @@ class HierarchicalBert(nn.Module):
 
         # Squash samples and segments into a single axis (batch_size * n_segments, max_segment_length) --> (256, 128)
         input_ids_reshape = input_ids.contiguous().view(-1, input_ids.size(-1))
+        print('Shape of input ids:')
+        print(input_ids.shape)
+        print('Shape of input ids reshaped:')
+        print(input_ids_reshape.shape)
         attention_mask_reshape = attention_mask.contiguous().view(-1, attention_mask.size(-1))
 
         if token_type_ids is not None:
@@ -137,7 +153,7 @@ class HierarchicalBert(nn.Module):
 
         # Encode segments with BERT --> (256, 128, 768)
 
-        if self.encoder.config.model_type in ['distilbert', 'mt5']:
+        if self.encoder.config.model_type in ['distilbert', 'mt5', 'bloom']:
             encoder_outputs = self.encoder(input_ids=input_ids_reshape,
                                            attention_mask=attention_mask_reshape)[0]
         elif self.encoder.config.model_type == 'xmod':
@@ -157,7 +173,10 @@ class HierarchicalBert(nn.Module):
                                                             self.hidden_size)
 
         # Gather CLS outputs per segment --> (4, 64, 768)
-        encoder_outputs = encoder_outputs[:, :, 0]
+        if self.encoder.config.model_type == 'bloom':
+            encoder_outputs = encoder_outputs[:, :, -1]
+        else:
+            encoder_outputs = encoder_outputs[:, :, 0]
 
         # Infer real segments, i.e., mask paddings (4, 64)
         seg_mask = (torch.sum(input_ids, 2) != 0).to(input_ids.dtype)
@@ -176,6 +195,9 @@ class HierarchicalBert(nn.Module):
 
 
 def build_hierarchical_model(model, max_segments, max_segment_length):
+    print('\n################### Model before: ########################\n')
+    print(model)
+    old_model = deepcopy(model)
     config = model.config
     # Hack the classifier encoder to use hierarchical BERT
     if config.model_type in supported_models:
@@ -193,6 +215,8 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             segment_encoder = model.mt5
         elif config.model_type == 'xmod':
             segment_encoder = model.roberta
+        elif config.model_type == 'bloom':
+            segment_encoder = model.transformer
         # Replace flat BERT encoder with hierarchical BERT encoder
         model_encoder = HierarchicalBert(encoder=segment_encoder,
                                          max_segments=max_segments,
@@ -209,10 +233,16 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
             model.roberta = model_encoder
         elif config.model_type == 'mt5':
             model.mt5 = model_encoder
+        elif config.model_type == 'bloom':
+            model.transformer = model_encoder
     elif config.model_type in ['longformer', 'big_bird']:
         pass
     else:
         raise NotImplementedError(f"{config.model_type} is not supported yet!")
+
+    print('\n################### Model after: ########################\n')
+    print(model)
+    print('Models are the same: ', old_model == model)
 
     return model
 
@@ -251,7 +281,8 @@ def get_model_class_for_sequence_classification(model_type, model_args=None):
         "xlm-roberta": HierXLMRobertaForSequenceClassification,
         "camembert": HierCamembertForSequenceClassification,
         "mt5": HierMT5ForSequenceClassification,
-        "xmod": HierXmodForSequenceClassification
+        "xmod": HierXmodForSequenceClassification,
+        "bloom": HierBloomForSequenceClassification
         # Here just get directly the encoder, because there is no transformers class MT5ForSequenceClassification
     }
     if model_args is not None:

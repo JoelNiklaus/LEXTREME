@@ -1121,7 +1121,8 @@
         ],
         "large": [
           "xlm-roberta-large",
-          "google/mt5-large"
+          "google/mt5-large",
+          "bigscience/bloom-560m"
         ]
       }
     },
