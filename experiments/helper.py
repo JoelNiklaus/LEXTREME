@@ -391,9 +391,10 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
         for ids in tokenized['input_ids']:
             # convert ids to tokens and then back to strings
-            if model_args.model_name_or_path == 'bigscience/bloom-560m':
+            if model_args.model_name_or_path in meta_infos["bloom_models"]:
                 id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length)]
-                id_blocks[-1] = [id for id in id_blocks[-1] if id != pad_id]  # remove remaining pad_tokens_ids from the last block
+                id_blocks[-1] = [id for id in id_blocks[-1] if
+                                 id != pad_id]  # remove remaining pad_tokens_ids from the last block
             else:
                 id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length)
                              if
@@ -422,7 +423,8 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
         del batch['segments']
 
     else:
-        if not model_is_suitable_for_hierharchical(model_args.model_name_or_path) and meta_infos["task_default_arguments"][data_args.finetuning_task]["ModelArguments"]["hierarchical"]:
+        if not model_is_suitable_for_hierharchical(model_args.model_name_or_path) and \
+                meta_infos["task_default_arguments"][data_args.finetuning_task]["ModelArguments"]["hierarchical"]:
             maximal_sequence_length = data_args.max_segments * data_args.max_seg_length if data_args.max_segments * data_args.max_seg_length <= 4096 else 4096
         else:
             maximal_sequence_length = data_args.max_seq_length
@@ -966,7 +968,7 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
 
 
 def model_is_suitable_for_hierharchical(model_name_or_path: str) -> bool:
-    if 'longformer' not in model_name_or_path: # and model_name_or_path != 'bigscience/bloom-560m'
+    if 'longformer' not in model_name_or_path:
         return True
     else:
         return False
@@ -995,7 +997,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
     tokenizer = get_tokenizer(
         model_args.model_name_or_path, model_args.revision)
 
-    if model_args.hierarchical and config.model_type not in ['longformer']: #'bloom'
+    if model_args.hierarchical and config.model_type not in ['longformer']:
         model = build_hierarchical_model(
             model, data_args.max_segments, data_args.max_seg_length)
 

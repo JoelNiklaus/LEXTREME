@@ -572,7 +572,8 @@
       "case_hold"
     ],
     "original": [
-      "original"]
+      "original"
+    ]
   },
   "task_default_arguments": {
     "greek_legal_ner": {
@@ -1122,7 +1123,8 @@
         "large": [
           "xlm-roberta-large",
           "google/mt5-large",
-          "bigscience/bloom-560m"
+          "bigscience/bloom-560m",
+	  "bigscience/bloomz-560m"
         ]
       }
     },
@@ -1338,5 +1340,14 @@
   ],
   "rcds_swiss_citation_extraction_configs": [
     "original"
+  ],
+  "bloom_models": [
+    "bigscience/bloom-560m",
+    "bigscience/bloomz-560m",
+    "bigscience/bloom-1b1",
+    "bigscience/bloom-1b7",
+    "bigscience/bloom-3b",
+    "bigscience/bloom-7b1",
+    "bigscience/bloom"
   ]
 }

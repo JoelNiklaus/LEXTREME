@@ -137,10 +137,6 @@ class HierarchicalBert(nn.Module):
 
         # Squash samples and segments into a single axis (batch_size * n_segments, max_segment_length) --> (256, 128)
         input_ids_reshape = input_ids.contiguous().view(-1, input_ids.size(-1))
-        print('Shape of input ids:')
-        print(input_ids.shape)
-        print('Shape of input ids reshaped:')
-        print(input_ids_reshape.shape)
         attention_mask_reshape = attention_mask.contiguous().view(-1, attention_mask.size(-1))
 
         if token_type_ids is not None:
@@ -174,6 +170,7 @@ class HierarchicalBert(nn.Module):
 
         # Gather CLS outputs per segment --> (4, 64, 768)
         if self.encoder.config.model_type == 'bloom':
+            # Because of the expalantions given here: https://huggingface.co/docs/transformers/model_doc/bloom#transformers.BloomForSequenceClassification
             encoder_outputs = encoder_outputs[:, :, -1]
         else:
             encoder_outputs = encoder_outputs[:, :, 0]
@@ -195,8 +192,6 @@ class HierarchicalBert(nn.Module):
 
 
 def build_hierarchical_model(model, max_segments, max_segment_length):
-    print('\n################### Model before: ########################\n')
-    print(model)
     old_model = deepcopy(model)
     config = model.config
     # Hack the classifier encoder to use hierarchical BERT
@@ -239,10 +234,6 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
         pass
     else:
         raise NotImplementedError(f"{config.model_type} is not supported yet!")
-
-    print('\n################### Model after: ########################\n')
-    print(model)
-    print('Models are the same: ', old_model == model)
 
     return model
 
