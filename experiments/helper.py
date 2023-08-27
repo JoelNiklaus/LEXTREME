@@ -32,7 +32,6 @@ utils_path = os.path.join(os.path.dirname(__file__), '../utils')
 
 sys.path.append(utils_path)
 
-
 meta_infos = get_meta_infos()
 
 
@@ -313,7 +312,7 @@ def get_label_list_from_sltc_tasks(train_dataset, eval_dataset, predict_dataset)
 def append_zero_segments(case_encodings, pad_token_id, data_args):
     """appends a list of zero segments to the encodings to make up for missing segments"""
     return case_encodings + [[pad_token_id] * data_args.max_seg_length] * (
-        data_args.max_segments - len(case_encodings))
+            data_args.max_segments - len(case_encodings))
 
 
 def add_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
@@ -358,6 +357,12 @@ def do_oversampling_to_multiclass_dataset(train_dataset, id2label, data_args):
     return train_dataset
 
 
+def remove_pad_tokens(id_block, pad_id):
+    id_block = [_id for _id in id_block if _id != pad_id]
+
+    return id_block
+
+
 def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
     """Can be used with any task that requires hierarchical models"""
 
@@ -376,7 +381,7 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
     pad_id = tokenizer.pad_token_id
 
-    if model_args.hierarchical and 'longformer' not in model_args.model_name_or_path:
+    if model_args.hierarchical and model_is_suitable_for_hierharchical(model_args.model_name_or_path):
 
         batch['segments'] = []
 
@@ -386,10 +391,16 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
 
         for ids in tokenized['input_ids']:
             # convert ids to tokens and then back to strings
-            id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length) if
-                         ids[i] != pad_id]  # remove blocks containing only ids
-            id_blocks[-1] = [id for id in id_blocks[-1] if
-                             id != pad_id]  # remove remaining pad_tokens_ids from the last block
+            if model_args.model_name_or_path in meta_infos["bloom_models"]:
+                id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length)]
+                id_blocks[-1] = [id for id in id_blocks[-1] if
+                                 id != pad_id]  # remove remaining pad_tokens_ids from the last block
+            else:
+                id_blocks = [ids[i:i + data_args.max_seg_length] for i in range(0, len(ids), data_args.max_seg_length)
+                             if
+                             ids[i] != pad_id]  # remove blocks containing only ids
+                id_blocks[-1] = [id for id in id_blocks[-1] if
+                                 id != pad_id]  # remove remaining pad_tokens_ids from the last block
             token_blocks = [tokenizer.convert_ids_to_tokens(
                 ids) for ids in id_blocks]
             string_blocks = [tokenizer.convert_tokens_to_string(
@@ -412,22 +423,18 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
         del batch['segments']
 
     else:
-        if 'longformer' in model_args.model_name_or_path and \
+        if not model_is_suitable_for_hierharchical(model_args.model_name_or_path) and \
                 meta_infos["task_default_arguments"][data_args.finetuning_task]["ModelArguments"]["hierarchical"]:
-            tokenized = tokenizer(
-                batch["input"],
-                padding=padding,
-                max_length=data_args.max_segments * data_args.max_seg_length if data_args.max_segments *
-                data_args.max_seg_length <= 4096 else 4096,
-                truncation=True,
-            )
+            maximal_sequence_length = data_args.max_segments * data_args.max_seg_length if data_args.max_segments * data_args.max_seg_length <= 4096 else 4096
         else:
-            tokenized = tokenizer(
-                batch["input"],
-                padding=padding,
-                max_length=data_args.max_seq_length,
-                truncation=True,
-            )
+            maximal_sequence_length = data_args.max_seq_length
+
+        tokenized = tokenizer(
+            batch["input"],
+            padding=padding,
+            max_length=maximal_sequence_length,
+            truncation=True,
+        )
 
     return tokenized
 
@@ -627,12 +634,12 @@ class Seqeval:
         # labels
         true_predictions = [
             [self.label_list[p]
-                for (p, l) in zip(prediction, label) if l != -100]
+             for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
         true_labels = [
             [self.label_list[l]
-                for (p, l) in zip(prediction, label) if l != -100]
+             for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
 
@@ -960,6 +967,13 @@ def config_wandb(training_args, model_args, data_args, project_name=None):
         log_args(wandb, data_args, model_args)
 
 
+def model_is_suitable_for_hierharchical(model_name_or_path: str) -> bool:
+    if 'longformer' not in model_name_or_path:
+        return True
+    else:
+        return False
+
+
 def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, training_args, num_labels):
     config = AutoConfig.from_pretrained(
         model_args.model_name_or_path,
@@ -983,7 +997,7 @@ def generate_Model_Tokenizer_for_SequenceClassification(data_args, model_args, t
     tokenizer = get_tokenizer(
         model_args.model_name_or_path, model_args.revision)
 
-    if model_args.hierarchical and config.model_type != 'longformer':
+    if model_args.hierarchical and config.model_type not in ['longformer']:
         model = build_hierarchical_model(
             model, data_args.max_segments, data_args.max_seg_length)
 
@@ -1102,7 +1116,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
             run_specific_output_directory = get_the_run_name_for_hyperparameter_tuning(
                 data_args, training_args)
             training_args.output_dir = data_args.log_directory + '/' + data_args.finetuning_task + \
-                '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
+                                       '/' + model_args.model_name_or_path + '/' + run_specific_output_directory
 
             trainer = trainer_object(
                 model_init=model_init,
@@ -1134,7 +1148,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
                                          name_of_input_field="input")
         elif meta_infos["task_type_mapping"][data_args.finetuning_task] == "MLTC":
             langs = train_dataset['language'] + \
-                eval_dataset['language'] + predict_dataset['language']
+                    eval_dataset['language'] + predict_dataset['language']
             langs = sorted(list(set(langs)))
             make_predictions_multi_label(trainer=trainer, data_args=data_args, predict_dataset=predict_dataset,
                                          id2label=id2label, training_args=training_args, list_of_languages=langs)
