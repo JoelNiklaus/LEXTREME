@@ -86,12 +86,20 @@ class ResultAggregator(RevisionHandler):
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
 
-        if split == "eval":
-            self.split = split + "/"
-        elif split == "predict":
+        if "predict" in split:
             self.split = split + "/_"
+        else:
+            self.split = split + "/"
 
         self.score = score
+
+        # If score contains the name of the split in the name, no further postprocessing is required.
+        if bool(re.search('(eval|train)', score)):
+            score_to_filter = score
+        else:
+            score_to_filter = self.split + score
+
+        self.score_to_filter = score_to_filter
 
         self.api = wandb.Api()
 
@@ -143,7 +151,10 @@ class ResultAggregator(RevisionHandler):
 
         self.results = results
 
-        available_predict_scores = [col for col in self.results if bool(re.search(r'^\w+_predict/_' + self.score, col))]
+        available_predict_scores = [col for col in self.results if
+                                    bool(re.search(f'^\w*_*{self.split}{self.score}', col))]
+        print(self.split, self.score)
+        print('available_predict_scores', available_predict_scores)
         self.available_predict_scores = sorted(available_predict_scores)
         self.available_predict_scores_original = deepcopy(self.available_predict_scores)
 
@@ -355,11 +366,12 @@ class ResultAggregator(RevisionHandler):
             languages = self.meta_infos['task_language_mapping'][config]
             for language in languages:
                 column_name = language + '_' + score
-                indices = dataframe[(dataframe.language == language) & (dataframe.finetuning_task == config) & (
-                    dataframe._name_or_path.isin(monolingual_models))].index.tolist()
-                for i in indices:
-                    if not isinstance(dataframe.at[i, column_name], float):
-                        dataframe.at[i, column_name] = dataframe.at[i, score]
+                if column_name in dataframe.columns.tolist():
+                    indices = dataframe[(dataframe.language == language) & (dataframe.finetuning_task == config) & (
+                        dataframe._name_or_path.isin(monolingual_models))].index.tolist()
+                    for i in indices:
+                        if not isinstance(dataframe.at[i, column_name], float):
+                            dataframe.at[i, column_name] = dataframe.at[i, score]
 
         return dataframe
 
@@ -624,8 +636,7 @@ class ResultAggregator(RevisionHandler):
                     item['finetuning_task'] = finetuning_task
                     item['_name_or_path'] = required_name_or_path
                     item['language'] = self.meta_infos['model_language_lookup_table'][required_name_or_path]
-                    item['missing_seeds'] = [
-                        str(s) for s in sorted(list(required_seeds))]
+                    item['missing_seeds'] = [str(s) for s in sorted(list(required_seeds))]
                     report.append(item)
 
             for available_name_or_path in available_models:
@@ -725,12 +736,6 @@ class ResultAggregator(RevisionHandler):
         required_seeds = list(required_seeds)
         required_seeds = sorted(int(s) for s in required_seeds)
 
-        # If score contains the name of the split in the name, no further postprocessing is required.
-        if bool(re.search('(eval|train)', score)):
-            score_to_filter = score
-        else:
-            score_to_filter = self.split + score
-
         if only_completed_tasks == True:
             incomplete_tasks = self.get_list_of_incomplete_tasks(task_constraint=task_constraint,
                                                                  model_constraint=model_constraint,
@@ -742,11 +747,11 @@ class ResultAggregator(RevisionHandler):
                                                                                                '_name_or_path',
                                                                                                'language',
                                                                                                'seed',
-                                                                                               score_to_filter]]
+                                                                                               self.score_to_filter]]
 
         elif only_completed_tasks == False:
             df = self.results[(self.results.seed.isin(required_seeds))][
-                ['finetuning_task', '_name_or_path', 'language', 'seed', score_to_filter]]
+                ['finetuning_task', '_name_or_path', 'language', 'seed', self.score_to_filter]]
 
         if len(task_constraint) > 0:
             df = df[df.finetuning_task.isin(task_constraint)]
@@ -754,7 +759,7 @@ class ResultAggregator(RevisionHandler):
         if len(model_constraint) > 0:
             df = df[df._name_or_path.isin(model_constraint)]
 
-        df_pivot = df.pivot_table(values=score_to_filter,
+        df_pivot = df.pivot_table(values=self.score_to_filter,
                                   index=['finetuning_task', '_name_or_path', 'language'],
                                   columns='seed',
                                   aggfunc='first')
@@ -996,7 +1001,7 @@ class ResultAggregator(RevisionHandler):
     def get_average_score(self, finetuning_task: str, _name_or_path: str, score: str = None,
                           with_standard_deviation: bool = False) -> float:
         if score is None:
-            score = 'predict/_' + self.score
+            score = self.score_to_filter
 
         results_filtered = self.results[(self.results.finetuning_task == finetuning_task)
                                         & (self.results._name_or_path == _name_or_path)][["seed", score]]
@@ -1038,7 +1043,7 @@ class ResultAggregator(RevisionHandler):
                 f'There are no useful values to calculate an mean score. ')
         return mean_value
 
-    def create_template(self, columns: list = None) -> pd.core.frame.DataFrame:
+    def create_template(self, columns: list = None, model_constraint: list = None) -> pd.core.frame.DataFrame:
 
         """
         Creates an empty dataframe with predefined indices and column names that will be used to create the dataframe
@@ -1052,7 +1057,10 @@ class ResultAggregator(RevisionHandler):
         overview_template = pd.DataFrame()
 
         # Se the list of model names as index
-        overview_template = overview_template.set_axis(self.results._name_or_path.unique())
+        if model_constraint is not None:
+            overview_template = overview_template.set_axis(model_constraint)
+        else:
+            overview_template = overview_template.set_axis(self.results._name_or_path.unique())
 
         # Name the index axis as Model
         overview_template.index.names = ['Model']
@@ -1093,7 +1101,7 @@ class ResultAggregator(RevisionHandler):
             if len(configs) > 0:
                 columns.extend(configs)
 
-        self.config_aggregated_score = self.create_template(columns=columns)
+        self.config_aggregated_score = self.create_template(columns=columns, model_constraint=model_constraint)
 
         self.insert_config_average_scores(overview_template=self.config_aggregated_score,
                                           average_over_language=average_over_language,
@@ -1270,7 +1278,7 @@ class ResultAggregator(RevisionHandler):
             if len(configs) > 0:
                 columns.append(dataset)
 
-        self.dataset_aggregated_score = self.create_template(columns=columns)
+        self.dataset_aggregated_score = self.create_template(columns=columns, model_constraint=model_constraint)
 
         relevant_models = self.results._name_or_path.unique()
 
@@ -1332,7 +1340,7 @@ class ResultAggregator(RevisionHandler):
                 if lang not in ['tr', 'nb']:
                     all_languages.add(lang)
 
-        self.language_aggregated_score = self.create_template(all_languages)
+        self.language_aggregated_score = self.create_template(columns=all_languages, model_constraint=model_constraint)
 
         for score_type in self.available_predict_scores:
             language = score_type.split('_')[0]
@@ -1461,6 +1469,7 @@ if __name__ == "__main__":
         list_of_seeds = [int(s.strip()) for s in list_of_seeds]
     else:
         list_of_seeds = args.list_of_seeds
+
     ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
                           project_name=report_spec['wandb_project_name'],
                           output_dir=TABLE_OUTPUT_PATH + f'/{report_spec["wandb_project_name"]}',
@@ -1472,9 +1481,14 @@ if __name__ == "__main__":
                           report_spec_name=args.report_spec,
                           fill_with_wrong_revisions=False,
                           mean_type='harmonic',
-                          remove_outliers=True)
+                          remove_outliers=False,
+                          # score='macro-f1',
+                          split='eval'
+                          )
 
     ra.get_info()
+
+    AVERAGE_OVER_LANG = False
     model_constraint = [_name_or_path.split(
         '@')[0] for _name_or_path in report_spec['_name_or_path']]
     ra.create_report(task_constraint=report_spec['finetuning_task'],
@@ -1482,20 +1496,49 @@ if __name__ == "__main__":
                      only_completed_tasks=False)
 
     ra.get_dataset_aggregated_score(task_constraint=report_spec['finetuning_task'],
-                                    model_constraint=model_constraint)
+                                    model_constraint=model_constraint,
+                                    average_over_language=AVERAGE_OVER_LANG)  # When split == eval, you cannot have average_over_language=True
 
     ra.get_language_aggregated_score(task_constraint=report_spec['finetuning_task'],
                                      model_constraint=model_constraint)
 
     # Comment the method below out if you do not want config aggregate scores with standard deviation
-    ra.get_config_aggregated_score(average_over_language=True,
+    ra.get_config_aggregated_score(average_over_language=AVERAGE_OVER_LANG,
+                                   # When split == eval, you cannot have average_over_language=True
                                    write_to_csv=True,
                                    model_constraint=model_constraint,
                                    task_constraint=report_spec['finetuning_task'],
-                                   with_standard_deviation=True)
+                                   with_standard_deviation=False)
 
     with open(ra.output_dir + '/removed_outliers.json', 'w') as f:
         js.dump(ra.removed_values_dict, fp=f, indent=2)
+
+    '''for LANG in ['de', 'fr', 'it', 'en', 'rm']:
+        model_constraint = [_name_or_path.split(
+            '@')[0] for _name_or_path in report_spec['_name_or_path']]
+        ra = ResultAggregator(wandb_api_key=args.wandb_api_key,
+                              project_name=report_spec['wandb_project_name'],
+                              output_dir=TABLE_OUTPUT_PATH + f'/{report_spec["wandb_project_name"]}/{LANG}',
+                              path_to_csv_export=args.path_to_csv_export,
+                              verbose_logging=args.verbose,
+                              only_completed_tasks=False,
+                              which_language=args.which_language,
+                              required_seeds=list_of_seeds,
+                              report_spec_name=args.report_spec,
+                              fill_with_wrong_revisions=False,
+                              mean_type='harmonic',
+                              remove_outliers=False,
+                              split=f'{LANG}_predict')
+
+        ra.create_report(task_constraint=report_spec['finetuning_task'],
+                         model_constraint=model_constraint,
+                         only_completed_tasks=False)
+
+        ra.get_config_aggregated_score(average_over_language=False,
+                                       write_to_csv=True,
+                                       model_constraint=model_constraint,
+                                       task_constraint=report_spec['finetuning_task'],
+                                       with_standard_deviation=False)'''
 
     # TODO maybe move all of this reporting functionality into a separate folder
 
