@@ -97,16 +97,16 @@
     "online_terms_of_service_unfairness_levels": "OTS-UL",
     "swiss_judgment_prediction": "SJP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
-    "swiss_criticality_prediction_bge_facts": "SCP-BF",
-    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
-    "swiss_criticality_prediction_citation_facts": "SCP-CF",
-    "swiss_criticality_prediction_citation_considerations": "SCP-CC",
-    "swiss_law_area_prediction_facts": "SLAP-F",
-    "swiss_law_area_prediction_considerations": "SLAP-C",
-    "swiss_law_area_prediction_sub_area_facts": "SLAP-SF",
-    "swiss_law_area_prediction_sub_area_considerations": "SLAP-SC",
-    "swiss_judgment_prediction_xl_facts": "SJPXL-F",
-    "swiss_judgment_prediction_xl_considerations": "SJPXL-C",
+    "swiss_criticality_prediction_bge_facts": "CPB-F",
+    "swiss_criticality_prediction_bge_considerations": "CPB-C",
+    "swiss_criticality_prediction_citation_facts": "CPC-F",
+    "swiss_criticality_prediction_citation_considerations": "CPC-C",
+    "swiss_law_area_prediction_facts": "LAP-F",
+    "swiss_law_area_prediction_considerations": "LAP-C",
+    "swiss_law_area_prediction_sub_area_facts": "SLAP-F",
+    "swiss_law_area_prediction_sub_area_considerations": "SLAP-C",
+    "swiss_judgment_prediction_xl_facts": "JP-F",
+    "swiss_judgment_prediction_xl_considerations": "JP-C",
     "ecthr_a": "ECTA",
     "ecthr_b": "ECTB",
     "eurlex": "EUR",
@@ -116,6 +116,8 @@
     "case_hold": "CAH",
     "original": "ORIG"
   },
+  "scale_task_abbreviations":{
+      },
   "model_abbrevations": {
     "distilbert-base-multilingual-cased": "DistilBERT",
     "microsoft/Multilingual-MiniLM-L12-H384": "MiniLM",
@@ -157,7 +159,9 @@
     "joelito/legal-xlm-roberta-large": "Legal-XLM-R-large",
     "joelito/legal-xlm-longformer-base": "Legal-XLM-LF-base",
     "facebook/xmod-base": "X-MOD-base",
-    "ZurichNLP/swissbert-xlm-vocab": "SwissBERT (xlm-vocab)"
+    "ZurichNLP/swissbert-xlm-vocab": "SwissBERT (xlm-vocab)",
+    "bigscience/bloom-560m": "BLOOM-560m",
+    "bigscience/bloomz-560m": "BLOOMZ-560m"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -1121,7 +1125,9 @@
         ],
         "large": [
           "xlm-roberta-large",
-          "google/mt5-large"
+          "google/mt5-large",
+          "bigscience/bloom-560m",
+          "bigscience/bloomz-560m"
         ]
       }
     },

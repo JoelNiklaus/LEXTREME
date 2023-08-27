@@ -18,12 +18,12 @@
     "xlm-roberta-large@main",
     "facebook/xmod-base@main",
     "ZurichNLP/swissbert-xlm-vocab@main",
-    "joelito/legal-swiss-roberta-base@47048d047356032a7f3e322469744294a5923042",
-    "joelito/legal-swiss-roberta-large@7ab61a6431c9f6759d0a747b0257f23cc76d65c9",
-    "joelito/legal-swiss-longformer-base@main",
     "google/mt5-small@main",
     "google/mt5-base@main",
-    "bigscience/bloom-560m@main"
+    "bigscience/bloom-560m@main",
+    "joelito/legal-swiss-roberta-base@47048d047356032a7f3e322469744294a5923042",
+    "joelito/legal-swiss-roberta-large@7ab61a6431c9f6759d0a747b0257f23cc76d65c9",
+    "joelito/legal-swiss-longformer-base@main"
   ],
   "excluded_models": [
     "google/mt5-large@main",
