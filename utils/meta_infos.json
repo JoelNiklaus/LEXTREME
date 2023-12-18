@@ -1,57 +1,20 @@
 {
   "dataset_jurisdiction": {
-    "swiss_criticality_prediction": [
-      "CH"
-    ],
-    "swiss_law_area_prediction": [
-      "CH"
-    ],
-    "swiss_judgment_prediction_xl": [
-      "CH"
-    ],
-    "brazilian_court_decisions": [
-      "BR"
-    ],
-    "german_argument_mining": [
-      "DE"
-    ],
-    "greek_legal_code": [
-      "GR"
-    ],
-    "turkish_constitutional_court_decisions_judgment": [
-      "TR"
-    ],
-    "swiss_judgment_prediction": [
-      "CH"
-    ],
-    "online_terms_of_service": [
-      "EU"
-    ],
-    "covid19_emergency_event": [
-      "BE",
-      "FR",
-      "HU",
-      "IT",
-      "NL",
-      "NO",
-      "PL",
-      "UK"
-    ],
-    "multi_eurlex": [
-      "EU"
-    ],
-    "greek_legal_ner": [
-      "GR"
-    ],
-    "legalnero": [
-      "RO"
-    ],
-    "lener_br": [
-      "BR"
-    ],
-    "mapa": [
-      "EU"
-    ]
+    "swiss_criticality_prediction": ["CH"],
+    "swiss_law_area_prediction": ["CH"],
+    "swiss_judgment_prediction_xl": ["CH"],
+    "brazilian_court_decisions": ["BR"],
+    "german_argument_mining": ["DE"],
+    "greek_legal_code": ["GR"],
+    "turkish_constitutional_court_decisions_judgment": ["TR"],
+    "swiss_judgment_prediction": ["CH"],
+    "online_terms_of_service": ["EU"],
+    "covid19_emergency_event": ["BE", "FR", "HU", "IT", "NL", "NO", "PL", "UK"],
+    "multi_eurlex": ["EU"],
+    "greek_legal_ner": ["GR"],
+    "legalnero": ["RO"],
+    "lener_br": ["BR"],
+    "mapa": ["EU"]
   },
   "dataset_abbreviations": {
     "brazilian_court_decisions": "BCD",
@@ -97,16 +60,16 @@
     "online_terms_of_service_unfairness_levels": "OTS-UL",
     "swiss_judgment_prediction": "SJP",
     "turkish_constitutional_court_decisions_judgment": "TCD",
-    "swiss_criticality_prediction_bge_facts": "SCP-BF",
-    "swiss_criticality_prediction_bge_considerations": "SCP-BC",
-    "swiss_criticality_prediction_citation_facts": "SCP-CF",
-    "swiss_criticality_prediction_citation_considerations": "SCP-CC",
-    "swiss_law_area_prediction_facts": "SLAP-F",
-    "swiss_law_area_prediction_considerations": "SLAP-C",
-    "swiss_law_area_prediction_sub_area_facts": "SLAP-SF",
-    "swiss_law_area_prediction_sub_area_considerations": "SLAP-SC",
-    "swiss_judgment_prediction_xl_facts": "SJPXL-F",
-    "swiss_judgment_prediction_xl_considerations": "SJPXL-C",
+    "swiss_criticality_prediction_bge_facts": "CPB-F",
+    "swiss_criticality_prediction_bge_considerations": "CPB-C",
+    "swiss_criticality_prediction_citation_facts": "CPC-F",
+    "swiss_criticality_prediction_citation_considerations": "CPC-C",
+    "swiss_law_area_prediction_facts": "LAP-F",
+    "swiss_law_area_prediction_considerations": "LAP-C",
+    "swiss_law_area_prediction_sub_area_facts": "SLAP-F",
+    "swiss_law_area_prediction_sub_area_considerations": "SLAP-C",
+    "swiss_judgment_prediction_xl_facts": "JP-F",
+    "swiss_judgment_prediction_xl_considerations": "JP-C",
     "ecthr_a": "ECTA",
     "ecthr_b": "ECTB",
     "eurlex": "EUR",
@@ -116,6 +79,7 @@
     "case_hold": "CAH",
     "original": "ORIG"
   },
+  "scale_task_abbreviations": {},
   "model_abbrevations": {
     "distilbert-base-multilingual-cased": "DistilBERT",
     "microsoft/Multilingual-MiniLM-L12-H384": "MiniLM",
@@ -157,7 +121,9 @@
     "joelito/legal-xlm-roberta-large": "Legal-XLM-R-large",
     "joelito/legal-xlm-longformer-base": "Legal-XLM-LF-base",
     "facebook/xmod-base": "X-MOD-base",
-    "ZurichNLP/swissbert-xlm-vocab": "SwissBERT (xlm-vocab)"
+    "ZurichNLP/swissbert-xlm-vocab": "SwissBERT (xlm-vocab)",
+    "bigscience/bloom-560m": "BLOOM-560m",
+    "bigscience/bloomz-560m": "BLOOMZ-560m"
   },
   "task_type_mapping": {
     "brazilian_court_decisions_judgment": "SLTC",
@@ -199,50 +165,16 @@
     "case_hold": "MCQA"
   },
   "task_language_mapping": {
-    "brazilian_court_decisions_judgment": [
-      "pt"
-    ],
-    "brazilian_court_decisions_unanimity": [
-      "pt"
-    ],
-    "german_argument_mining": [
-      "de"
-    ],
-    "greek_legal_code_chapter": [
-      "el"
-    ],
-    "greek_legal_code_subject": [
-      "el"
-    ],
-    "greek_legal_code_volume": [
-      "el"
-    ],
-    "swiss_judgment_prediction": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "online_terms_of_service_unfairness_levels": [
-      "de",
-      "en",
-      "it",
-      "pl"
-    ],
-    "online_terms_of_service_clause_topics": [
-      "de",
-      "en",
-      "it",
-      "pl"
-    ],
-    "covid19_emergency_event": [
-      "hu",
-      "it",
-      "pl",
-      "nl",
-      "en",
-      "fr",
-      "nb"
-    ],
+    "brazilian_court_decisions_judgment": ["pt"],
+    "brazilian_court_decisions_unanimity": ["pt"],
+    "german_argument_mining": ["de"],
+    "greek_legal_code_chapter": ["el"],
+    "greek_legal_code_subject": ["el"],
+    "greek_legal_code_volume": ["el"],
+    "swiss_judgment_prediction": ["de", "fr", "it"],
+    "online_terms_of_service_unfairness_levels": ["de", "en", "it", "pl"],
+    "online_terms_of_service_clause_topics": ["de", "en", "it", "pl"],
+    "covid19_emergency_event": ["hu", "it", "pl", "nl", "en", "fr", "nb"],
     "multi_eurlex_level_1": [
       "it",
       "pl",
@@ -318,15 +250,9 @@
       "cs",
       "sv"
     ],
-    "greek_legal_ner": [
-      "el"
-    ],
-    "legalnero": [
-      "ro"
-    ],
-    "lener_br": [
-      "pt"
-    ],
+    "greek_legal_ner": ["el"],
+    "legalnero": ["ro"],
+    "lener_br": ["pt"],
     "mapa_coarse": [
       "it",
       "sk",
@@ -373,85 +299,25 @@
       "cs",
       "sv"
     ],
-    "turkish_constitutional_court_decisions_judgment": [
-      "tr"
-    ],
-    "swiss_criticality_prediction_bge_facts": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_criticality_prediction_bge_considerations": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_criticality_prediction_citation_facts": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_criticality_prediction_citation_considerations": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_law_area_prediction_facts": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_law_area_prediction_considerations": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_law_area_prediction_sub_area_facts": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_law_area_prediction_sub_area_considerations": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_judgment_prediction_xl_facts": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "swiss_judgment_prediction_xl_considerations": [
-      "de",
-      "fr",
-      "it"
-    ],
-    "ecthr_a": [
-      "en"
-    ],
-    "ecthr_b": [
-      "en"
-    ],
-    "eurlex": [
-      "en"
-    ],
-    "scotus": [
-      "en"
-    ],
-    "ledgar": [
-      "en"
-    ],
-    "unfair_tos": [
-      "en"
-    ],
-    "case_hold": [
-      "en"
-    ],
-    "original": [
-      "de",
-      "fr",
-      "it"
-    ]
+    "turkish_constitutional_court_decisions_judgment": ["tr"],
+    "swiss_criticality_prediction_bge_facts": ["de", "fr", "it"],
+    "swiss_criticality_prediction_bge_considerations": ["de", "fr", "it"],
+    "swiss_criticality_prediction_citation_facts": ["de", "fr", "it"],
+    "swiss_criticality_prediction_citation_considerations": ["de", "fr", "it"],
+    "swiss_law_area_prediction_facts": ["de", "fr", "it"],
+    "swiss_law_area_prediction_considerations": ["de", "fr", "it"],
+    "swiss_law_area_prediction_sub_area_facts": ["de", "fr", "it"],
+    "swiss_law_area_prediction_sub_area_considerations": ["de", "fr", "it"],
+    "swiss_judgment_prediction_xl_facts": ["de", "fr", "it"],
+    "swiss_judgment_prediction_xl_considerations": ["de", "fr", "it"],
+    "ecthr_a": ["en"],
+    "ecthr_b": ["en"],
+    "eurlex": ["en"],
+    "scotus": ["en"],
+    "ledgar": ["en"],
+    "unfair_tos": ["en"],
+    "case_hold": ["en"],
+    "original": ["de", "fr", "it"]
   },
   "config_to_dataset": {
     "brazilian_court_decisions_judgment": "brazilian_court_decisions",
@@ -497,42 +363,27 @@
       "brazilian_court_decisions_judgment",
       "brazilian_court_decisions_unanimity"
     ],
-    "german_argument_mining": [
-      "german_argument_mining"
-    ],
+    "german_argument_mining": ["german_argument_mining"],
     "greek_legal_code": [
       "greek_legal_code_chapter",
       "greek_legal_code_subject",
       "greek_legal_code_volume"
     ],
-    "swiss_judgment_prediction": [
-      "swiss_judgment_prediction"
-    ],
+    "swiss_judgment_prediction": ["swiss_judgment_prediction"],
     "online_terms_of_service": [
       "online_terms_of_service_unfairness_levels",
       "online_terms_of_service_clause_topics"
     ],
-    "covid19_emergency_event": [
-      "covid19_emergency_event"
-    ],
+    "covid19_emergency_event": ["covid19_emergency_event"],
     "multi_eurlex": [
       "multi_eurlex_level_1",
       "multi_eurlex_level_2",
       "multi_eurlex_level_3"
     ],
-    "greek_legal_ner": [
-      "greek_legal_ner"
-    ],
-    "legalnero": [
-      "legalnero"
-    ],
-    "lener_br": [
-      "lener_br"
-    ],
-    "mapa": [
-      "mapa_coarse",
-      "mapa_fine"
-    ],
+    "greek_legal_ner": ["greek_legal_ner"],
+    "legalnero": ["legalnero"],
+    "lener_br": ["lener_br"],
+    "mapa": ["mapa_coarse", "mapa_fine"],
     "turkish_constitutional_court_decisions_judgment": [
       "turkish_constitutional_court_decisions_judgment"
     ],
@@ -552,28 +403,13 @@
       "swiss_judgment_prediction_xl_facts",
       "swiss_judgment_prediction_xl_considerations"
     ],
-    "ecthr": [
-      "ecthr_a",
-      "ecthr_b"
-    ],
-    "eurlex": [
-      "eurlex"
-    ],
-    "scotus": [
-      "scotus"
-    ],
-    "ledgar": [
-      "ledgar"
-    ],
-    "unfair_tos": [
-      "unfair_tos"
-    ],
-    "case_hold": [
-      "case_hold"
-    ],
-    "original": [
-      "original"
-    ]
+    "ecthr": ["ecthr_a", "ecthr_b"],
+    "eurlex": ["eurlex"],
+    "scotus": ["scotus"],
+    "ledgar": ["ledgar"],
+    "unfair_tos": ["unfair_tos"],
+    "case_hold": ["case_hold"],
+    "original": ["original"]
   },
   "task_default_arguments": {
     "greek_legal_ner": {
@@ -939,52 +775,33 @@
     "general": {
       "bg": {
         "small": [],
-        "base": [
-          "iarfmoose/roberta-base-bulgarian"
-        ],
+        "base": ["iarfmoose/roberta-base-bulgarian"],
         "large": []
       },
       "cs": {
         "small": [],
-        "base": [
-          "UWB-AIR/Czert-B-base-cased"
-        ],
+        "base": ["UWB-AIR/Czert-B-base-cased"],
         "large": []
       },
       "da": {
         "small": [],
-        "base": [
-          "Maltehb/danish-bert-botxo"
-        ],
+        "base": ["Maltehb/danish-bert-botxo"],
         "large": []
       },
       "de": {
         "small": [],
-        "base": [
-          "dbmdz/bert-base-german-cased",
-          "deepset/gbert-base"
-        ],
+        "base": ["dbmdz/bert-base-german-cased", "deepset/gbert-base"],
         "large": []
       },
       "el": {
         "small": [],
-        "base": [
-          "nlpaueb/bert-base-greek-uncased-v1"
-        ],
+        "base": ["nlpaueb/bert-base-greek-uncased-v1"],
         "large": []
       },
       "en": {
-        "small": [
-          "distilbert-base-uncased"
-        ],
-        "base": [
-          "bert-base-uncased",
-          "bert-base-cased",
-          "roberta-base"
-        ],
-        "large": [
-          "roberta-large"
-        ]
+        "small": ["distilbert-base-uncased"],
+        "base": ["bert-base-uncased", "bert-base-cased", "roberta-base"],
+        "large": ["roberta-large"]
       },
       "es": {
         "small": [],
@@ -996,31 +813,22 @@
       },
       "et": {
         "small": [],
-        "base": [
-          "tartuNLP/EstBERT"
-        ],
+        "base": ["tartuNLP/EstBERT"],
         "large": []
       },
       "fi": {
         "small": [],
-        "base": [
-          "TurkuNLP/bert-base-finnish-cased-v1"
-        ],
+        "base": ["TurkuNLP/bert-base-finnish-cased-v1"],
         "large": []
       },
       "fr": {
         "small": [],
-        "base": [
-          "camembert-base",
-          "dbmdz/bert-base-french-europeana-cased"
-        ],
+        "base": ["camembert-base", "dbmdz/bert-base-french-europeana-cased"],
         "large": []
       },
       "ga": {
         "small": [],
-        "base": [
-          "DCU-NLP/bert-base-irish-cased-v1"
-        ],
+        "base": ["DCU-NLP/bert-base-irish-cased-v1"],
         "large": []
       },
       "hr": {
@@ -1030,9 +838,7 @@
       },
       "hu": {
         "small": [],
-        "base": [
-          "SZTAKI-HLT/hubert-base-cc"
-        ],
+        "base": ["SZTAKI-HLT/hubert-base-cc"],
         "large": []
       },
       "it": {
@@ -1068,30 +874,22 @@
       },
       "pl": {
         "small": [],
-        "base": [
-          "dkleczek/bert-base-polish-uncased-v1"
-        ],
+        "base": ["dkleczek/bert-base-polish-uncased-v1"],
         "large": []
       },
       "pt": {
         "small": [],
-        "base": [
-          "neuralmind/bert-base-portuguese-cased"
-        ],
+        "base": ["neuralmind/bert-base-portuguese-cased"],
         "large": []
       },
       "ro": {
         "small": [],
-        "base": [
-          "dumitrescustefan/bert-base-romanian-uncased-v1"
-        ],
+        "base": ["dumitrescustefan/bert-base-romanian-uncased-v1"],
         "large": []
       },
       "sk": {
         "small": [],
-        "base": [
-          "gerulata/slovakbert"
-        ],
+        "base": ["gerulata/slovakbert"],
         "large": []
       },
       "sl": {
@@ -1101,9 +899,7 @@
       },
       "sv": {
         "small": [],
-        "base": [
-          "KB/bert-base-swedish-cased"
-        ],
+        "base": ["KB/bert-base-swedish-cased"],
         "large": []
       },
       "multilingual": {
@@ -1124,46 +920,34 @@
           "xlm-roberta-large",
           "google/mt5-large",
           "bigscience/bloom-560m",
-	  "bigscience/bloomz-560m"
+          "bigscience/bloomz-560m"
         ]
       }
     },
     "legal": {
       "bg": {
         "small": [],
-        "base": [
-          "joelito/legal-bulgarian-roberta-base"
-        ],
+        "base": ["joelito/legal-bulgarian-roberta-base"],
         "large": []
       },
       "cs": {
         "small": [],
-        "base": [
-          "joelito/legal-czech-roberta-base"
-        ],
+        "base": ["joelito/legal-czech-roberta-base"],
         "large": []
       },
       "da": {
         "small": [],
-        "base": [
-          "joelito/legal-danish-roberta-base"
-        ],
+        "base": ["joelito/legal-danish-roberta-base"],
         "large": []
       },
       "de": {
         "small": [],
-        "base": [
-          "joelito/legal-german-roberta-base"
-        ],
-        "large": [
-          "joelito/legal-german-roberta-large"
-        ]
+        "base": ["joelito/legal-german-roberta-base"],
+        "large": ["joelito/legal-german-roberta-large"]
       },
       "el": {
         "small": [],
-        "base": [
-          "joelito/legal-greek-roberta-base"
-        ],
+        "base": ["joelito/legal-greek-roberta-base"],
         "large": []
       },
       "en": {
@@ -1173,9 +957,7 @@
           "nlpaueb/legal-bert-base-uncased",
           "joelito/legal-english-roberta-base"
         ],
-        "large": [
-          "joelito/legal-english-roberta-large"
-        ]
+        "large": ["joelito/legal-english-roberta-large"]
       },
       "es": {
         "small": [],
@@ -1183,52 +965,36 @@
           "PlanTL-GOB-ES/RoBERTalex",
           "joelito/legal-spanish-roberta-base"
         ],
-        "large": [
-          "joelito/legal-spanish-roberta-large"
-        ]
+        "large": ["joelito/legal-spanish-roberta-large"]
       },
       "et": {
         "small": [],
-        "base": [
-          "joelito/legal-estonian-roberta-base"
-        ],
+        "base": ["joelito/legal-estonian-roberta-base"],
         "large": []
       },
       "fi": {
         "small": [],
-        "base": [
-          "joelito/legal-finnish-roberta-base"
-        ],
+        "base": ["joelito/legal-finnish-roberta-base"],
         "large": []
       },
       "fr": {
         "small": [],
-        "base": [
-          "joelito/legal-french-roberta-base"
-        ],
-        "large": [
-          "joelito/legal-french-roberta-large"
-        ]
+        "base": ["joelito/legal-french-roberta-base"],
+        "large": ["joelito/legal-french-roberta-large"]
       },
       "ga": {
         "small": [],
-        "base": [
-          "joelito/legal-irish-roberta-base"
-        ],
+        "base": ["joelito/legal-irish-roberta-base"],
         "large": []
       },
       "hr": {
         "small": [],
-        "base": [
-          "joelito/legal-croatian-roberta-base"
-        ],
+        "base": ["joelito/legal-croatian-roberta-base"],
         "large": []
       },
       "hu": {
         "small": [],
-        "base": [
-          "joelito/legal-hungarian-roberta-base"
-        ],
+        "base": ["joelito/legal-hungarian-roberta-base"],
         "large": []
       },
       "it": {
@@ -1237,53 +1003,37 @@
           "dlicari/Italian-Legal-BERT",
           "joelito/legal-italian-roberta-base"
         ],
-        "large": [
-          "joelito/legal-italian-roberta-large"
-        ]
+        "large": ["joelito/legal-italian-roberta-large"]
       },
       "lt": {
         "small": [],
-        "base": [
-          "joelito/legal-lithuanian-roberta-base"
-        ],
+        "base": ["joelito/legal-lithuanian-roberta-base"],
         "large": []
       },
       "lv": {
         "small": [],
-        "base": [
-          "joelito/legal-latvian-roberta-base"
-        ],
+        "base": ["joelito/legal-latvian-roberta-base"],
         "large": []
       },
       "mt": {
         "small": [],
-        "base": [
-          "joelito/legal-maltese-roberta-base"
-        ],
+        "base": ["joelito/legal-maltese-roberta-base"],
         "large": []
       },
       "nl": {
         "small": [],
-        "base": [
-          "joelito/legal-dutch-roberta-base"
-        ],
+        "base": ["joelito/legal-dutch-roberta-base"],
         "large": []
       },
       "pl": {
         "small": [],
-        "base": [
-          "joelito/legal-polish-roberta-base"
-        ],
+        "base": ["joelito/legal-polish-roberta-base"],
         "large": []
       },
       "pt": {
         "small": [],
-        "base": [
-          "joelito/legal-portuguese-roberta-base"
-        ],
-        "large": [
-          "joelito/legal-portuguese-roberta-large"
-        ]
+        "base": ["joelito/legal-portuguese-roberta-base"],
+        "large": ["joelito/legal-portuguese-roberta-large"]
       },
       "ro": {
         "small": [],
@@ -1295,23 +1045,17 @@
       },
       "sk": {
         "small": [],
-        "base": [
-          "joelito/legal-slovak-roberta-base"
-        ],
+        "base": ["joelito/legal-slovak-roberta-base"],
         "large": []
       },
       "sl": {
         "small": [],
-        "base": [
-          "joelito/legal-slovenian-roberta-base"
-        ],
+        "base": ["joelito/legal-slovenian-roberta-base"],
         "large": []
       },
       "sv": {
         "small": [],
-        "base": [
-          "joelito/legal-swedish-roberta-base"
-        ],
+        "base": ["joelito/legal-swedish-roberta-base"],
         "large": []
       },
       "multilingual": {
@@ -1338,9 +1082,7 @@
     "unfair_tos",
     "case_hold"
   ],
-  "rcds_swiss_citation_extraction_configs": [
-    "original"
-  ],
+  "rcds_swiss_citation_extraction_configs": ["original"],
   "bloom_models": [
     "bigscience/bloom-560m",
     "bigscience/bloomz-560m",
