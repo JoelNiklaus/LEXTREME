@@ -401,10 +401,8 @@ def preprocess_function(batch, tokenizer, model_args, data_args, id2label=None):
                              ids[i] != pad_id]  # remove blocks containing only ids
                 id_blocks[-1] = [id for id in id_blocks[-1] if
                                  id != pad_id]  # remove remaining pad_tokens_ids from the last block
-            token_blocks = [tokenizer.convert_ids_to_tokens(
-                ids) for ids in id_blocks]
-            string_blocks = [tokenizer.convert_tokens_to_string(
-                tokens) for tokens in token_blocks]
+            token_blocks = [tokenizer.convert_ids_to_tokens(ids) for ids in id_blocks]
+            string_blocks = [tokenizer.convert_tokens_to_string(tokens) for tokens in token_blocks]
             batch['segments'].append(string_blocks)
 
         # Tokenize the text
@@ -715,24 +713,23 @@ def process_results(preds, labels):
 
 def make_predictions_multi_class(trainer, data_args, predict_dataset, id2label, training_args, list_of_languages=[],
                                  name_of_input_field='input'):
+
     language_specific_metrics = list()
-    if data_args.language == 'all':
 
-        if not list_of_languages:
-            list_of_languages = sorted(list(set(predict_dataset['language'])))
+    if not list_of_languages:
+        list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-        for language in list_of_languages:
+    for language in list_of_languages:
 
-            predict_dataset_filtered = predict_dataset.filter(
-                lambda example: example['language'] == language)
+        predict_dataset_filtered = predict_dataset.filter(lambda example: example['language'] == language)
 
-            if len(predict_dataset_filtered['language']) > 0:
-                metric_prefix = language + "_predict/"
-                predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                               metric_key_prefix=metric_prefix)
-                wandb.log(metrics)
+        if len(predict_dataset_filtered['language']) > 0:
+            metric_prefix = language + "_predict/"
+            predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                           metric_key_prefix=metric_prefix)
+            wandb.log(metrics)
 
-                language_specific_metrics.append(metrics)
+            language_specific_metrics.append(metrics)
 
     predictions, labels, metrics = trainer.predict(
         predict_dataset, metric_key_prefix="predict/")
@@ -792,23 +789,21 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
     language_specific_metrics = list()
 
     if "language" in list(predict_dataset.features.keys()):
-        if data_args.language == 'all':
-            if not list_of_languages:
-                list_of_languages = sorted(
-                    list(set(predict_dataset['language'])))
+        if not list_of_languages:
+            list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-            for l in list_of_languages:
+        for l in list_of_languages:
 
-                predict_dataset_filtered = predict_dataset.filter(
-                    lambda example: example['language'] == l)
+            predict_dataset_filtered = predict_dataset.filter(
+                lambda example: example['language'] == l)
 
-                if len(predict_dataset_filtered['language']) > 0:
-                    metric_prefix = l + "_predict/"
-                    predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                                   metric_key_prefix=metric_prefix)
-                    wandb.log(metrics)
+            if len(predict_dataset_filtered['language']) > 0:
+                metric_prefix = l + "_predict/"
+                predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                               metric_key_prefix=metric_prefix)
+                wandb.log(metrics)
 
-                    language_specific_metrics.append(metrics)
+                language_specific_metrics.append(metrics)
 
     predictions, labels, metrics = trainer.predict(
         predict_dataset, metric_key_prefix="predict/")
@@ -854,23 +849,24 @@ def make_predictions_multi_label(trainer, data_args, predict_dataset, id2label, 
 
 
 def make_predictions_ner(trainer, tokenizer, data_args, predict_dataset, id2label, training_args, list_of_languages=[]):
+
     language_specific_metrics = list()
-    if data_args.language == 'all':
-        if not list_of_languages:
-            list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-        for language in list_of_languages:
+    if not list_of_languages:
+        list_of_languages = sorted(list(set(predict_dataset['language'])))
 
-            predict_dataset_filtered = predict_dataset.filter(
-                lambda example: example['language'] == language)
+    for language in list_of_languages:
 
-            if len(predict_dataset_filtered['language']) > 0:
-                metric_prefix = language + "_predict/"
-                predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
-                                                               metric_key_prefix=metric_prefix)
-                wandb.log(metrics)
+        predict_dataset_filtered = predict_dataset.filter(
+            lambda example: example['language'] == language)
 
-                language_specific_metrics.append(metrics)
+        if len(predict_dataset_filtered['language']) > 0:
+            metric_prefix = language + "_predict/"
+            predictions, labels, metrics = trainer.predict(predict_dataset_filtered,
+                                                           metric_key_prefix=metric_prefix)
+            wandb.log(metrics)
+
+            language_specific_metrics.append(metrics)
 
     predictions, labels, metrics = trainer.predict(
         predict_dataset, metric_key_prefix="predict/")
@@ -1089,6 +1085,7 @@ def init_hyperparameter_search(data_args, model_args, training_args, num_labels,
     def model_init():
         model, _, _ = generate_model_and_tokenizer(model_args=model_args,
                                                    data_args=data_args,
+                                                   training_args=training_args,
                                                    num_labels=num_labels)
         model.cuda()
         return model

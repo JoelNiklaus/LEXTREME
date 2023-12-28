@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('-gib', '--greater_is_better',
                         help='Use in conjunction with load_best_model_at_end and metric_for_best_model to specify if better models should have a greater metric or not. Will default to: True if metric_for_best_model is set to a value that isn’t "loss" or "eval_loss". False if metric_for_best_model is not set, or set to "loss" or "eval_loss". ',
                         default=None)
-    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=11)
+    parser.add_argument('-gm', '--gpu_memory', help='Define how much memory your GPUs have', default=16)
     parser.add_argument('-hier', '--hierarchical',
                         help='Define whether you want to use a hierarchical model or not. '
                              'Caution: this will not work for every task',
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                              '{type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}. '
                              'If you specify "all" for any of the three parameters, '
                              'all models of that type/language/size will be used.',
-                        default='all')
+                        default='all_all_all')
     parser.add_argument('-los', '--list_of_seeds',
                         help='Define the random seeds for which you want to run the experiments.',
                         default=None)

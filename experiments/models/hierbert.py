@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn
 from transformers.file_utils import ModelOutput
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, \
-    AutoModelForTokenClassification, XmodForSequenceClassification
+    AutoModelForTokenClassification, XmodForSequenceClassification, RobertaTokenizer
 from models.deberta_v2 import HierDebertaV2ForSequenceClassification
 from models.distilbert import HierDistilBertForSequenceClassification
 from models.roberta import HierRobertaForSequenceClassification
@@ -246,7 +246,7 @@ def build_hierarchical_model(model, max_segments, max_segment_length):
 models_that_require_add_prefix_space = ["iarfmoose/roberta-base-bulgarian", "gerulata/slovakbert", "roberta-base",
                                         "PlanTL-GOB-ES/roberta-base-bne", "bertin-project/bertin-roberta-base-spanish",
                                         "BSC-TeMU/roberta-base-bne", "pdelobelle/robbert-v2-dutch-base",
-                                        "roberta-large"]
+                                        "roberta-large", "EuropeanParliament/EUBERT"]
 
 
 def get_tokenizer(model_name_or_path, revision):

@@ -914,7 +914,8 @@
           "google/mt5-base",
           "ZurichNLP/swissbert",
           "ZurichNLP/swissbert-xlm-vocab",
-          "facebook/xmod-base"
+          "facebook/xmod-base",
+          "EuropeanParliament/EUBERT"
         ],
         "large": [
           "xlm-roberta-large",

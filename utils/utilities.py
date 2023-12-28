@@ -14,6 +14,7 @@ import itertools
 from itertools import cycle
 from multiprocessing import Pool
 import torch
+from time import sleep
 
 # In the beginning we have the configurations
 optimal_batch_sizes = {
@@ -163,6 +164,7 @@ optimal_batch_sizes = {
         # 'xlm-roberta-large': {256: 64, 512: 64, 1024: 32, 2048: 16, 4096: 4}, # fp32
     },
 }
+
 
 
 def find_optimal_learning_rate(model_name_or_path: str):
@@ -716,6 +718,10 @@ def process_gpu_number(gpu_number, do_hyperparameter_search):
 
     return gpu_number
 
+def chunk_list(lst, chunk_size):
+    """Yield successive chunk_size-sized chunks from lst."""
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
 
 def run_experiment(
         accumulation_steps,
@@ -792,7 +798,7 @@ def run_experiment(
     # language_model_type is in the form {type: general|legal}_{language: ISO_CODE or "multilingual"]}_{size: small|base|large}
     language_model_info = language_model_type.split('_')
     if len(language_model_info) != 3:  # we got a direct language model just use it
-        # This way we can comma-seperate several language models
+        # This way we can comma-separate several language models
         models_to_be_used = language_model_type.split(',')
     else:  # find out what models we want to run
         types, languages, sizes = language_model_info[0], language_model_info[1], language_model_info[2]
@@ -829,7 +835,7 @@ def run_experiment(
     if not do_hyperparameter_search:
 
         if task == 'all':
-            all_variables = [[t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used,
+            all_variables = [[k for k, v in meta_infos["task_type_mapping"].items() if v != 'MCQA'], models_to_be_used,
                              list_of_seeds]
         elif isinstance(task, str) and ',' in task:
             tasks = task.split(',')
@@ -944,10 +950,9 @@ def run_experiment(
                 list_of_languages = None  # Set language back to None
 
     else:
-
         if task == 'all':
             all_variables = [
-                [t for t in list(meta_infos["task_type_mapping"].keys())], models_to_be_used]
+                [k for k, v in meta_infos["task_type_mapping"].items() if v != 'MCQA'], models_to_be_used]
         else:
             all_variables = [[task], models_to_be_used]
 
@@ -1043,8 +1048,7 @@ def run_experiment(
     with open('command_dict.json', 'w') as f:
         js.dump(gpu_command_dict, f, ensure_ascii=False, indent=2)
 
-    commands_to_run = ['; sleep 10; '.join(
-        commands) for _, commands in gpu_command_dict.items()]
+
 
     with open('temporary_scripts/final_commands_run_inparallel.txt', 'w') as f:
         for gpu_id, commands in gpu_command_dict.items():
@@ -1057,4 +1061,14 @@ def run_experiment(
                 print('\t', c, file=f)
             print("\n########################################\n", file=f)
 
-    run_in_parallel(commands_to_run=commands_to_run)
+    # commands_to_run = ['; sleep 10; '.join(commands) for _, commands in gpu_command_dict.items()]
+    commands_to_run = [commands for commands in gpu_command_dict.values()]
+    commands_to_run_zipped = list(itertools.zip_longest(*commands_to_run))
+
+    # commands_to_run_zipped_chunked = chunk_list(commands_to_run_zipped, len(gpu_command_dict.keys()))
+    for cmds in commands_to_run_zipped:
+        cmds = list(cmds)
+        cmds = [c for c in cmds if c is not None]
+        run_in_parallel(commands_to_run=cmds)
+        sleep(3)
+
